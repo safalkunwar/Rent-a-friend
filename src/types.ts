@@ -1,6 +1,16 @@
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  role: 'guest' | 'customer' | 'companion' | 'admin';
+  favorites: string[]; // Companion IDs
+}
+
 export interface Review {
   id: string;
   authorName: string;
+  authorAvatar?: string;
   rating: number;
   text: string;
   date: string;
@@ -14,6 +24,8 @@ export interface ExperienceStory {
   imageUrl: string;
   timeAgo: string;
   caption: string;
+  likes?: number;
+  comments?: number;
 }
 
 export interface Companion {
@@ -32,16 +44,47 @@ export interface Companion {
   imageUrl: string;
   images?: string[];
   reviews?: Review[];
+  availableDays?: string[]; // e.g. ['Monday', 'Tuesday']
 }
 
 export interface Booking {
   id: string;
   companionId: string;
+  userId: string;
   date: string;
   time: string;
-  duration: number;
-  status: 'pending' | 'confirmed' | 'active' | 'completed';
+  duration: number; // hours
+  participants: number;
+  status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   totalPrice: number;
   meetingPoint: string;
-  paymentMethod?: 'esewa' | 'khalti';
+  specialRequests?: string;
+  createdAt: string;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  timestamp: string;
+  isRead: boolean;
+}
+
+export interface Conversation {
+  id: string;
+  participantIds: string[]; // [userId, companionId]
+  lastMessage?: Message;
+  unreadCount: number;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'booking' | 'message' | 'system';
+  isRead: boolean;
+  timestamp: string;
+  link?: string;
 }

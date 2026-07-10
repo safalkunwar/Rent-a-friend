@@ -3,35 +3,68 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { StrictMode, useState } from 'react';
+import { StrictMode, useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Navbar } from './components/Navbar';
-import { BookingModal } from './components/BookingModal';
+import { CompanionProfileModal } from './components/modals/CompanionProfileModal';
 import { AuthModal } from './components/AuthModal';
+import { MessagesTab } from './components/messages/MessagesTab';
+import { DashboardTab } from './components/dashboard/DashboardTab';
 import { SafetyWidget } from './components/SafetyWidget';
 import { COMPANIONS, STORIES } from './data';
 import { Companion, ExperienceStory } from './types';
 import { MapPin, Star, ShieldCheck, Languages, Search, Play, Clock } from 'lucide-react';
 import * as motion from 'motion/react-client';
+import { useAppContext } from './context/AppContext';
+import { useToast } from './components/ui/Toast';
+import { AnimatePresence } from 'motion/react';
 
 export function ClientApp() {
-  const [activeTab, setActiveTab] = useState<'explore' | 'bookings' | 'messages' | 'about'>('explore');
+  const { bookings, currentUser } = useAppContext();
+  const { showToast } = useToast();
+  const [activeTab, setActiveTab] = useState<'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard'>('explore');
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingStory, setViewingStory] = useState<ExperienceStory | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'guide' | null>(null);
   const [isGuide, setIsGuide] = useState(false);
   const [showGuideSetup, setShowGuideSetup] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [sortBy, setSortBy] = useState<'recommended' | 'priceAsc' | 'priceDesc' | 'rating'>('recommended');
+  const [showSOS, setShowSOS] = useState(false);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showSOS) {
+      timer = setTimeout(() => {
+        setShowSOS(false);
+      }, 5000);
+    }
+    return () => clearTimeout(timer);
+  }, [showSOS]);
   
   const filteredCompanions = COMPANIONS.filter(c => 
-    c.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.interests.some(i => i.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+    c.interests.some(i => i.toLowerCase().includes(searchQuery.toLowerCase()))) &&
+    (selectedCategory === 'All' || c.interests.includes(selectedCategory) || c.bio.includes(selectedCategory))
+  ).sort((a, b) => {
+    if (sortBy === 'priceAsc') return a.hourlyRate - b.hourlyRate;
+    if (sortBy === 'priceDesc') return b.hourlyRate - a.hourlyRate;
+    if (sortBy === 'rating') return b.rating - a.rating;
+    return 0; // recommended
+  });
 
   return (
     <div className="min-h-screen bg-[#0F1113] font-sans text-[#E0E0E0] pb-20">
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} onOpenAuth={setAuthMode} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <Navbar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        onOpenAuth={setAuthMode} 
+        searchQuery={searchQuery} 
+        setSearchQuery={setSearchQuery}
+        onLogoClick={() => setShowSOS((s) => !s)}
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 md:mt-8">
         
@@ -68,7 +101,7 @@ export function ClientApp() {
                       <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E9299] font-bold block mb-2">Languages Spoken</label>
                       <input type="text" className="w-full px-4 py-2 bg-[#1E2124] border border-[#2A2D31] rounded-xl text-white outline-none focus:border-[#C8A25E] text-sm" placeholder="English, Nepali, Newari..." />
                     </div>
-                    <button className="px-6 py-2.5 bg-[#C8A25E] text-[#0F1113] font-bold uppercase tracking-wide text-xs rounded-xl hover:bg-[#B69150] transition-colors mt-2">Save Profile Data</button>
+                    <button onClick={() => { showToast('Profile saved successfully!', 'success'); setShowGuideSetup(false); }} className="px-6 py-2.5 bg-[#C8A25E] text-[#0F1113] font-bold uppercase tracking-wide text-xs rounded-xl hover:bg-[#B69150] transition-colors mt-2">Save Profile Data</button>
                  </div>
               </div>
            </div>
@@ -76,7 +109,35 @@ export function ClientApp() {
 
         {activeTab === 'explore' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-            
+            {/* Stories Section - Recent Adventures */}
+            <div className="mb-5 md:mb-8 pt-2 md:pt-0">
+              <h2 className="text-sm uppercase tracking-[0.2em] font-bold text-[#8E9299] mb-4 hidden md:block">Recent Adventures</h2>
+              <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 snap-x snap-mandatory">
+                 {/* Current user add story mockup */}
+                 <div onClick={() => showToast('Story creation feature coming soon!', 'info')} className="shrink-0 w-[72px] flex flex-col items-center gap-1.5 cursor-pointer group snap-start">
+                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-full p-[2px] bg-[#2A2D31] relative">
+                       <img src={currentUser?.avatar || "https://ui-avatars.com/api/?name=User&background=random"} alt="Your Story" className="w-full h-full rounded-full border-2 border-[#1E2124] object-cover" />
+                       <div className="absolute bottom-0 right-0 bg-[#C8A25E] text-[#0F1113] w-5 h-5 rounded-full flex items-center justify-center font-bold text-lg leading-none border-2 border-[#1E2124]">+</div>
+                    </div>
+                    <span className="text-[11px] md:text-xs text-[#8E9299] truncate w-full text-center">Share Moment</span>
+                 </div>
+                 
+                 {STORIES.map((story) => (
+                    <motion.div 
+                      key={story.id} 
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => setViewingStory(story)}
+                      className="shrink-0 w-[72px] flex flex-col items-center gap-1.5 cursor-pointer group snap-start"
+                    >
+                       <div className="w-14 h-14 md:w-16 md:h-16 rounded-full p-[2px] bg-gradient-to-tr from-[#C8A25E] via-yellow-500 to-[#B69150]">
+                          <img src={story.userAvatar} alt={story.userName} className="w-full h-full rounded-full border-2 border-[#17191C] object-cover group-hover:scale-95 transition-transform" />
+                       </div>
+                       <span className="text-[11px] md:text-xs text-white truncate w-full text-center">{story.userName}</span>
+                    </motion.div>
+                 ))}
+              </div>
+            </div>
+
             {/* Visual Hero / Search block */}
             <div className="relative rounded-3xl overflow-hidden h-[240px] md:h-[400px] mb-6 md:mb-12 border border-[#2A2D31] group">
                <img src="https://images.unsplash.com/photo-1511216335778-7cb8f49fa7a3?q=80&w=1200&auto=format&fit=crop" alt="Hero" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
@@ -91,17 +152,35 @@ export function ClientApp() {
             {/* Filters/Categories */}
             <div className="mb-5 md:mb-10 overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-2 -mx-4 px-4 md:mx-0 md:px-0">
               <div className="flex gap-3 w-max">
-                {['Coffee Buddy', 'Travel Companion', 'Language Exchange', 'Food Explorer', 'Museum Guide', 'Hiking Partner', 'Shopping Buddy', 'Study Partner', 'Nightlife', 'Photography Walk'].map((cat, i) => (
-                   <motion.span whileTap={{ scale: 0.95 }} key={cat} className={`snap-start shrink-0 px-5 py-2.5 rounded-full text-[14px] font-medium tracking-wide cursor-pointer transition-colors border shadow-sm ${i === 0 ? 'bg-[#C8A25E] text-[#0F1113] border-[#C8A25E]' : 'bg-[#1E2124]/80 backdrop-blur-md text-[#8E9299] border-[#2A2D31] hover:border-[#C8A25E] hover:text-white'}`}>
+                {['All', 'Coffee Buddy', 'Travel Companion', 'Language Exchange', 'Food Explorer', 'Museum Guide', 'Hiking Partner', 'Shopping Buddy', 'Study Partner', 'Nightlife', 'Photography Walk'].map((cat, i) => (
+                   <motion.span 
+                     whileTap={{ scale: 0.95 }} 
+                     key={cat} 
+                     onClick={() => setSelectedCategory(cat)}
+                     className={`snap-start shrink-0 px-5 py-2.5 rounded-full text-[14px] font-medium tracking-wide cursor-pointer transition-colors border shadow-sm ${selectedCategory === cat ? 'bg-[#C8A25E] text-[#0F1113] border-[#C8A25E]' : 'bg-[#1E2124]/80 backdrop-blur-md text-[#8E9299] border-[#2A2D31] hover:border-[#C8A25E] hover:text-white'}`}
+                   >
                      {cat}
                    </motion.span>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
               <h2 className="text-xl md:text-2xl font-bold text-white">Featured Companions</h2>
-              <button className="text-sm font-medium text-[#C8A25E] hover:text-[#B69150]">View All</button>
+              
+              <div className="flex items-center gap-4">
+                <select 
+                  value={sortBy} 
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="bg-[#1E2124] border border-[#2A2D31] text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#C8A25E]"
+                >
+                  <option value="recommended">Recommended</option>
+                  <option value="rating">Highest Rated</option>
+                  <option value="priceAsc">Price: Low to High</option>
+                  <option value="priceDesc">Price: High to Low</option>
+                </select>
+                <button onClick={() => setSelectedCategory('All')} className="text-sm font-medium text-[#C8A25E] hover:text-[#B69150]">View All</button>
+              </div>
             </div>
             
             {/* Companions Grid */}
@@ -114,7 +193,7 @@ export function ClientApp() {
                   transition={{ delay: idx * 0.1, duration: 0.4 }}
                   className="group bg-[#17191C] rounded-[20px] overflow-hidden shadow-lg shadow-black/20 hover:shadow-2xl hover:shadow-[#C8A25E]/5 transition-all flex flex-col border border-[#2A2D31]/50 relative"
                 >
-                  <div className="relative aspect-[4/4.5] md:aspect-[4/5] overflow-hidden">
+                  <div className="relative aspect-[4/4.5] md:aspect-[4/5] overflow-hidden cursor-pointer" onClick={() => setSelectedCompanion(companion)}>
                     <img 
                       src={companion.imageUrl} 
                       alt={companion.name} 
@@ -127,9 +206,9 @@ export function ClientApp() {
                     </div>
                   </div>
 
-                  <div className="px-5 pb-5 pt-2 flex-1 flex flex-col relative z-10 -mt-10">
+                  <div className="px-5 pb-5 pt-2 flex-1 flex flex-col relative z-10 -mt-10 pointer-events-none">
                     <div className="flex justify-between items-end mb-2">
-                      <div>
+                      <div className="pointer-events-auto cursor-pointer" onClick={() => setSelectedCompanion(companion)}>
                         <h3 className="font-bold text-[16px] md:text-lg text-white flex items-center gap-1.5 drop-shadow-md">
                           {companion.name}, {companion.age}
                           {companion.isVerified && (
@@ -143,11 +222,11 @@ export function ClientApp() {
                       </div>
                     </div>
 
-                    <p className="text-[13px] md:text-sm text-[#8E9299] line-clamp-2 mt-2 mb-3 flex-1 font-light leading-relaxed">
+                    <p className="text-[13px] md:text-sm text-[#8E9299] line-clamp-2 mt-2 mb-3 flex-1 font-light leading-relaxed pointer-events-auto">
                       {companion.bio}
                     </p>
 
-                    <div className="flex flex-col gap-2 mb-4">
+                    <div className="flex flex-col gap-2 mb-4 pointer-events-auto">
                       <div className="flex items-center gap-1.5 text-[12px] text-[#8E9299]">
                         <Languages className="w-3.5 h-3.5" />
                         <span className="truncate">{companion.languages.join(' • ')}</span>
@@ -161,7 +240,7 @@ export function ClientApp() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#2A2D31]/50">
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#2A2D31]/50 pointer-events-auto">
                       <div>
                         <span className="font-semibold text-white text-[15px]">
                           ${companion.hourlyRate} <span className="text-[12px] md:text-sm font-normal text-[#5A5E66]">/hr</span>
@@ -174,7 +253,7 @@ export function ClientApp() {
                         onClick={() => setSelectedCompanion(companion)}
                         className="px-5 py-2.5 bg-[#C8A25E] text-[#0F1113] font-semibold text-sm rounded-[14px] hover:bg-[#B69150] transition-transform hover:scale-105 active:scale-95 shadow-sm"
                       >
-                        Book
+                        Profile
                       </button>
                     </div>
                   </div>
@@ -182,11 +261,20 @@ export function ClientApp() {
               ))}
             </div>
 
+            {filteredCompanions.length === 0 && (
+              <div className="text-center py-20 bg-[#17191C] border border-[#2A2D31] rounded-3xl">
+                <Search className="w-12 h-12 text-[#8E9299] mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-white mb-2">No companions found</h3>
+                <p className="text-[#8E9299]">Try adjusting your search or filters.</p>
+                <button onClick={() => {setSearchQuery(''); setSelectedCategory('All');}} className="mt-4 text-[#C8A25E] font-medium hover:underline">Clear all filters</button>
+              </div>
+            )}
+
             {/* Community Moments Feed */}
             <div className="mt-16 md:mt-24">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-xl md:text-3xl font-bold text-white">Community Moments</h2>
-                <button className="text-sm font-medium text-[#C8A25E] hover:text-[#B69150]">View Feed</button>
+                <button onClick={() => showToast('Full community feed coming soon', 'info')} className="text-sm font-medium text-[#C8A25E] hover:text-[#B69150]">View Feed</button>
               </div>
               <div className="flex overflow-x-auto gap-6 hide-scrollbar snap-x snap-mandatory pb-4">
                  {[
@@ -217,7 +305,7 @@ export function ClientApp() {
             <div className="mt-16 md:mt-24">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-xl md:text-3xl font-bold text-white">Popular Activities</h2>
-                <button className="text-sm font-medium text-[#C8A25E] hover:text-[#B69150]">Explore All</button>
+                <button onClick={() => showToast('Activities directory coming soon', 'info')} className="text-sm font-medium text-[#C8A25E] hover:text-[#B69150]">Explore All</button>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -226,7 +314,7 @@ export function ClientApp() {
                    { title: 'Street Food Tour', image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=800&auto=format&fit=crop', duration: '2-3 hours', avgPrice: '$20/hr', count: '85 companions' },
                    { title: 'City Photography', image: 'https://images.unsplash.com/photo-1516862523118-a3724eb136d7?q=80&w=800&auto=format&fit=crop', duration: '2-4 hours', avgPrice: '$25/hr', count: '62 companions' }
                  ].map((activity, idx) => (
-                   <div key={idx} className="group cursor-pointer rounded-[20px] overflow-hidden border border-[#2A2D31] bg-[#17191C] relative hover:border-[#C8A25E]/50 transition-colors">
+                   <div key={idx} onClick={() => { setSelectedCategory(activity.title); showToast(`Filtering by ${activity.title}`, 'success'); }} className="group cursor-pointer rounded-[20px] overflow-hidden border border-[#2A2D31] bg-[#17191C] relative hover:border-[#C8A25E]/50 transition-colors">
                       <div className="h-48 relative overflow-hidden">
                          <img src={activity.image} alt={activity.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                          <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] to-transparent"></div>
@@ -311,7 +399,7 @@ export function ClientApp() {
             <div className="mt-16 md:mt-24 mb-12">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-xl md:text-3xl font-bold text-white">Upcoming Local Events</h2>
-                <button className="text-sm font-medium text-[#C8A25E] hover:text-[#B69150]">View Calendar</button>
+                <button onClick={() => showToast('Event calendar coming soon', 'info')} className="text-sm font-medium text-[#C8A25E] hover:text-[#B69150]">View Calendar</button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  {[
@@ -337,7 +425,10 @@ export function ClientApp() {
                             <span className="text-xs text-[#8E9299]">
                               <span className="text-white font-medium">{event.participants}</span> going • <span className="text-[#C8A25E]">{event.spots} spots left</span>
                             </span>
-                            <button className="px-4 py-1.5 bg-[#1E2124] text-white border border-[#2A2D31] text-xs font-medium rounded-lg hover:bg-[#C8A25E] hover:text-[#0F1113] hover:border-[#C8A25E] transition-colors">
+                            <button onClick={() => {
+                              if (!currentUser) setAuthMode('login');
+                              else showToast(`Successfully joined ${event.title}!`, 'success');
+                            }} className="px-4 py-1.5 bg-[#1E2124] text-white border border-[#2A2D31] text-xs font-medium rounded-lg hover:bg-[#C8A25E] hover:text-[#0F1113] hover:border-[#C8A25E] transition-colors">
                                Join
                             </button>
                          </div>
@@ -350,79 +441,56 @@ export function ClientApp() {
           </motion.div>
         )}
 
+        {activeTab === 'dashboard' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+             <DashboardTab />
+          </motion.div>
+        )}
+
         {activeTab === 'bookings' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
              <h2 className="text-2xl font-bold text-white mb-6 border-b border-[#2A2D31] pb-4">My Bookings</h2>
-             <div className="bg-[#17191C] border border-[#2A2D31] p-8 rounded-2xl flex flex-col items-center text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-[#1E2124] border border-[#2A2D31] flex items-center justify-center">
-                   <Star className="w-8 h-8 text-[#8E9299]" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">No active bookings</h3>
-                  <p className="text-[#8E9299] mt-2">You don't have any upcoming experiences scheduled.</p>
-                </div>
-                <button onClick={() => setActiveTab('explore')} className="mt-4 px-6 py-2 bg-[#C8A25E] text-[#0F1113] rounded-lg font-medium hover:bg-[#B69150] transition-colors">
-                  Explore Companions
-                </button>
-             </div>
+             {bookings.filter(b => b.userId === currentUser?.id).length > 0 ? (
+               <div className="grid gap-4">
+                 {bookings.filter(b => b.userId === currentUser?.id).map(booking => {
+                   const companion = COMPANIONS.find(c => c.id === booking.companionId);
+                   return (
+                     <div key={booking.id} className="bg-[#17191C] border border-[#2A2D31] rounded-2xl p-6 flex items-center justify-between">
+                        <div>
+                           <h3 className="font-bold text-white mb-1">Booking with {companion?.name}</h3>
+                           <p className="text-sm text-[#8E9299]">Date: {booking.date} at {booking.startTime}</p>
+                           <p className="text-sm text-[#8E9299]">Duration: {booking.duration} hours</p>
+                        </div>
+                        <div className="text-right">
+                           <span className="block font-bold text-[#C8A25E]">${booking.totalPrice}</span>
+                           <span className={`text-xs px-2 py-1 rounded-full border ${booking.status === 'confirmed' ? 'bg-green-500/10 border-green-500/50 text-green-500' : 'bg-yellow-500/10 border-yellow-500/50 text-yellow-500'}`}>
+                             {booking.status}
+                           </span>
+                        </div>
+                     </div>
+                   );
+                 })}
+               </div>
+             ) : (
+               <div className="bg-[#17191C] border border-[#2A2D31] p-8 rounded-2xl flex flex-col items-center text-center space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-[#1E2124] border border-[#2A2D31] flex items-center justify-center">
+                     <Star className="w-8 h-8 text-[#8E9299]" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">No active bookings</h3>
+                    <p className="text-[#8E9299] mt-2">You don't have any upcoming experiences scheduled.</p>
+                  </div>
+                  <button onClick={() => setActiveTab('explore')} className="mt-4 px-6 py-2 bg-[#C8A25E] text-[#0F1113] rounded-lg font-medium hover:bg-[#B69150] transition-colors">
+                    Explore Companions
+                  </button>
+               </div>
+             )}
           </motion.div>
         )}
 
         {activeTab === 'messages' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-             <h2 className="text-2xl font-bold text-white mb-6 border-b border-[#2A2D31] pb-4">Messages</h2>
-             <div className="bg-[#17191C] border border-[#2A2D31] rounded-2xl flex overflow-hidden min-h-[500px]">
-                <div className="w-1/3 border-r border-[#2A2D31] bg-[#0F1113]">
-                  <div className="p-4 border-b border-[#2A2D31]">
-                    <div className="bg-[#1E2124] border border-[#2A2D31] rounded-lg px-3 py-2 flex items-center gap-2">
-                       <Search className="w-4 h-4 text-[#8E9299]" />
-                       <input type="text" placeholder="Search chats..." className="bg-transparent border-none outline-none text-sm text-white w-full" />
-                    </div>
-                  </div>
-                  <div className="divide-y divide-[#2A2D31]">
-                     <div className="p-4 bg-[#1E2124] flex gap-3 cursor-pointer">
-                        <div className="relative">
-                           <img src={COMPANIONS[0].imageUrl} className="w-12 h-12 rounded-full object-cover" />
-                           <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-[#1E2124] absolute bottom-0 right-0"></div>
-                        </div>
-                        <div className="flex-1 overflow-hidden">
-                           <div className="flex justify-between items-center mb-1">
-                              <span className="font-semibold text-white text-sm">{COMPANIONS[0].name}</span>
-                              <span className="text-[10px] text-[#C8A25E]">2m ago</span>
-                           </div>
-                           <p className="text-xs text-[#8E9299] truncate">Looking forward to our tour tomorrow!</p>
-                        </div>
-                     </div>
-                  </div>
-                </div>
-                <div className="w-2/3 bg-[#17191C] flex flex-col">
-                   <div className="p-4 border-b border-[#2A2D31] flex items-center gap-3">
-                      <img src={COMPANIONS[0].imageUrl} className="w-10 h-10 rounded-full object-cover" />
-                      <div>
-                         <span className="font-semibold text-white block">{COMPANIONS[0].name}</span>
-                         <span className="text-xs text-green-500">Online</span>
-                      </div>
-                   </div>
-                   <div className="flex-1 p-4 flex flex-col justify-end space-y-4">
-                      
-                      <div className="flex gap-2 w-max max-w-[70%]">
-                        <img src={COMPANIONS[0].imageUrl} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                        <div className="bg-[#1E2124] border border-[#2A2D31] rounded-2xl rounded-tl-none p-3 text-sm text-white">
-                           Hi! Thanks for booking the History & Food tour. Are you okay meeting at the Patan Museum entrance?
-                        </div>
-                      </div>
-
-                   </div>
-                   <div className="p-4 border-t border-[#2A2D31]">
-                      <div className="flex items-center gap-2 bg-[#1E2124] border border-[#2A2D31] rounded-xl p-2">
-                         <input type="text" placeholder="Type a message..." className="bg-transparent text-white outline-none flex-1 px-2 text-sm" />
-                         <button className="p-2 bg-[#C8A25E] text-[#0F1113] rounded-lg hover:bg-[#B69150] transition-colors font-medium text-xs uppercase tracking-wide">
-                            Send
-                         </button>
-                      </div>
-                   </div>
-                </div>
-             </div>
+             <MessagesTab />
           </motion.div>
         )}
 
@@ -456,18 +524,6 @@ export function ClientApp() {
 
 
       </main>
-
-      {/* Booking Modal */}
-      {selectedCompanion && (
-        <BookingModal 
-          companion={selectedCompanion} 
-          onClose={() => setSelectedCompanion(null)} 
-          onMessage={() => {
-             setSelectedCompanion(null);
-             setActiveTab('messages');
-          }}
-        />
-      )}
 
       {/* Story Modal */}
       {viewingStory && (
@@ -519,8 +575,23 @@ export function ClientApp() {
       )}
 
       {/* Safety / Verification Widget Mockup */}
-      {/* <SafetyWidget /> */}
+      <AnimatePresence>
+        {showSOS && (
+          <SafetyWidget isVisible={showSOS} onClose={() => setShowSOS(false)} />
+        )}
+      </AnimatePresence>
       
+      {selectedCompanion && (
+        <CompanionProfileModal 
+          companion={selectedCompanion} 
+          onClose={() => setSelectedCompanion(null)} 
+          onOpenAuth={setAuthMode}
+          onMessage={() => {
+            setSelectedCompanion(null);
+            setActiveTab('messages');
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, MapPin, DollarSign, Upload, ShieldCheck, Briefcase } from 'lucide-react';
+import { useAppContext } from '../context/AppContext';
+import { User as UserType } from '../types';
 
 interface AuthModalProps {
   initialMode: 'login' | 'signup' | 'guide';
@@ -8,11 +10,27 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }) => {
+  const { setCurrentUser } = useAppContext();
   const [mode, setMode] = useState<'login' | 'signup' | 'guide'>(initialMode);
   const [agreed, setAgreed] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Create a mock user based on input
+    const newUser: UserType = {
+      id: `u-${Date.now()}`,
+      name: name || 'Demo User',
+      email: email || 'user@example.com',
+      avatar: `https://ui-avatars.com/api/?name=${name || 'Demo'}&background=random`,
+      role: mode === 'guide' ? 'companion' : 'customer',
+      favorites: []
+    };
+    
+    setCurrentUser(newUser);
+
     if (onSuccess) onSuccess(mode);
     onClose();
   };
@@ -37,7 +55,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
                 <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E9299] font-bold block mb-2">Full Name</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-                  <input type="text" required className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#2A2D31] bg-[#1E2124] text-white focus:ring-1 focus:ring-[#C8A25E] outline-none text-sm" placeholder="John Doe" />
+                  <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#2A2D31] bg-[#1E2124] text-white focus:ring-1 focus:ring-[#C8A25E] outline-none text-sm" placeholder="John Doe" />
                 </div>
               </div>
             )}
@@ -46,7 +64,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
               <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E9299] font-bold block mb-2">Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-                <input type="email" required className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#2A2D31] bg-[#1E2124] text-white focus:ring-1 focus:ring-[#C8A25E] outline-none text-sm" placeholder="hello@example.com" />
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#2A2D31] bg-[#1E2124] text-white focus:ring-1 focus:ring-[#C8A25E] outline-none text-sm" placeholder="hello@example.com" />
               </div>
             </div>
 

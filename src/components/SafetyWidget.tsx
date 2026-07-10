@@ -2,16 +2,25 @@ import React, { useState } from 'react';
 import { MapPin, AlertTriangle, Navigation, CheckCircle2 } from 'lucide-react';
 import * as motion from 'motion/react-client';
 
-export const SafetyWidget: React.FC = () => {
+export const SafetyWidget: React.FC<{ isVisible?: boolean, onClose?: () => void }> = ({ isVisible = true, onClose }) => {
   const [sosActive, setSosActive] = useState(false);
+
+  // If we want to hide it automatically, we can do it in the parent
+  if (!isVisible) return null;
 
   return (
     <motion.div 
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 100, opacity: 0 }}
       className="fixed bottom-6 right-6 z-40"
     >
-      <div className="bg-[#17191C] rounded-2xl shadow-2xl border border-[#2A2D31] p-4 w-72 flex flex-col gap-3">
+      <div className="bg-[#17191C] rounded-2xl shadow-2xl border border-[#2A2D31] p-4 w-72 flex flex-col gap-3 relative">
+        {onClose && (
+           <button onClick={onClose} className="absolute top-2 right-2 text-[#8E9299] hover:text-white p-1">
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+           </button>
+        )}
         <div className="flex items-center gap-3">
            <div className="w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] flex items-center justify-center relative">
              <div className={`absolute inset-0 rounded-full border-2 ${sosActive ? 'border-red-500' : 'border-[#C8A25E]'} animate-ping opacity-20`}></div>
