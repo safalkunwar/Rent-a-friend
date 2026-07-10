@@ -374,8 +374,8 @@ export function ClientApp() {
               </div>
               <div className="flex overflow-x-auto gap-6 hide-scrollbar snap-x snap-mandatory pb-4">
                  {[
-                   { name: 'Michael Chen', city: 'London', review: 'Aarav was an amazing guide! He showed me around all the best local coffee spots that I would have never found on my own. Highly recommended!', activity: 'Local Coffee Chat', avatar: 'https://ui-avatars.com/api/?name=Michael+C&background=random' },
-                   { name: 'Sarah Jenkins', city: 'New York', review: 'I had the best time exploring the street food scene. Very knowledgeable and friendly companion.', activity: 'Street Food Tour', avatar: 'https://ui-avatars.com/api/?name=Sarah+J&background=random' },
+                   { name: 'Michael Chen', city: 'London', review: 'Safal was an amazing guide! He showed me around all the best local coffee spots that I would have never found on my own. Highly recommended!', activity: 'Local Coffee Chat', avatar: 'https://ui-avatars.com/api/?name=Michael+C&background=random' },
+                   { name: 'Sarah Jenkins', city: 'New York', review: 'Safal you are the best,I had the best time exploring the street food scene. Very knowledgeable and friendly companion.', activity: 'Street Food Tour', avatar: 'https://ui-avatars.com/api/?name=Sarah+J&background=random' },
                    { name: 'David Lee', city: 'Toronto', review: 'Great experience! We spent hours discussing photography and captured amazing shots of the city skyline.', activity: 'City Photography', avatar: 'https://ui-avatars.com/api/?name=David+L&background=random' }
                  ].map((testimonial, idx) => (
                    <div key={idx} className="shrink-0 w-80 md:w-[400px] snap-center bg-[#1E2124] border border-[#2A2D31] p-6 rounded-[20px] flex flex-col">
