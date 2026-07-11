@@ -11,7 +11,12 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled rejection:', event.reason);
 });
 
-createRoot(document.getElementById('root')!).render(
+const rootEl = document.getElementById('root');
+if (rootEl) {
+  rootEl.textContent = 'MOUNTING SATHI...';
+}
+
+createRoot(rootEl!).render(
   <StrictMode>
     <App />
   </StrictMode>,
