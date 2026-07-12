@@ -130,42 +130,45 @@ export const MessagesTab: React.FC = () => {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {conversations.length === 0 && (
+          {!currentUser ? (
+            <div className="p-4 text-sm text-[#8E9299] text-center">Log in to view messages.</div>
+          ) : conversations.length === 0 ? (
             <div className="p-4 text-sm text-[#8E9299] text-center">No conversations yet.</div>
-          )}
-          {conversations.map((convo) => {
-            const cId = convo.participantIds.find((id: string) => id !== currentUser?.id);
-            const comp = fetchedCompanions.find(c => c.id === cId);
-            if (!comp) return null;
+          ) : (
+            conversations.map((convo) => {
+              const cId = convo.participantIds.find((id: string) => id !== currentUser?.id);
+              const comp = fetchedCompanions.find(c => c.id === cId);
+              if (!comp) return null;
 
-            return (
-              <div
-                key={convo.id}
-                onClick={() => setSelectedConvo(convo.id)}
-                className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-[#1E2124] transition-colors border-b border-[#2A2D31]/50 ${selectedConvo === convo.id ? 'bg-[#1E2124]' : ''}`}
-              >
-                <div className="relative">
-                  <img src={comp.imageUrl} alt={comp.name} className="w-12 h-12 rounded-full object-cover" />
-                  {(convo.unreadCount || 0) > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C8A25E] text-[#0F1113] text-[10px] font-bold rounded-full flex items-center justify-center">
-                      {convo.unreadCount}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline mb-1">
-                    <h4 className="font-semibold text-white truncate">{comp.name}</h4>
-                    <span className="text-xs text-[#8E9299]">
-                      {convo.lastMessage ? new Date(convo.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                    </span>
+              return (
+                <div
+                  key={convo.id}
+                  onClick={() => setSelectedConvo(convo.id)}
+                  className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-[#1E2124] transition-colors border-b border-[#2A2D31]/50 ${selectedConvo === convo.id ? 'bg-[#1E2124]' : ''}`}
+                >
+                  <div className="relative">
+                    <img src={comp.imageUrl} alt={comp.name} className="w-12 h-12 rounded-full object-cover" />
+                    {(convo.unreadCount || 0) > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C8A25E] text-[#0F1113] text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {convo.unreadCount}
+                      </span>
+                    )}
                   </div>
-                  <p className={`text-sm truncate ${(convo.unreadCount || 0) > 0 ? 'text-white font-medium' : 'text-[#8E9299]'}`}>
-                    {convo.lastMessage?.text || 'Tap to chat'}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline mb-1">
+                      <h4 className="font-semibold text-white truncate">{comp.name}</h4>
+                      <span className="text-xs text-[#8E9299]">
+                        {convo.lastMessage ? new Date(convo.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                    <p className={`text-sm truncate ${(convo.unreadCount || 0) > 0 ? 'text-white font-medium' : 'text-[#8E9299]'}`}>
+                      {convo.lastMessage?.text || 'Tap to chat'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -199,19 +202,26 @@ export const MessagesTab: React.FC = () => {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-            {messages.map((msg) => {
-              const isMe = msg.senderId === currentUser?.id;
-              return (
-                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[70%] rounded-2xl px-4 py-3 ${isMe ? 'bg-[#C8A25E] text-[#0F1113] rounded-br-sm' : 'bg-[#1E2124] text-white rounded-bl-sm border border-[#2A2D31]'}`}>
-                    <p className="text-sm md:text-base">{msg.text}</p>
-                    <span className={`text-[10px] mt-1 block ${isMe ? 'text-[#0F1113]/70' : 'text-[#8E9299]'}`}>
-                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+            {messages.length === 0 ? (
+              <div className="text-center text-[#8E9299] py-8">
+                <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <p>No messages yet. Start the conversation!</p>
+              </div>
+            ) : (
+              messages.map((msg) => {
+                const isMe = msg.senderId === currentUser?.id;
+                return (
+                  <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[70%] rounded-2xl px-4 py-3 ${isMe ? 'bg-[#C8A25E] text-[#0F1113] rounded-br-sm' : 'bg-[#1E2124] text-white rounded-bl-sm border border-[#2A2D31]'}`}>
+                      <p className="text-sm md:text-base">{msg.text}</p>
+                      <span className={`text-[10px] mt-1 block ${isMe ? 'text-[#0F1113]/70' : 'text-[#8E9299]'}`}>
+                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
 
           {/* Input */}

@@ -43,7 +43,10 @@ export const offlineStorage = {
     const tx = db.transaction(store, 'readwrite');
     const objectStore = tx.objectStore(store);
     items.forEach((item) => objectStore.put(item));
-    await tx.done;
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
   },
 
   getCachedCollection: async <T extends { id: string }>(store: StoreName): Promise<T[]> => {
@@ -62,7 +65,10 @@ export const offlineStorage = {
     const tx = db.transaction(store, 'readwrite');
     const objectStore = tx.objectStore(store);
     objectStore.put(item);
-    await tx.done;
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
   },
 
   getCachedItem: async <T extends { id: string }>(store: StoreName, id: string): Promise<T | null> => {
@@ -81,6 +87,9 @@ export const offlineStorage = {
     const tx = db.transaction(store, 'readwrite');
     const objectStore = tx.objectStore(store);
     objectStore.clear();
-    await tx.done;
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
   },
 };

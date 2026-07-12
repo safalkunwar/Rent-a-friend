@@ -146,9 +146,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                           <img src={story.userAvatar} alt={story.userName} className="w-full h-full rounded-full border-2 border-[#17191C] object-cover group-hover:scale-95 transition-transform" />
                        </div>
                        <span className="text-[11px] md:text-xs text-white truncate w-full text-center">{story.userName}</span>
-                    </motion.div>
-                 ))}
-              </div>
+                 </motion.div>
+              ))}
+            </div>
             </div>
 
             {/* Visual Hero / Search block */}
@@ -198,53 +198,65 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             
             {/* Companions Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
-              {filteredCompanions.map((companion, idx) => (
-                <motion.div 
-                  key={companion.id} 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.1, duration: 0.4 }}
-                  className="group bg-[#17191C] rounded-[20px] overflow-hidden shadow-lg shadow-black/20 hover:shadow-2xl hover:shadow-[#C8A25E]/5 transition-all flex flex-col border border-[#2A2D31]/50 relative"
-                >
-                  <div className="relative aspect-[4/4.5] md:aspect-[4/5] overflow-hidden cursor-pointer" onClick={() => setSelectedCompanion(companion)}>
-                    <img 
-                      src={companion.imageUrl} 
-                      alt={companion.name} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] via-[#17191C]/20 to-transparent opacity-80" />
-                    <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm border border-white/10">
-                      <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                      <span className="text-xs font-semibold text-white">{companion.rating}</span>
+              {companionsLoading ? (
+                Array.from({ length: 8 }).map((_, idx) => (
+                  <div key={idx} className="bg-[#17191C] rounded-[20px] overflow-hidden border border-[#2A2D31]/50 animate-pulse">
+                    <div className="aspect-[4/5] bg-[#1E2124]" />
+                    <div className="p-5 space-y-3">
+                      <div className="h-4 bg-[#1E2124] rounded w-3/4" />
+                      <div className="h-3 bg-[#1E2124] rounded w-1/2" />
+                      <div className="h-3 bg-[#1E2124] rounded w-full" />
                     </div>
                   </div>
-
-                  <div className="px-5 pb-5 pt-2 flex-1 flex flex-col relative z-10 -mt-10 pointer-events-none">
-                    <div className="flex justify-between items-end mb-2">
-                      <div className="pointer-events-auto cursor-pointer" onClick={() => setSelectedCompanion(companion)}>
-                        <h3 className="font-bold text-[16px] md:text-lg text-white flex items-center gap-1.5 drop-shadow-md">
-                          {companion.name}, {companion.age}
-                          {companion.isVerified && (
-                            <ShieldCheck className="w-4 h-4 text-[#C8A25E]" title="KYC Verified" />
-                          )}
-                        </h3>
-                        <p className="text-[#8E9299] text-[13px] md:text-sm flex items-center gap-1 mt-0.5 drop-shadow-md">
-                          <MapPin className="w-3.5 h-3.5" />
-                          {companion.location}
-                        </p>
+                ))
+              ) : (
+                filteredCompanions.map((companion, idx) => (
+                  <motion.div 
+                    key={companion.id} 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1, duration: 0.4 }}
+                    className="group bg-[#17191C] rounded-[20px] overflow-hidden shadow-lg shadow-black/20 hover:shadow-2xl hover:shadow-[#C8A25E]/5 transition-all flex flex-col border border-[#2A2D31]/50 relative"
+                  >
+                    <div className="relative aspect-[4/4.5] md:aspect-[4/5] overflow-hidden cursor-pointer" onClick={() => setSelectedCompanion(companion)}>
+                      <img 
+                        src={companion.imageUrl} 
+                        alt={companion.name} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] via-[#17191C]/20 to-transparent opacity-80" />
+                      <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm border border-white/10">
+                        <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                        <span className="text-xs font-semibold text-white">{companion.rating}</span>
                       </div>
                     </div>
 
-                    <p className="text-[13px] md:text-sm text-[#8E9299] line-clamp-2 mt-2 mb-3 flex-1 font-light leading-relaxed pointer-events-auto">
-                      {companion.bio}
-                    </p>
-
-                    <div className="flex flex-col gap-2 mb-4 pointer-events-auto">
-                      <div className="flex items-center gap-1.5 text-[12px] text-[#8E9299]">
-                        <Languages className="w-3.5 h-3.5" />
-                        <span className="truncate">{companion.languages.join(' • ')}</span>
+                    <div className="px-5 pb-5 pt-2 flex-1 flex flex-col relative z-10 -mt-10 pointer-events-none">
+                      <div className="flex justify-between items-end mb-2">
+                        <div className="pointer-events-auto cursor-pointer" onClick={() => setSelectedCompanion(companion)}>
+                          <h3 className="font-bold text-[16px] md:text-lg text-white flex items-center gap-1.5 drop-shadow-md">
+                            {companion.name}, {companion.age}
+                            {companion.isVerified && (
+                              <ShieldCheck className="w-4 h-4 text-[#C8A25E]" title="KYC Verified" />
+                            )}
+                          </h3>
+                          <p className="text-[#8E9299] text-[13px] md:text-sm flex items-center gap-1 mt-0.5 drop-shadow-md">
+                            <MapPin className="w-3.5 h-3.5" />
+                            {companion.location}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
+
+                      <p className="text-[13px] md:text-sm text-[#8E9299] line-clamp-2 mt-2 mb-3 flex-1 font-light leading-relaxed pointer-events-auto">
+                        {companion.bio}
+                      </p>
+
+                      <div className="flex flex-col gap-2 mb-4 pointer-events-auto">
+                        <div className="flex items-center gap-1.5 text-[12px] text-[#8E9299]">
+                          <Languages className="w-3.5 h-3.5" />
+                          <span className="truncate">{companion.languages.join(' • ')}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
                         {companion.interests.slice(0, 3).map(interest => (
                           <span key={interest} className="text-[11px] md:text-xs px-2.5 py-1 bg-[#1E2124]/80 backdrop-blur-sm border border-[#2A2D31] text-[#8E9299] rounded-lg">
                             {interest}
@@ -265,12 +277,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <button 
                         onClick={() => setSelectedCompanion(companion)}
                         className="px-5 py-2.5 bg-[#C8A25E] text-[#0F1113] font-semibold text-sm rounded-[14px] hover:bg-[#B69150] transition-transform hover:scale-105 active:scale-95 shadow-sm"
-                      >
-                        Profile
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
+                       >
+                         Profile
+                       </button>
+                     </div>
+                   </div>
+                 </motion.div>
               ))}
             </div>
 
@@ -309,12 +321,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                             {moment.text}
                          </p>
                       </div>
-                   </div>
-                 ))}
-              </div>
+                </div>
+              ))}
             </div>
+              )}
 
-             {/* Popular Activities */}
+             {/* Community Moments Feed */}
              <div className="mt-16 md:mt-24">
                <div className="flex items-center justify-between mb-8">
                  <h2 className="text-xl md:text-3xl font-bold text-white">Popular Activities</h2>
@@ -322,8 +334,19 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                </div>
                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                   {(activities.length > 0 ? activities : []).map((activity) => (
-                     <div key={activity.id} onClick={() => { setSelectedCategory(activity.title); showToast(`Filtering by ${activity.title}`, 'success'); }} className="group cursor-pointer rounded-[20px] overflow-hidden border border-[#2A2D31] bg-[#17191C] relative hover:border-[#C8A25E]/50 transition-colors">
+                  {activitiesLoading ? (
+                    Array.from({ length: 3 }).map((_, idx) => (
+                      <div key={idx} className="bg-[#17191C] rounded-[20px] overflow-hidden border border-[#2A2D31] animate-pulse">
+                        <div className="h-48 bg-[#1E2124]" />
+                        <div className="p-6 space-y-3">
+                          <div className="h-5 bg-[#1E2124] rounded w-3/4" />
+                          <div className="h-4 bg-[#1E2124] rounded w-1/2" />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    activities.map((activity) => (
+                      <div key={activity.id} onClick={() => { setSelectedCategory(activity.title); showToast(`Filtering by ${activity.title}`, 'success'); }} className="group cursor-pointer rounded-[20px] overflow-hidden border border-[#2A2D31] bg-[#17191C] relative hover:border-[#C8A25E]/50 transition-colors">
                         <div className="h-48 relative overflow-hidden">
                             <img src={activity.imageUrl || activity.image} alt={activity.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                            <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] to-transparent"></div>
@@ -340,9 +363,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                            </div>
                         </div>
                      </div>
-                   ))}
+                    ))
+                  )}
                 </div>
-                {activities.length === 0 && (
+                {!activitiesLoading && activities.length === 0 && (
                   <div className="text-center py-12 bg-[#17191C] border border-[#2A2D31] rounded-3xl">
                     <p className="text-[#8E9299]">No activities available yet. Seed Firestore to see activities.</p>
                   </div>
@@ -415,41 +439,58 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                  <h2 className="text-xl md:text-3xl font-bold text-white">Upcoming Local Events</h2>
                  <button onClick={() => showToast('Event calendar coming soon', 'info')} className="text-sm font-medium text-[#C8A25E] hover:text-[#B69150]">View Calendar</button>
                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   {(events.length > 0 ? events : []).map((event) => {
-                     const dateObj = new Date(event.date);
-                     const month = dateObj.toLocaleString('en-US', { month: 'short' });
-                     const day = dateObj.getDate();
-                     return (
-                     <div key={event.id} className="bg-[#17191C] border border-[#2A2D31] p-5 md:p-6 rounded-[20px] flex gap-4 hover:border-[#C8A25E]/50 transition-colors">
-                        <div className="shrink-0 w-16 h-16 rounded-2xl bg-[#1E2124] border border-[#2A2D31] flex flex-col items-center justify-center">
-                           <span className="text-[#C8A25E] text-xs font-bold uppercase">{month}</span>
-                           <span className="text-white font-bold text-lg leading-none">{day}</span>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {eventsLoading ? (
+                      Array.from({ length: 2 }).map((_, idx) => (
+                        <div key={idx} className="bg-[#17191C] rounded-[20px] overflow-hidden border border-[#2A2D31] animate-pulse p-5 flex gap-4">
+                          <div className="shrink-0 w-16 h-16 rounded-2xl bg-[#1E2124]" />
+                          <div className="flex-1 space-y-3">
+                            <div className="h-5 bg-[#1E2124] rounded w-3/4" />
+                            <div className="h-4 bg-[#1E2124] rounded w-1/2" />
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                           <h3 className="font-bold text-white text-lg truncate">{event.title}</h3>
-                           <p className="text-sm text-[#8E9299] flex items-center gap-1.5 mt-1 truncate">
-                             <MapPin className="w-3.5 h-3.5" /> {event.location}
-                           </p>
-                           <p className="text-xs text-[#8E9299] flex items-center gap-1.5 mt-1 truncate">
-                             <Clock className="w-3.5 h-3.5" /> {event.time}
-                           </p>
-                           <div className="flex items-center justify-between mt-4">
-                              <span className="text-xs text-[#8E9299]">
-                                <span className="text-white font-medium">{typeof event.participants === 'number' ? event.participants : (event.participants as any)?.length || 0}</span> going • <span className="text-[#C8A25E]">{event.spots} spots left</span>
-                              </span>
-                              <button onClick={() => {
-                                if (!currentUser) setAuthMode('login');
-                                else showToast(`Successfully joined ${event.title}!`, 'success');
-                              }} className="px-4 py-1.5 bg-[#1E2124] text-white border border-[#2A2D31] text-xs font-medium rounded-lg hover:bg-[#C8A25E] hover:text-[#0F1113] hover:border-[#C8A25E] transition-colors">
-                                 Join
-                              </button>
+                      ))
+                    ) : (
+                      events.map((event) => {
+                        const dateObj = new Date(event.date);
+                        const month = dateObj.toLocaleString('en-US', { month: 'short' });
+                        const day = dateObj.getDate();
+                        return (
+                        <div key={event.id} className="bg-[#17191C] border border-[#2A2D31] p-5 md:p-6 rounded-[20px] flex gap-4 hover:border-[#C8A25E]/50 transition-colors">
+                           <div className="shrink-0 w-16 h-16 rounded-2xl bg-[#1E2124] border border-[#2A2D31] flex flex-col items-center justify-center">
+                              <span className="text-[#C8A25E] text-xs font-bold uppercase">{month}</span>
+                              <span className="text-white font-bold text-lg leading-none">{day}</span>
+                           </div>
+                           <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-white text-lg truncate">{event.title}</h3>
+                              <p className="text-sm text-[#8E9299] flex items-center gap-1.5 mt-1 truncate">
+                                <MapPin className="w-3.5 h-3.5" /> {event.location}
+                              </p>
+                              <p className="text-xs text-[#8E9299] flex items-center gap-1.5 mt-1 truncate">
+                                <Clock className="w-3.5 h-3.5" /> {event.time}
+                              </p>
+                              <div className="flex items-center justify-between mt-4">
+                                 <span className="text-xs text-[#8E9299]">
+                                   <span className="text-white font-medium">{typeof event.participants === 'number' ? event.participants : (event.participants as any)?.length || 0}</span> going • <span className="text-[#C8A25E]">{event.spots} spots left</span>
+                                 </span>
+                                 <button onClick={() => {
+                                   if (!currentUser) setAuthMode('login');
+                                   else showToast(`Successfully joined ${event.title}!`, 'success`);
+                                 }} className="px-4 py-1.5 bg-[#1E2124] text-white border border-[#2A2D31] text-xs font-medium rounded-lg hover:bg-[#C8A25E] hover:text-[#0F1113] hover:border-[#C8A25E] transition-colors">
+                                    Join
+                                 </button>
+                              </div>
                            </div>
                         </div>
-                     </div>
-                     );
-                   })}
-                </div>
+                        );
+                      })
+                    )}
+                 </div>
+                 {!eventsLoading && events.length === 0 && (
+                   <div className="text-center py-12 bg-[#17191C] border border-[#2A2D31] rounded-3xl">
+                     <p className="text-[#8E9299]">No upcoming events. Seed Firestore to populate events.</p>
+                   </div>
+                 )}
                 {events.length === 0 && (
                   <div className="text-center py-12 bg-[#17191C] border border-[#2A2D31] rounded-3xl">
                     <p className="text-[#8E9299]">No upcoming events. Seed Firestore to see events.</p>
