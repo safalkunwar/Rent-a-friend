@@ -5,11 +5,8 @@ import * as motion from 'motion/react-client';
 import { firestore } from '../services/firestore';
 
 import { AdminOverview } from './AdminOverview';
-import { AdminUsers } from './AdminUsers';
 import { AdminGuides } from './AdminGuides';
-import { AdminCompanions } from './AdminCompanions';
 import { AdminBookings } from './AdminBookings';
-import { AdminContent } from './AdminContent';
 import { AdminSecurity } from './AdminSecurity';
 import { AdminFeedback } from './AdminFeedback';
 import { AdminUsers } from './AdminUsers';
@@ -102,7 +99,7 @@ export function AdminApp() {
                  </div>
               </div>
 
-               {activeTab === 'overview' && <AdminOverview />}
+                {activeTab === 'overview' && <AdminOverview onNavigate={setActiveTab} />}
                {activeTab === 'users' && <AdminUsers />}
                {activeTab === 'guides' && <AdminGuides />}
                {activeTab === 'companions' && <AdminCompanions />}

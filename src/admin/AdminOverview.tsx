@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserCheck, CalendarDays, ShieldAlert } from 'lucide-react';
+import { Users, UserCheck, CalendarDays, ShieldAlert, UserPlus, FileText, AlertTriangle } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { firestore } from '../services/firestore';
 
-export function AdminOverview() {
+interface AdminOverviewProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export function AdminOverview({ onNavigate }: AdminOverviewProps) {
   const [stats, setStats] = useState({ users: 0, guides: 0, pending: 0, bookings: 0 });
   const [chartData, setChartData] = useState<Array<{ name: string; users: number; bookings: number }>>([]);
 
@@ -85,6 +89,33 @@ export function AdminOverview() {
       </div>
 
       <div className="bg-[#111] border border-[#222] rounded-2xl p-5 mb-8 mt-8">
+        <h3 className="font-semibold text-sm mb-4 text-white">Quick Actions</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <button onClick={() => onNavigate?.('guides')} className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#222] rounded-xl hover:border-[#C8A25E]/50 transition-colors text-left">
+            <UserPlus className="w-5 h-5 text-[#C8A25E]" />
+            <div>
+              <p className="text-sm font-medium text-white">Review Guides</p>
+              <p className="text-xs text-gray-400">{stats.pending} pending applications</p>
+            </div>
+          </button>
+          <button onClick={() => onNavigate?.('bookings')} className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#222] rounded-xl hover:border-[#C8A25E]/50 transition-colors text-left">
+            <CalendarDays className="w-5 h-5 text-[#C8A25E]" />
+            <div>
+              <p className="text-sm font-medium text-white">Manage Bookings</p>
+              <p className="text-xs text-gray-400">{stats.bookings} total bookings</p>
+            </div>
+          </button>
+          <button onClick={() => onNavigate?.('security')} className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#222] rounded-xl hover:border-red-500/50 transition-colors text-left">
+            <AlertTriangle className="w-5 h-5 text-red-500" />
+            <div>
+              <p className="text-sm font-medium text-white">Security Center</p>
+              <p className="text-xs text-gray-400">Review SOS & alerts</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-[#111] border border-[#222] rounded-2xl p-5">
         <h3 className="font-semibold text-sm mb-6 text-white">Platform Growth Overview</h3>
         <div className="h-64 w-full text-xs">
           {chartData.length > 0 ? (

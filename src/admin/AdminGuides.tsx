@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, CheckCircle2, XCircle, Search, FileText } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, XCircle, Search, FileText, StickyNote } from 'lucide-react';
 import { firestore } from '../services/firestore';
 import { Companion } from '../types';
+import { auditService } from '../services/audit';
 
 interface GuideApplication {
   id: string;
@@ -12,12 +13,14 @@ interface GuideApplication {
   status: 'pending' | 'approved' | 'rejected';
   idUrl?: string;
   companionId?: string;
+  adminNotes?: string;
 }
 
 export function AdminGuides() {
   const [selectedGuide, setSelectedGuide] = useState<GuideApplication | null>(null);
   const [guides, setGuides] = useState<Companion[]>([]);
   const [applications, setApplications] = useState<GuideApplication[]>([]);
+  const [adminNote, setAdminNote] = useState('');
 
   useEffect(() => {
     const unsubCompanions = firestore.subscribe<Companion>('companions', {}, (items) => {
@@ -38,13 +41,31 @@ export function AdminGuides() {
     if (app.companionId) {
       await firestore.updateDocument(`companions/${app.companionId}`, { isVerified: true, updatedAt: new Date().toISOString() });
     }
-    await firestore.updateDocument(`guideApplications/${app.id}`, { status: 'approved' });
+    await firestore.updateDocument(`guideApplications/${app.id}`, { status: 'approved', adminNotes: adminNote || undefined });
+    await auditService.log({
+      action: 'approve_guide',
+      actorId: 'admin',
+      actorName: 'Admin',
+      targetType: 'guideApplication',
+      targetId: app.id,
+      details: { companionId: app.companionId, note: adminNote },
+    });
     setSelectedGuide(null);
+    setAdminNote('');
   };
 
   const handleReject = async (app: GuideApplication) => {
-    await firestore.updateDocument(`guideApplications/${app.id}`, { status: 'rejected' });
+    await firestore.updateDocument(`guideApplications/${app.id}`, { status: 'rejected', adminNotes: adminNote || undefined });
+    await auditService.log({
+      action: 'reject_guide',
+      actorId: 'admin',
+      actorName: 'Admin',
+      targetType: 'guideApplication',
+      targetId: app.id,
+      details: { note: adminNote },
+    });
     setSelectedGuide(null);
+    setAdminNote('');
   };
 
   return (
@@ -142,6 +163,17 @@ export function AdminGuides() {
                   </div>
                   <button className="text-xs text-[#C8A25E] font-medium border border-[#C8A25E]/50 px-3 py-1.5 rounded-lg hover:bg-[#C8A25E]/10">View</button>
                 </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Admin Notes</h4>
+                <textarea
+                  value={adminNote}
+                  onChange={(e) => setAdminNote(e.target.value)}
+                  placeholder="Add notes about this application..."
+                  className="w-full bg-[#1a1a1a] border border-[#222] rounded-xl p-3 text-sm text-white outline-none focus:border-[#C8A25E] resize-none"
+                  rows={3}
+                />
               </div>
 
               <div className="flex gap-4 pt-4">
