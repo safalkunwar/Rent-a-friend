@@ -219,3 +219,21 @@ Changed
 Fixed
 
 - None
+
+## v0.11.0 - 2026-07-12
+
+Added
+
+- Production-grade Firestore Security Rules with RBAC model.
+- 40+ composite indexes for optimized Firestore queries.
+- Core Cloud Functions for Auth, Bookings, Messaging, and Ratings in `functions/src/index.ts`.
+- Comprehensive Firebase Implementation Report (`FIREBASE_IMPLEMENTATION_REPORT.md`).
+
+Changed
+
+- Hardened Firebase initialization in `src/firebase.ts` with strict environment variable validation.
+- Linked local environment to `hamrosathi1` project.
+
+Fixed
+
+- Resolved `auth/configuration-not-found` error path in Firebase initialization.
