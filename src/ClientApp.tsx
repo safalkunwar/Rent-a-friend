@@ -197,8 +197,13 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             </div>
             
             {/* Companions Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
-              {filteredCompanions.map((companion, idx) => (
+            {companionsLoading ? (
+              <div className="text-center py-20 text-[#8E9299]">
+                Loading companions...
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
+                {filteredCompanions.map((companion, idx) => (
                 <motion.div 
                   key={companion.id} 
                   initial={{ opacity: 0, y: 20 }}
@@ -273,6 +278,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 </motion.div>
               ))}
             </div>
+            )}
 
             {filteredCompanions.length === 0 && (
               <div className="text-center py-20 bg-[#17191C] border border-[#2A2D31] rounded-3xl">
