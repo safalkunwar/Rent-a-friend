@@ -61,37 +61,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
           favorites: [],
         });
         showToast('Account created successfully!', 'success');
-      } else if (mode === 'guide') {
+       } else if (mode === 'guide') {
         const authUser = await authService.signup(email, password, name);
         const companionId = `companion-${authUser.uid}`;
         await firestore.setDocument(`users/${authUser.uid}`, {
           name,
           email,
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-          role: 'companion',
+          role: 'customer',
           favorites: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
-        await firestore.setDocument(`companions/${companionId}`, {
-          userId: authUser.uid,
+        await firestore.setDocument(`guideApplications/${companionId}`, {
+          id: companionId,
           name,
+          email,
           location,
           hourlyRate: Number(rate) || 0,
           bio: '',
-          rating: 0,
-          reviewsCount: 0,
-          isVerified: false,
-          verificationStatus: 'pending',
           gender: '',
           languages: [],
           interests: [],
-          images: [],
-          availableDays: [],
-          responseRate: 0,
-          responseTime: '',
-          completedBookings: 0,
-          trustScore: 0,
+          status: 'pending',
+          companionId,
+          appliedDate: new Date().toISOString(),
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
@@ -100,10 +94,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
           name,
           email,
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-          role: 'companion',
+          role: 'customer',
           favorites: [],
         });
-        showToast('Guide application submitted!', 'success');
+        showToast('Guide application submitted! An admin will review your profile shortly.', 'success');
       }
 
       if (onSuccess) onSuccess(mode);

@@ -1,7 +1,7 @@
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { onUserCreated, onUserDeleted } from "firebase-functions/v2/auth";
+import { user } from "firebase-functions/v1/auth";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 
@@ -11,14 +11,10 @@ setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 
 // --- Authentication & User Management ---
 
-export const onUserCreate = onUserCreated(async (event) => {
-  const user = event.data;
-  if (!user) return;
-
+export const onUserCreate = user().onCreate(async (user) => {
   const { uid, email, displayName, photoURL } = user;
 
   try {
-    // 1. Create Firestore user profile
     await admin.firestore().collection("users").doc(uid).set({
       id: uid,
       email: email || "",
@@ -31,7 +27,6 @@ export const onUserCreate = onUserCreated(async (event) => {
       isVerified: false
     });
 
-    // 2. Set custom claim
     await admin.auth().setCustomUserClaims(uid, { role: "customer" });
     logger.info(`User profile and claims created for ${uid}`);
   } catch (error) {
@@ -39,10 +34,7 @@ export const onUserCreate = onUserCreated(async (event) => {
   }
 });
 
-export const onUserDelete = onUserDeleted(async (event) => {
-  const user = event.data;
-  if (!user) return;
-
+export const onUserDelete = user().onDelete(async (user) => {
   try {
     await admin.firestore().collection("users").doc(user.uid).delete();
     logger.info(`User profile deleted for ${user.uid}`);

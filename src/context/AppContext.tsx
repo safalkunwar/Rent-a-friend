@@ -88,6 +88,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, []);
 
+  useEffect(() => {
+    if (!currentUser) return;
+    const unsubBookings = firestore.subscribe<Booking>('bookings', { where: [{ field: 'userId', operator: '==', value: currentUser.id }] }, (items) => {
+      setBookings(items);
+    });
+    const unsubNotifications = firestore.subscribe<Notification>('notifications', { where: [{ field: 'userId', operator: '==', value: currentUser.id }], orderByField: 'timestamp', orderDirection: 'desc' }, (items) => {
+      setNotifications(items);
+    });
+    return () => {
+      unsubBookings();
+      unsubNotifications();
+    };
+  }, [currentUser]);
+
   const toggleFavorite = useCallback((companionId: string) => {
     setFavorites(prev => {
       const next = prev.includes(companionId) ? prev.filter(id => id !== companionId) : [...prev, companionId];

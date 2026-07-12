@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Calendar, Clock, MapPin, Users, Check, Map as MapIcon, Navigation, CreditCard } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, Users, Check, CreditCard } from 'lucide-react';
 import { Companion, Booking } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 import { MapPreview } from '../maps/MapPreview';
@@ -27,9 +27,9 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
   const [paymentMethod, setPaymentMethod] = useState<PaymentProvider | ''>('');
   const [processing, setProcessing] = useState(false);
 
-  const calculateTotal = () => companion.hourlyRate * duration;
-  const serviceFee = calculateTotal() * 0.1;
-  const grandTotal = calculateTotal() + serviceFee;
+  const baseTotal = companion.hourlyRate * duration * participants;
+  const serviceFee = baseTotal * 0.1;
+  const grandTotal = baseTotal + serviceFee;
 
   const handleConfirm = async () => {
     const bookingId = `bk-${Date.now()}`;
@@ -114,46 +114,43 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                 <h3 className="text-lg font-bold text-white mb-6">When do you want to meet?</h3>
                 
                  <div className="space-y-5">
-                   <div>
-                     <label htmlFor="booking-date" className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Calendar className="w-4 h-4" /> Date</label>
-                     <input id="booking-date" type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" />
-                   </div>
+                    <div>
+                      <label htmlFor="booking-date" className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Calendar className="w-4 h-4" /> Date</label>
+                      <input id="booking-date" type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" />
+                    </div>
 
-                   <div>
-                     <label htmlFor="booking-time" className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Clock className="w-4 h-4" /> Time</label>
-                     <input id="booking-time" type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" />
-                   </div>
+                    <div>
+                      <label htmlFor="booking-time" className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Clock className="w-4 h-4" /> Time</label>
+                      <input id="booking-time" type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" />
+                    </div>
 
+                    <div>
+                      <label className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Clock className="w-4 h-4" /> Duration</label>
+                      <div className="flex items-center gap-4">
+                        <button onClick={() => setDuration(Math.max(1, duration - 1))} className="w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center" aria-label="Decrease duration">-</button>
+                        <span className="text-xl font-bold text-white w-8 text-center">{duration} hrs</span>
+                        <button onClick={() => setDuration(duration + 1)} className="w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center" aria-label="Increase duration">+</button>
+                      </div>
+                    </div>
+                   
                    <div>
-                     <label className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Clock className="w-4 h-4" /> Duration</label>
+                     <label className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Users className="w-4 h-4" /> Participants</label>
                      <div className="flex items-center gap-4">
-                       <button onClick={() => setDuration(Math.max(1, duration - 1))} className="w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center" aria-label="Decrease duration">-</button>
-                       <span className="text-xl font-bold text-white w-8 text-center">{duration} hrs</span>
-                       <button onClick={() => setDuration(duration + 1)} className="w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center" aria-label="Increase duration">+</button>
+                       <button onClick={() => setParticipants(Math.max(1, participants - 1))} className="w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center">-</button>
+                       <span className="text-xl font-bold text-white w-8 text-center">{participants}</span>
+                       <button onClick={() => setParticipants(Math.min(10, participants + 1))} className="w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center">+</button>
                      </div>
+                     <p className="text-xs text-[#8E9299] mt-1">NPR {companion.hourlyRate} x {duration} hrs x {participants} people = NPR {(companion.hourlyRate * duration * participants).toLocaleString()}</p>
                    </div>
-                  
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Clock className="w-4 h-4" /> Time</label>
-                      <input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-[#8E9299] mb-2 text-right">Duration</label>
-                      <select value={duration} onChange={e => setDuration(Number(e.target.value))} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E] appearance-none">
-                        {[1,2,3,4,5,6].map(h => <option key={h} value={h}>{h} {h === 1 ? 'hour' : 'hours'}</option>)}
-                      </select>
-                    </div>
-                  </div>
 
-                  <button 
-                    disabled={!date || !time}
-                    onClick={() => setStep(2)}
-                    className="w-full py-4 mt-4 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Continue
-                  </button>
-                </div>
+                   <button 
+                     disabled={!date || !time}
+                     onClick={() => setStep(2)}
+                     className="w-full py-4 mt-4 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                   >
+                     Continue
+                   </button>
+                 </div>
               </motion.div>
             )}
 
@@ -189,50 +186,18 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                      <label htmlFor="booking-requests" className="block text-sm font-medium text-[#8E9299] mb-2">Special Requests (Optional)</label>
                      <textarea id="booking-requests" value={requests} onChange={e => setRequests(e.target.value)} placeholder="Any specific activities or preferences?" className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E] h-24 resize-none" />
                    </div>
-
-                   {location && (
-                     <div className="mt-3">
-                       <MapPreview
-                         center={MAP_CENTER}
-                         zoom={13}
-                         height="200px"
-                         markers={[
-                           {
-                             id: 'meeting-point',
-                             position: MAP_CENTER,
-                             title: location,
-                             subtitle: 'Proposed meeting point',
-                           },
-                         ]}
-                       />
-                     </div>
-                   )}
-
-                  <div>
-                    <label className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Users className="w-4 h-4" /> Participants</label>
-                    <div className="flex items-center gap-4">
-                      <button onClick={() => setParticipants(Math.max(1, participants - 1))} className="w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center">-</button>
-                      <span className="text-xl font-bold text-white w-8 text-center">{participants}</span>
-                      <button onClick={() => setParticipants(participants + 1)} className="w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center">+</button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-[#8E9299] mb-2">Special Requests (Optional)</label>
-                    <textarea value={requests} onChange={e => setRequests(e.target.value)} placeholder="Any specific activities or preferences?" className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E] h-24 resize-none" />
-                  </div>
-                  
-                  <div className="flex gap-3 mt-4">
-                    <button onClick={() => setStep(1)} className="px-6 py-4 bg-[#1E2124] text-white rounded-xl font-bold hover:bg-[#2A2D31] transition-colors">Back</button>
-                    <button 
-                      disabled={!location}
-                      onClick={() => setStep(3)}
-                      className="flex-1 py-4 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Review Booking
-                    </button>
-                  </div>
-                </div>
+                   
+                   <div className="flex gap-3 mt-4">
+                     <button onClick={() => setStep(1)} className="px-6 py-4 bg-[#1E2124] text-white rounded-xl font-bold hover:bg-[#2A2D31] transition-colors">Back</button>
+                     <button 
+                       disabled={!location}
+                       onClick={() => setStep(3)}
+                       className="flex-1 py-4 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                     >
+                       Review Booking
+                     </button>
+                   </div>
+                 </div>
               </motion.div>
             )}
 
@@ -246,8 +211,8 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                     <span className="text-white font-medium">{date} at {time}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-[#8E9299]">Duration</span>
-                    <span className="text-white font-medium">{duration} hours</span>
+                    <span className="text-[#8E9299]">Duration & Participants</span>
+                    <span className="text-white font-medium">{duration} hour(s) x {participants} people</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-[#8E9299]">Meeting Point</span>
@@ -256,8 +221,8 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                   
                   <div className="border-t border-[#2A2D31] pt-4 mt-4 space-y-3">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-[#8E9299]">NPR {companion.hourlyRate} x {duration} hrs</span>
-                      <span className="text-white">NPR {calculateTotal().toFixed(2)}</span>
+                      <span className="text-[#8E9299]">NPR {companion.hourlyRate} x {duration} hrs x {participants}</span>
+                      <span className="text-white">NPR {baseTotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-[#8E9299]">Service Fee (10%)</span>
