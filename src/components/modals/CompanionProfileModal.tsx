@@ -164,11 +164,15 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                   <div className="space-y-4 mb-8">
                     <div className="flex items-center gap-3 text-sm text-[#E0E0E0]">
                       <CheckCircle2 className="w-5 h-5 text-[#C8A25E]" />
-                      <span>Usually responds in 1 hour</span>
+                      <span>Usually responds in {companion.responseTime || '1 hour'}</span>
                     </div>
                     <div className="flex items-center gap-3 text-sm text-[#E0E0E0]">
                       <Calendar className="w-5 h-5 text-[#C8A25E]" />
-                      <span>Available this weekend</span>
+                      <span>
+                        {companion.availableDays && companion.availableDays.length > 0
+                          ? `Available: ${companion.availableDays.join(', ')}`
+                          : 'Availability not specified'}
+                      </span>
                     </div>
                   </div>
 

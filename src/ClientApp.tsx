@@ -26,7 +26,7 @@ interface ClientAppProps {
 }
 
 export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
-  const { bookings, currentUser } = useAppContext();
+  const { bookings, currentUser, updateBookingStatus } = useAppContext();
   const { showToast } = useToast();
   const { companions: fetchedCompanions, loading: companionsLoading } = useCompanions();
   const { stories: fetchedStories, loading: storiesLoading } = useStories();
@@ -321,31 +321,32 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                  <button onClick={() => showToast('Activities directory coming soon', 'info')} className="text-sm font-medium text-[#C8A25E] hover:text-[#B69150]">Explore All</button>
                </div>
                
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {(activities.length > 0 ? activities : [
-                     { title: 'Local Coffee Chat', image: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?q=80&w=800&auto=format&fit=crop', duration: '1-2 hours', avgPrice: 1500, companionCount: 124 },
-                     { title: 'Street Food Tour', image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=800&auto=format&fit=crop', duration: '2-3 hours', avgPrice: 2000, companionCount: 85 },
-                     { title: 'City Photography', image: 'https://images.unsplash.com/photo-1516862523118-a3724eb136d7?q=80&w=800&auto=format&fit=crop', duration: '2-4 hours', avgPrice: 2500, companionCount: 62 }
-                  ]).map((activity, idx) => (
-                    <div key={activity.id || idx} onClick={() => { setSelectedCategory(activity.title); showToast(`Filtering by ${activity.title}`, 'success'); }} className="group cursor-pointer rounded-[20px] overflow-hidden border border-[#2A2D31] bg-[#17191C] relative hover:border-[#C8A25E]/50 transition-colors">
-                       <div className="h-48 relative overflow-hidden">
-                           <img src={activity.imageUrl || activity.image} alt={activity.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] to-transparent"></div>
-                       </div>
-                       <div className="p-6 relative z-10 -mt-12">
-                          <h3 className="text-xl font-bold text-white mb-2 drop-shadow-md">{activity.title}</h3>
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-[#8E9299]">
-                             <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {activity.duration}</span>
-                             <span className="flex items-center gap-1.5"><span className="text-[#C8A25E]">Avg.</span> NPR {activity.avgPrice}/hr</span>
-                          </div>
-                          <div className="mt-4 pt-4 border-t border-[#2A2D31] flex items-center justify-between text-sm">
-                             <span className="text-[#8E9299]">{activity.companionCount} companions</span>
-                             <span className="text-[#C8A25E] font-medium group-hover:translate-x-1 transition-transform inline-block">Explore →</span>
-                          </div>
-                       </div>
-                    </div>
-                  ))}
-               </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                   {(activities.length > 0 ? activities : []).map((activity) => (
+                     <div key={activity.id} onClick={() => { setSelectedCategory(activity.title); showToast(`Filtering by ${activity.title}`, 'success'); }} className="group cursor-pointer rounded-[20px] overflow-hidden border border-[#2A2D31] bg-[#17191C] relative hover:border-[#C8A25E]/50 transition-colors">
+                        <div className="h-48 relative overflow-hidden">
+                            <img src={activity.imageUrl || activity.image} alt={activity.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                           <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] to-transparent"></div>
+                        </div>
+                        <div className="p-6 relative z-10 -mt-12">
+                           <h3 className="text-xl font-bold text-white mb-2 drop-shadow-md">{activity.title}</h3>
+                           <div className="flex flex-wrap items-center gap-4 text-sm text-[#8E9299]">
+                              <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {activity.duration}</span>
+                              <span className="flex items-center gap-1.5"><span className="text-[#C8A25E]">Avg.</span> NPR {activity.avgPrice}/hr</span>
+                           </div>
+                           <div className="mt-4 pt-4 border-t border-[#2A2D31] flex items-center justify-between text-sm">
+                              <span className="text-[#8E9299]">{activity.companionCount} companions</span>
+                              <span className="text-[#C8A25E] font-medium group-hover:translate-x-1 transition-transform inline-block">Explore →</span>
+                           </div>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+                {activities.length === 0 && (
+                  <div className="text-center py-12 bg-[#17191C] border border-[#2A2D31] rounded-3xl">
+                    <p className="text-[#8E9299]">No activities available yet. Seed Firestore to see activities.</p>
+                  </div>
+                )}
              </div>
 
             {/* Trust & Safety */}
@@ -414,46 +415,46 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                  <h2 className="text-xl md:text-3xl font-bold text-white">Upcoming Local Events</h2>
                  <button onClick={() => showToast('Event calendar coming soon', 'info')} className="text-sm font-medium text-[#C8A25E] hover:text-[#B69150]">View Calendar</button>
                </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {(events.length > 0 ? events : [
-                    { date: '2026-07-24', time: '10:00 AM', title: 'Weekend Hiking Group', location: 'National Park Trailhead', spots: 3, participants: 8 },
-                    { date: '2026-07-25', time: '02:00 PM', title: 'Art Exhibition & Coffee', location: 'Downtown Gallery', spots: 2, participants: 5 },
-                    { date: '2026-07-26', time: '06:30 PM', title: 'Language Exchange Meetup', location: 'Central Cafe', spots: 5, participants: 15 },
-                    { date: '2026-07-28', time: '09:00 AM', title: 'Photography Walk', location: 'Historic District', spots: 1, participants: 6 }
-                  ]).map((event, idx) => {
-                    const dateObj = new Date(event.date);
-                    const month = dateObj.toLocaleString('en-US', { month: 'short' });
-                    const day = dateObj.getDate();
-                    return (
-                    <div key={event.id || idx} className="bg-[#17191C] border border-[#2A2D31] p-5 md:p-6 rounded-[20px] flex gap-4 hover:border-[#C8A25E]/50 transition-colors">
-                       <div className="shrink-0 w-16 h-16 rounded-2xl bg-[#1E2124] border border-[#2A2D31] flex flex-col items-center justify-center">
-                          <span className="text-[#C8A25E] text-xs font-bold uppercase">{month}</span>
-                          <span className="text-white font-bold text-lg leading-none">{day}</span>
-                       </div>
-                       <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-white text-lg truncate">{event.title}</h3>
-                          <p className="text-sm text-[#8E9299] flex items-center gap-1.5 mt-1 truncate">
-                            <MapPin className="w-3.5 h-3.5" /> {event.location}
-                          </p>
-                          <p className="text-xs text-[#8E9299] flex items-center gap-1.5 mt-1 truncate">
-                            <Clock className="w-3.5 h-3.5" /> {event.time}
-                          </p>
-                          <div className="flex items-center justify-between mt-4">
-                             <span className="text-xs text-[#8E9299]">
-                               <span className="text-white font-medium">{event.participants?.length || event.participants || 0}</span> going • <span className="text-[#C8A25E]">{event.spots} spots left</span>
-                             </span>
-                             <button onClick={() => {
-                               if (!currentUser) setAuthMode('login');
-                               else showToast(`Successfully joined ${event.title}!`, 'success');
-                             }} className="px-4 py-1.5 bg-[#1E2124] text-white border border-[#2A2D31] text-xs font-medium rounded-lg hover:bg-[#C8A25E] hover:text-[#0F1113] hover:border-[#C8A25E] transition-colors">
-                                Join
-                             </button>
-                          </div>
-                       </div>
-                    </div>
-                    );
-                  })}
-               </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   {(events.length > 0 ? events : []).map((event) => {
+                     const dateObj = new Date(event.date);
+                     const month = dateObj.toLocaleString('en-US', { month: 'short' });
+                     const day = dateObj.getDate();
+                     return (
+                     <div key={event.id} className="bg-[#17191C] border border-[#2A2D31] p-5 md:p-6 rounded-[20px] flex gap-4 hover:border-[#C8A25E]/50 transition-colors">
+                        <div className="shrink-0 w-16 h-16 rounded-2xl bg-[#1E2124] border border-[#2A2D31] flex flex-col items-center justify-center">
+                           <span className="text-[#C8A25E] text-xs font-bold uppercase">{month}</span>
+                           <span className="text-white font-bold text-lg leading-none">{day}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                           <h3 className="font-bold text-white text-lg truncate">{event.title}</h3>
+                           <p className="text-sm text-[#8E9299] flex items-center gap-1.5 mt-1 truncate">
+                             <MapPin className="w-3.5 h-3.5" /> {event.location}
+                           </p>
+                           <p className="text-xs text-[#8E9299] flex items-center gap-1.5 mt-1 truncate">
+                             <Clock className="w-3.5 h-3.5" /> {event.time}
+                           </p>
+                           <div className="flex items-center justify-between mt-4">
+                              <span className="text-xs text-[#8E9299]">
+                                <span className="text-white font-medium">{typeof event.participants === 'number' ? event.participants : (event.participants as any)?.length || 0}</span> going • <span className="text-[#C8A25E]">{event.spots} spots left</span>
+                              </span>
+                              <button onClick={() => {
+                                if (!currentUser) setAuthMode('login');
+                                else showToast(`Successfully joined ${event.title}!`, 'success');
+                              }} className="px-4 py-1.5 bg-[#1E2124] text-white border border-[#2A2D31] text-xs font-medium rounded-lg hover:bg-[#C8A25E] hover:text-[#0F1113] hover:border-[#C8A25E] transition-colors">
+                                 Join
+                              </button>
+                           </div>
+                        </div>
+                     </div>
+                     );
+                   })}
+                </div>
+                {events.length === 0 && (
+                  <div className="text-center py-12 bg-[#17191C] border border-[#2A2D31] rounded-3xl">
+                    <p className="text-[#8E9299]">No upcoming events. Seed Firestore to see events.</p>
+                  </div>
+                )}
              </div>
 
           </motion.div>
@@ -472,44 +473,49 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
         )}
 
         {activeTab === 'bookings' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-             <h2 className="text-2xl font-bold text-white mb-6 border-b border-[#2A2D31] pb-4">My Bookings</h2>
-             {bookings.filter(b => b.userId === currentUser?.id).length > 0 ? (
-               <div className="grid gap-4">
-                 {bookings.filter(b => b.userId === currentUser?.id).map(booking => {
-                   const companion = companions.find(c => c.id === booking.companionId);
-                   return (
-                     <div key={booking.id} className="bg-[#17191C] border border-[#2A2D31] rounded-2xl p-6 flex items-center justify-between">
-                        <div>
-                           <h3 className="font-bold text-white mb-1">Booking with {companion?.name}</h3>
-                           <p className="text-sm text-[#8E9299]">Date: {booking.date} at {booking.time}</p>
-                           <p className="text-sm text-[#8E9299]">Duration: {booking.duration} hours</p>
-                        </div>
-                        <div className="text-right">
-                            <span className="block font-bold text-[#C8A25E]">NPR {booking.totalPrice}</span>
-                           <span className={`text-xs px-2 py-1 rounded-full border ${booking.status === 'confirmed' ? 'bg-green-500/10 border-green-500/50 text-green-500' : 'bg-yellow-500/10 border-yellow-500/50 text-yellow-500'}`}>
-                             {booking.status}
-                           </span>
-                        </div>
-                     </div>
-                   );
-                 })}
-               </div>
-             ) : (
-               <div className="bg-[#17191C] border border-[#2A2D31] p-8 rounded-2xl flex flex-col items-center text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-[#1E2124] border border-[#2A2D31] flex items-center justify-center">
-                     <Star className="w-8 h-8 text-[#8E9299]" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">No active bookings</h3>
-                    <p className="text-[#8E9299] mt-2">You don't have any upcoming experiences scheduled.</p>
-                  </div>
-                  <button onClick={() => setActiveTab('explore')} className="mt-4 px-6 py-2 bg-[#C8A25E] text-[#0F1113] rounded-lg font-medium hover:bg-[#B69150] transition-colors">
-                    Explore Companions
-                  </button>
-               </div>
-             )}
-          </motion.div>
+           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+              <h2 className="text-2xl font-bold text-white mb-6 border-b border-[#2A2D31] pb-4">My Bookings</h2>
+              {bookings.filter(b => b.userId === currentUser?.id).length > 0 ? (
+                <div className="grid gap-4">
+                  {bookings.filter(b => b.userId === currentUser?.id).map(booking => {
+                    const companion = companions.find(c => c.id === booking.companionId);
+                    const isCancellable = booking.status === 'pending' || booking.status === 'confirmed';
+                    return (
+                      <div key={booking.id} className="bg-[#17191C] border border-[#2A2D31] rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                         <div>
+                            <h3 className="font-bold text-white mb-1">Booking with {companion?.name || 'Companion'}</h3>
+                            <p className="text-sm text-[#8E9299]">Date: {booking.date} at {booking.time}</p>
+                            <p className="text-sm text-[#8E9299]">Duration: {booking.duration} hours {booking.participants > 1 ? `x ${booking.participants} people` : ''}</p>
+                            {booking.meetingPoint && <p className="text-sm text-[#8E9299]">Meeting: {booking.meetingPoint}</p>}
+                         </div>
+                         <div className="text-right flex flex-col items-end gap-2">
+                             <span className="block font-bold text-[#C8A25E]">NPR {booking.totalPrice.toFixed(2)}</span>
+                            <span className={`text-xs px-2 py-1 rounded-full border ${booking.status === 'confirmed' ? 'bg-green-500/10 border-green-500/50 text-green-500' : booking.status === 'cancelled' ? 'bg-red-500/10 border-red-500/50 text-red-500' : 'bg-yellow-500/10 border-yellow-500/50 text-yellow-500'}`}>
+                              {booking.status}
+                            </span>
+                            {isCancellable && (
+                              <button onClick={() => { updateBookingStatus(booking.id, 'cancelled'); showToast('Booking cancelled', 'info'); }} className="text-xs text-red-400 hover:text-red-300 transition-colors">Cancel Booking</button>
+                            )}
+                         </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="bg-[#17191C] border border-[#2A2D31] p-8 rounded-2xl flex flex-col items-center text-center space-y-4">
+                   <div className="w-16 h-16 rounded-full bg-[#1E2124] border border-[#2A2D31] flex items-center justify-center">
+                      <Star className="w-8 h-8 text-[#8E9299]" />
+                   </div>
+                   <div>
+                     <h3 className="text-xl font-bold text-white">No active bookings</h3>
+                     <p className="text-[#8E9299] mt-2">You don't have any upcoming experiences scheduled.</p>
+                   </div>
+                   <button onClick={() => setActiveTab('explore')} className="mt-4 px-6 py-2 bg-[#C8A25E] text-[#0F1113] rounded-lg font-medium hover:bg-[#B69150] transition-colors">
+                     Explore Companions
+                   </button>
+                </div>
+              )}
+           </motion.div>
         )}
 
         {activeTab === 'messages' && (
