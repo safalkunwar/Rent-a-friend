@@ -134,6 +134,14 @@ describe('notifications service', () => {
     const cleanup = notificationService.onForegroundMessage(() => {});
     expect(cleanup).toBeUndefined();
   });
+
+  it('showLocalNotification does nothing when Notification is unavailable', async () => {
+    vi.doMock('../firebase', () => ({ messaging: null }));
+    // @ts-expect-error simulate missing Notification
+    delete globalThis.Notification;
+    const { notificationService } = await import('../services/notifications');
+    expect(() => notificationService.showLocalNotification({ title: 'Test', body: 'Body' })).not.toThrow();
+  });
 });
 
 describe('storage service', () => {
