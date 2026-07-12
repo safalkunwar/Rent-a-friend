@@ -19,7 +19,12 @@ let db: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
 let messaging: Messaging | null = null;
 
-const hasValidConfig = import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_PROJECT_ID;
+const hasValidConfig = Boolean(
+  import.meta.env.VITE_FIREBASE_API_KEY &&
+  import.meta.env.VITE_FIREBASE_PROJECT_ID &&
+  import.meta.env.VITE_FIREBASE_AUTH_DOMAIN &&
+  import.meta.env.VITE_FIREBASE_APP_ID
+);
 
 console.log('[SATHI] Firebase config loaded:', {
   hasValidConfig,

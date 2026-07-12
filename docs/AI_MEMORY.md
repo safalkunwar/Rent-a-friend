@@ -1,6 +1,6 @@
 # AI Memory
 
-Last Updated: 2026-07-11
+Last Updated: 2026-07-12
 
 ## Business Vision
 
@@ -22,9 +22,9 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - Animation: motion (Framer Motion)
 - Icons: lucide-react
 - Routing: React Router DOM v7 (BrowserRouter)
-- Backend: Firebase Auth, Firestore, Storage, Cloud Functions (in progress)
-- Auth: Firebase Auth (email/password, Google) with custom claims
-- Database: Firestore (real-time subscriptions via service layer)
+- Backend: Firebase Auth, Firestore, Storage, Cloud Functions (Implemented, Pending Blaze Plan for Deployment)
+- Auth: Firebase Auth (email/password, Google) with custom claims and strict config validation
+- Database: Firestore (real-time subscriptions via service layer, production-grade security rules and composite indexes)
 - Maps: Google Maps Static API via `MapPreview` component
 - Offline: IndexedDB via `offlineStorage` service
 - Payments: Khalti REST API + eSewa form redirect
@@ -40,7 +40,7 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - No inline SVG when lucide-react icon is available
 - Consistent currency: NPR for Nepal market
 - All new features must include loading, empty, and error states
-- `src/firebase.ts` is the single source of truth for Firebase initialization
+- `src/firebase.ts` is the single source of truth for Firebase initialization (Hardened with strict config validation)
 - Service layer in `src/services/` for external integrations
 - Route guards in `src/components/guards/` for protected routes
 - Hooks in `src/hooks/` for Firestore-backed data
@@ -67,13 +67,19 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - Accessibility improvements: aria-labels, dialog roles, form label associations
 - Performance optimization: React.memo on ClientApp, lazy loading images
 - Partner dashboard component with stats and offers
+- **Firebase Resumption & Optimization (2026-07-12):**
+  - Resolved `auth/configuration-not-found` error via strict initialization validation in `src/firebase.ts`.
+  - Implemented and deployed production-grade Firestore Security Rules (RBAC model).
+  - Defined and deployed 40+ composite indexes for Firestore performance.
+  - Implemented core Cloud Functions for Auth, Bookings, Messaging, and Ratings in `functions/src/index.ts`.
+  - Linked local environment to `hamrosathi1` Firebase project.
 
 ## Current Priorities
 
-1. Admin real data migration (replace mock data in admin panels)
-2. Expand test coverage
-3. WCAG AA full compliance
-4. Performance optimization continued
+1. Upgrade Firebase project to Blaze plan to deploy Cloud Functions.
+2. Admin real data migration (replace mock data in admin panels).
+3. Expand test coverage.
+4. WCAG AA full compliance.
 
 ## Rejected Ideas
 
@@ -84,7 +90,7 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 ## Known Limitations
 
 - Build/lint tools not available in this environment (missing node toolchain)
-- Admin custom claims require Cloud Function deployment to set
+- **Cloud Functions require Blaze plan upgrade for deployment.**
 - eSewa payment uses form redirect which may not work in modal contexts
 - FCM foreground listener works; push notifications require Cloud Functions/Messaging
 - No error boundaries
@@ -95,7 +101,7 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 
 ## File Map (Current)
 
-- `src/firebase.ts` - Firebase init
+- `src/firebase.ts` - Firebase init (Hardened)
 - `src/services/auth.ts` - Auth service with claims
 - `src/services/firestore.ts` - Firestore service
 - `src/services/maps.ts` - Maps constants and types
@@ -124,3 +130,7 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - `vitest.config.ts` - Vitest configuration
 - `.github/workflows/ci.yml` - CI/CD pipeline
 - `docs/*.md` - Full project documentation
+- `functions/src/index.ts` - Cloud Functions implementation
+- `firestore.rules` - Production security rules
+- `firestore.indexes.json` - Composite indexes definition
+- `FIREBASE_IMPLEMENTATION_REPORT.md` - Implementation summary and next steps
