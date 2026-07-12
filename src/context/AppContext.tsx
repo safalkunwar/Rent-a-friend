@@ -144,7 +144,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updateBookingStatus = useCallback(async (id: string, status: Booking['status']) => {
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
     await firestore.updateDocument(`bookings/${id}`, { status, updatedAt: new Date().toISOString() });
-  }, []);
+
+    const booking = bookings.find(b => b.id === id);
+    if (booking && currentUser) {
+      const notification: Notification = {
+        id: `notif-${Date.now()}`,
+        userId: currentUser.id,
+        title: `Booking ${status}`,
+        message: `Your booking for ${booking.date} has been ${status}.`,
+        type: 'booking',
+        isRead: false,
+        timestamp: new Date().toISOString(),
+      };
+      setNotifications(prev => [notification, ...prev]);
+      await firestore.setDocument(`notifications/${notification.id}`, notification);
+    }
+  }, [bookings, currentUser]);
 
   const sendMessage = useCallback(async (conversationId: string, text: string) => {
     if (!currentUser) return;
