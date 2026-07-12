@@ -164,23 +164,29 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                      <input id="booking-location" type="text" placeholder="e.g. Starbucks, Downtown" value={location} onChange={e => setLocation(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" aria-required="true" />
                    </div>
 
-                   {location && (
-                     <div className="mt-3">
-                       <MapPreview
-                         center={MAP_CENTER}
-                         zoom={13}
-                         height="200px"
-                         markers={[
-                           {
-                             id: 'meeting-point',
-                             position: MAP_CENTER,
-                             title: location,
-                             subtitle: 'Proposed meeting point',
-                           },
-                         ]}
-                       />
-                     </div>
-                   )}
+                    {location && (
+                      <div className="mt-3">
+                        <MapPreview
+                          center={companion.coordinates ? { lat: companion.coordinates.latitude, lng: companion.coordinates.longitude } : MAP_CENTER}
+                          zoom={14}
+                          height="200px"
+                          markers={[
+                            ...(companion.coordinates ? [{
+                              id: companion.id,
+                              position: { lat: companion.coordinates.latitude, lng: companion.coordinates.longitude },
+                              title: companion.location,
+                              subtitle: companion.name,
+                            }] : []),
+                            {
+                              id: 'meeting-point',
+                              position: companion.coordinates ? { lat: companion.coordinates.latitude, lng: companion.coordinates.longitude } : MAP_CENTER,
+                              title: location,
+                              subtitle: 'Proposed meeting point',
+                            },
+                          ]}
+                        />
+                      </div>
+                    )}
 
                    <div>
                      <label htmlFor="booking-requests" className="block text-sm font-medium text-[#8E9299] mb-2">Special Requests (Optional)</label>

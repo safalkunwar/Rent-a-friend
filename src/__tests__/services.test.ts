@@ -67,3 +67,40 @@ describe('getConversationId', () => {
     expect(getConversationId('c1', 'u1')).toBe('c1_u1');
   });
 });
+
+describe('maps service', () => {
+  it('exports expected map center and zoom', async () => {
+    const { MAP_CENTER, DEFAULT_ZOOM } = await import('../services/maps');
+    expect(MAP_CENTER).toEqual({ lat: 27.7172, lng: 85.324 });
+    expect(DEFAULT_ZOOM).toBe(12);
+  });
+});
+
+describe('notifications service', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('requestPermission returns false when Notification is unavailable', async () => {
+    vi.doMock('../firebase', () => ({ messaging: null }));
+    // @ts-expect-error simulate missing Notification
+    delete globalThis.Notification;
+    const { notificationService } = await import('../services/notifications');
+    const result = await notificationService.requestPermission();
+    expect(result).toBe(false);
+  });
+
+  it('getFcmToken returns null when messaging is missing', async () => {
+    vi.doMock('../firebase', () => ({ messaging: null }));
+    const { notificationService } = await import('../services/notifications');
+    const result = await notificationService.getFcmToken();
+    expect(result).toBeNull();
+  });
+
+  it('onForegroundMessage returns undefined when messaging is missing', async () => {
+    vi.doMock('../firebase', () => ({ messaging: null }));
+    const { notificationService } = await import('../services/notifications');
+    const cleanup = notificationService.onForegroundMessage(() => {});
+    expect(cleanup).toBeUndefined();
+  });
+});
