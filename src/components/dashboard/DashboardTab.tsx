@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { useCompanions } from '../../hooks/useFirestoreData';
-import { Star, ShieldCheck, Heart, MapPin, Settings, Calendar, X } from 'lucide-react';
+import { Star, ShieldCheck, Heart, MapPin, Settings, Calendar, X, Bell } from 'lucide-react';
 import * as motion from 'motion/react-client';
 
 export const DashboardTab: React.FC = () => {
-  const { currentUser, favorites, toggleFavorite, bookings, setCurrentUser } = useAppContext();
+  const { currentUser, favorites, toggleFavorite, bookings, setCurrentUser, notifications } = useAppContext();
   const { showToast } = useToast();
   const { companions: fetchedCompanions } = useCompanions();
   const [isEditing, setIsEditing] = useState(false);
@@ -80,6 +80,33 @@ export const DashboardTab: React.FC = () => {
               <h3 className="text-[#8E9299] text-sm uppercase tracking-wider mb-2">Upcoming Trips</h3>
               <p className="text-3xl font-bold text-white">{myBookings.filter(b => b.status === 'confirmed').length}</p>
             </div>
+          </div>
+
+          {/* Recent Notifications */}
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-6">Recent Notifications</h2>
+            {notifications.length > 0 ? (
+              <div className="space-y-4">
+                {notifications.slice(0, 5).map(notification => (
+                  <div key={notification.id} className={`p-4 rounded-2xl border flex items-start gap-4 ${notification.isRead ? 'bg-[#17191C] border-[#2A2D31]' : 'bg-[#C8A25E]/5 border-[#C8A25E]/20'}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${notification.isRead ? 'bg-[#1E2124] text-[#8E9299]' : 'bg-[#C8A25E]/10 text-[#C8A25E]'}`}>
+                      <Bell className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`text-sm font-medium mb-1 ${notification.isRead ? 'text-gray-300' : 'text-white'}`}>{notification.title}</h3>
+                      <p className="text-xs text-[#8E9299]">{notification.message}</p>
+                      <p className="text-[10px] text-gray-500 mt-1">{new Date(notification.timestamp).toLocaleString()}</p>
+                    </div>
+                    {!notification.isRead && <span className="w-2 h-2 rounded-full bg-[#C8A25E] mt-2 shrink-0" />}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-[#17191C] border border-[#2A2D31] rounded-2xl p-8 text-center text-[#8E9299]">
+                <Bell className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                <p>No notifications yet.</p>
+              </div>
+            )}
           </div>
 
           {/* Recent Bookings */}
