@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, Clock, MapPin, Users, Check, CreditCard } from 'lucide-react';
 import { Companion, Booking } from '../../types';
@@ -26,6 +26,21 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
   const [requests, setRequests] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentProvider | ''>('');
   const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState('');
+
+  const today = new Date().toISOString().split('T')[0];
+  const minDateTime = useMemo(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  }, []);
+
+  const validateDateTime = () => {
+    if (!date || !time) return false;
+    const selected = new Date(`${date}T${time}`);
+    const now = new Date();
+    return selected > now;
+  };
 
   const baseTotal = companion.hourlyRate * duration * participants;
   const serviceFee = baseTotal * 0.1;
@@ -114,15 +129,15 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                 <h3 className="text-lg font-bold text-white mb-6">When do you want to meet?</h3>
                 
                  <div className="space-y-5">
-                    <div>
-                      <label htmlFor="booking-date" className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Calendar className="w-4 h-4" /> Date</label>
-                      <input id="booking-date" type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" />
-                    </div>
+                     <div>
+                       <label htmlFor="booking-date" className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Calendar className="w-4 h-4" /> Date</label>
+                       <input id="booking-date" type="date" min={today} value={date} onChange={e => { setDate(e.target.value); setError(''); }} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" />
+                     </div>
 
-                    <div>
-                      <label htmlFor="booking-time" className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Clock className="w-4 h-4" /> Time</label>
-                      <input id="booking-time" type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" />
-                    </div>
+                     <div>
+                       <label htmlFor="booking-time" className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Clock className="w-4 h-4" /> Time</label>
+                       <input id="booking-time" type="time" value={time} onChange={e => { setTime(e.target.value); setError(''); }} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" />
+                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><Clock className="w-4 h-4" /> Duration</label>
@@ -143,13 +158,21 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                      <p className="text-xs text-[#8E9299] mt-1">NPR {companion.hourlyRate} x {duration} hrs x {participants} people = NPR {(companion.hourlyRate * duration * participants).toLocaleString()}</p>
                    </div>
 
-                   <button 
-                     disabled={!date || !time}
-                     onClick={() => setStep(2)}
-                     className="w-full py-4 mt-4 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                   >
-                     Continue
-                   </button>
+                    <button 
+                      disabled={!date || !time || !validateDateTime()}
+                      onClick={() => {
+                        if (!validateDateTime()) {
+                          setError('Please select a future date and time.');
+                          return;
+                        }
+                        setError('');
+                        setStep(2);
+                      }}
+                      className="w-full py-4 mt-4 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Continue
+                    </button>
+                    {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
                  </div>
               </motion.div>
             )}
@@ -263,22 +286,26 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
 
                 <div className="flex gap-3">
                   <button onClick={() => setStep(2)} className="px-6 py-4 bg-[#1E2124] text-white rounded-xl font-bold hover:bg-[#2A2D31] transition-colors">Back</button>
-                  <button 
-                    disabled={!paymentMethod || processing}
-                    onClick={async () => {
-                      if (!paymentMethod || processing) return;
-                      setProcessing(true);
-                      try {
-                        await handleConfirm();
-                      } catch (err) {
-                        showToast(err instanceof Error ? err.message : 'Payment failed', 'error');
-                        setProcessing(false);
-                      }
-                    }}
-                    className="flex-1 py-4 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] transition-colors shadow-lg shadow-[#C8A25E]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {processing ? 'Processing...' : `Pay NPR ${grandTotal.toFixed(2)}`}
-                  </button>
+                   <button 
+                     disabled={!paymentMethod || processing}
+                     onClick={async () => {
+                       if (!paymentMethod || processing) return;
+                       if (!validateDateTime()) {
+                         showToast('Please select a future date and time.', 'error');
+                         return;
+                       }
+                       setProcessing(true);
+                       try {
+                         await handleConfirm();
+                       } catch (err) {
+                         showToast(err instanceof Error ? err.message : 'Payment failed', 'error');
+                         setProcessing(false);
+                       }
+                     }}
+                     className="flex-1 py-4 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] transition-colors shadow-lg shadow-[#C8A25E]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                   >
+                     {processing ? 'Processing...' : `Pay NPR ${grandTotal.toFixed(2)}`}
+                   </button>
                 </div>
               </motion.div>
             )}
