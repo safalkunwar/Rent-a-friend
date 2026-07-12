@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { useCompanions } from '../../hooks/useFirestoreData';
-import { Star, ShieldCheck, Heart, MapPin, Settings, Calendar } from 'lucide-react';
+import { Star, ShieldCheck, Heart, MapPin, Settings, Calendar, X } from 'lucide-react';
 import * as motion from 'motion/react-client';
 
 export const DashboardTab: React.FC = () => {
-  const { currentUser, favorites, toggleFavorite, bookings } = useAppContext();
+  const { currentUser, favorites, toggleFavorite, bookings, setCurrentUser } = useAppContext();
   const { showToast } = useToast();
   const { companions: fetchedCompanions } = useCompanions();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(currentUser?.name || '');
+  const [editEmail, setEditEmail] = useState(currentUser?.email || '');
 
   if (!currentUser) return <div className="text-white p-8">Please log in to view dashboard</div>;
 
@@ -38,12 +41,27 @@ export const DashboardTab: React.FC = () => {
           </div>
         </div>
 
-        <button 
-          onClick={() => showToast('Profile editing will be available soon.', 'info')}
-          className="relative z-10 px-6 py-3 bg-[#1E2124] text-white border border-[#2A2D31] rounded-xl hover:border-[#C8A25E] transition-colors flex items-center gap-2 font-medium"
-        >
-          <Settings className="w-4 h-4" /> Edit Profile
-        </button>
+        {isEditing ? (
+          <div className="relative z-10 bg-[#17191C] border border-[#2A2D31] rounded-xl p-5 flex flex-col gap-4 w-full md:w-auto">
+            <button onClick={() => setIsEditing(false)} className="absolute top-3 right-3 text-[#8E9299] hover:text-white"><X className="w-4 h-4" /></button>
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E9299] font-bold block mb-2">Name</label>
+              <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full px-4 py-2 bg-[#1E2124] border border-[#2A2D31] rounded-xl text-white outline-none focus:border-[#C8A25E] text-sm" />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E9299] font-bold block mb-2">Email</label>
+              <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="w-full px-4 py-2 bg-[#1E2124] border border-[#2A2D31] rounded-xl text-white outline-none focus:border-[#C8A25E] text-sm" />
+            </div>
+            <button onClick={() => { setCurrentUser({ ...currentUser!, name: editName, email: editEmail, avatar: currentUser!.avatar }); setIsEditing(false); showToast('Profile updated', 'success'); }} className="px-4 py-2 bg-[#C8A25E] text-[#0F1113] rounded-xl text-sm font-bold hover:bg-[#B69150] transition-colors">Save Changes</button>
+          </div>
+        ) : (
+          <button 
+            onClick={() => setIsEditing(true)}
+            className="relative z-10 px-6 py-3 bg-[#1E2124] text-white border border-[#2A2D31] rounded-xl hover:border-[#C8A25E] transition-colors flex items-center gap-2 font-medium"
+          >
+            <Settings className="w-4 h-4" /> Edit Profile
+          </button>
+        )}
       </div>
 
       {currentUser.role === 'customer' && (

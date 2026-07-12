@@ -228,6 +228,8 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({ onOpenAuth }) => {
                       <p className="text-sm md:text-base">{msg.text}</p>
                       <span className={`text-[10px] mt-1 block ${isMe ? 'text-[#0F1113]/70' : 'text-[#8E9299]'}`}>
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {isMe && !msg.isRead && ' • Sent'}
+                        {isMe && msg.isRead && ' • Read'}
                       </span>
                     </div>
                   </div>

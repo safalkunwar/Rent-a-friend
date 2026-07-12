@@ -104,3 +104,31 @@ describe('notifications service', () => {
     expect(cleanup).toBeUndefined();
   });
 });
+
+describe('storage service', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('exports offlineStorage object', async () => {
+    const { offlineStorage } = await import('../services/storage');
+    expect(typeof offlineStorage).toBe('object');
+    expect(typeof offlineStorage.cacheCollection).toBe('function');
+    expect(typeof offlineStorage.getCachedCollection).toBe('function');
+    expect(typeof offlineStorage.cacheItem).toBe('function');
+    expect(typeof offlineStorage.getCachedItem).toBe('function');
+    expect(typeof offlineStorage.clearStore).toBe('function');
+  });
+});
+
+describe('auth service', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('getConversationId is stable', async () => {
+    const { getConversationId } = await import('../context/AppContext');
+    expect(getConversationId('u1', 'c1')).toBe('c1_u1');
+    expect(getConversationId('c1', 'u1')).toBe('c1_u1');
+  });
+});

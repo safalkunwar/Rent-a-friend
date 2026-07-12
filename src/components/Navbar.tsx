@@ -18,7 +18,9 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -26,6 +28,9 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -109,10 +114,27 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
           </div>
 
           <div className="flex items-center space-x-3 md:space-x-4 relative">
-            <button className="hidden md:flex w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] hover:border-[#C8A25E] transition-colors items-center justify-center text-[#8E9299] hover:text-[#C8A25E] relative focus:outline-none" aria-label="Notifications">
+            <button onClick={() => setShowNotifications(!showNotifications)} className="hidden md:flex w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] hover:border-[#C8A25E] transition-colors items-center justify-center text-[#8E9299] hover:text-[#C8A25E] relative focus:outline-none" aria-label="Notifications">
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#C8A25E] rounded-full border-2 border-[#1E2124]"></span>}
             </button>
+            {showNotifications && (
+              <div ref={notifRef} className="absolute right-0 top-12 mt-2 w-80 bg-[#17191C] border border-[#2A2D31] rounded-xl shadow-2xl py-2 z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-[#2A2D31]">
+                  <p className="text-sm font-semibold text-white">Notifications</p>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.length === 0 && <p className="text-xs text-gray-500 text-center py-4">No notifications yet.</p>}
+                  {notifications.slice(0, 5).map(n => (
+                    <div key={n.id} className={`p-3 hover:bg-[#1E2124] transition-colors ${!n.isRead ? 'bg-[#C8A25E]/5' : ''}`}>
+                      <p className={`text-sm ${!n.isRead ? 'font-bold text-white' : 'font-medium text-gray-300'}`}>{n.title}</p>
+                      <p className="text-xs text-gray-400">{n.message}</p>
+                      <p className="text-[10px] text-gray-500 mt-1">{new Date(n.timestamp).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="h-6 w-[1px] bg-[#2A2D31] hidden md:block"></div>
             
             <div ref={dropdownRef} className="relative">
