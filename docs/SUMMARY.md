@@ -17,7 +17,7 @@ SATHI is currently a **frontend-only prototype** built with React + Vite + TypeS
 | Icons | lucide-react | Consistent iconography |
 | State | React Context (AppContext + ToastContext) | Minimal/no persistence |
 | Routing | None | Hash-based admin toggle only |
-| Backend | None | All data is hardcoded in `src/data.ts` |
+| Backend | None | All data is in `src/data/seedData.ts` |
 | Auth | Mock | Creates local User object on form submit |
 | Database | None | Static arrays in data.ts |
 | Payments | UI only | eSewa/Khalti buttons with no integration |
