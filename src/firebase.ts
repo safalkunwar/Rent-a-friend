@@ -1,5 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getMessaging, type Messaging } from 'firebase/messaging';
@@ -40,6 +40,7 @@ if (hasValidConfig && !getApps().length) {
   try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
+    setPersistence(auth, browserLocalPersistence).catch((err) => console.warn('[SATHI] Auth persistence setup failed:', err));
     db = getFirestore(app);
     storage = getStorage(app);
     console.log('[SATHI] Firebase initialized:', { app: !!app, auth: !!auth, db: !!db, storage: !!storage });
@@ -57,6 +58,7 @@ if (hasValidConfig && !getApps().length) {
 } else if (getApps().length) {
   app = getApps()[0];
   auth = getAuth(app);
+  setPersistence(auth, browserLocalPersistence).catch((err) => console.warn('[SATHI] Auth persistence setup failed:', err));
   db = getFirestore(app);
   storage = getStorage(app);
   console.log('[SATHI] Firebase reused existing app:', { app: !!app, auth: !!auth, db: !!db });
