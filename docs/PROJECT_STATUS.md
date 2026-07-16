@@ -47,6 +47,7 @@ Completed
 ✅ Partner dashboard component (`src/components/dashboard/PartnerDashboard.tsx`)
 ✅ Admin panels migrated to real Firestore data (`AdminOverview`, `AdminBookings`, `AdminGuides`, `AdminFeedback`)
 ✅ Redesigned desktop Community Moments section with premium StoryCard component and category filters
+✅ TEMPORARY auth bypass for deployed Vercel testing (AuthGuard, AdminGuard, and AuthModal bypassed) - must be removed before production
 
 In Progress
 
@@ -62,4 +63,4 @@ Production-ready SATHI with full test suite and accessibility compliance
 
 Known Blockers
 
-None
+- TEMPORARY auth bypass for deployed Vercel testing must be removed before production.

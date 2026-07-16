@@ -1,8 +1,9 @@
 # Changelog
 
-## v0.18.0 - 2026-07-14
+## v0.18.0 - 2026-07-16
 
 Added
+- Added 10 additional companions (`c16`-`c25`) to seed data and Firestore
 - Redesigned desktop Community Moments (Stories) section with Instagram-quality cards
 - New `StoryCard` component (`src/components/cards/StoryCard.tsx`) with glassmorphism overlay, animated gold border, and hover zoom
 - Category filter chips for stories (Hiking, Coffee Buddy, Photography, etc.) with client-side filtering
@@ -14,11 +15,34 @@ Added
 Changed
 - Community Moments section now uses real Firestore-backed `stories` data instead of hardcoded mock data
 - Card dimensions increased for premium desktop feel (300px/360px width, 460px/520px height)
+- **TEMPORARY TESTING BYPASS:** AuthGuard, AdminGuard, and AuthModal bypassed for deployed Vercel testing. Any user can login and access all routes. This must be removed before production.
 
 Fixed
-- None
+- Deduplicated seed data by removing unused `src/data.ts`
 
-## v0.16.0 - 2026-07-12
+## v0.17.0 - 2026-07-14
+
+## v0.18.0 - 2026-07-16
+
+Added
+- Redesigned desktop Community Moments (Stories) section with Instagram-quality cards
+- New `StoryCard` component (`src/components/cards/StoryCard.tsx`) with glassmorphism overlay, animated gold border, and hover zoom
+- Category filter chips for stories (Hiking, Coffee Buddy, Photography, etc.) with client-side filtering
+- Story preview play button overlay on hover
+- Like count, comment count, time, and verified badge display on story cards
+- Keyboard navigation (arrow keys) and mouse wheel horizontal scroll for story carousel
+- Lazy loading images and memoized StoryCard for performance
+- Added 16 additional companions (`c10`-`c25`) to seed data and Firestore
+
+Changed
+- Community Moments section now uses real Firestore-backed `stories` data instead of hardcoded mock data
+- Card dimensions increased for premium desktop feel (300px/360px width, 460px/520px height)
+- **TEMPORARY TESTING BYPASS:** AuthGuard, AdminGuard, and AuthModal bypassed for deployed Vercel testing. Any user can login and access all routes. This must be removed before production.
+
+Fixed
+- Deduplicated seed data by removing unused `src/data.ts`
+
+## v0.17.0 - 2026-07-14
 
 Added
 - Recently viewed companions carousel in explore tab

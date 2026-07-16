@@ -16,6 +16,7 @@ The Firebase backend has been fully audited, redesigned, and implemented. The pr
 
 ### Ongoing Tasks & Priorities
 
+- **TEMPORARY TESTING BYPASS:** Auth guards and login are currently bypassed for deployed Vercel testing. Remove this bypass before production.
 - **Blaze Plan Upgrade:** Deferred. Paused until the user confirms billing is enabled.
 - **User Experience Improvements:** Make the client-side features more functional (booking flow, messaging, dashboard, map interactions).
 - **Testing:** Expand Vitest coverage for service logic.

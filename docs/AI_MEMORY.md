@@ -76,10 +76,11 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 
 ## Current Priorities
 
-1. Upgrade Firebase project to Blaze plan to deploy Cloud Functions.
-2. Admin real data migration (replace mock data in admin panels).
-3. Expand test coverage.
-4. WCAG AA full compliance.
+1. Remove temporary auth bypass for deployed Vercel testing before production.
+2. Upgrade Firebase project to Blaze plan to deploy Cloud Functions.
+3. Admin real data migration (replace mock data in admin panels).
+4. Expand test coverage.
+5. WCAG AA full compliance.
 
 ## Rejected Ideas
 
@@ -111,6 +112,7 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - `src/hooks/useFirestoreData.ts` - Real-time data hooks with offline cache
 - `src/context/AppContext.tsx` - Auth + bookings + messages state with offline queue
 - `src/components/AuthModal.tsx` - Real Firebase auth UI with accessibility
+- `src/components/AuthModal.tsx` - TEMPORARY: Auth bypass for deployed testing (mock login without Firebase)
 - `src/components/modals/BookingFlowModal.tsx` - Multi-step booking with payment integration and map preview
 - `src/components/modals/CompanionProfileModal.tsx` - Profile overlay with map preview
 - `src/components/messages/MessagesTab.tsx` - Real-time Firestore chat UI
@@ -118,7 +120,9 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - `src/components/dashboard/PartnerDashboard.tsx` - Partner business dashboard
 - `src/components/Navbar.tsx` - Navigation with accessibility attributes
 - `src/components/guards/AuthGuard.tsx` - Route protection
+- `src/components/guards/AuthGuard.tsx` - TEMPORARY: Bypassed for deployed testing
 - `src/components/guards/AdminGuard.tsx` - Admin route protection with custom claims
+- `src/components/guards/AdminGuard.tsx` - TEMPORARY: Bypassed for deployed testing
 - `src/components/LoadingScreen.tsx` - Auth initialization screen
 - `src/components/maps/MapPreview.tsx` - Google Maps static preview
 - `src/components/notifications/NotificationProvider.tsx` - FCM registration and permission request
