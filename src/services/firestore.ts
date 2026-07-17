@@ -16,7 +16,7 @@ export interface QueryOptions {
 
 const buildQuery = <T = DocumentData>(collectionName: string, options: QueryOptions = {}): Query<T> => {
   const base = collection(requireDb(), collectionName);
-  let q: Query<T> = base;
+  let q: Query<T> = base as unknown as Query<T>;
 
   if (options.where) {
     for (const condition of options.where) {

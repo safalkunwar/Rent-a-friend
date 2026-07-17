@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, AlertTriangle, Navigation, CheckCircle2 } from 'lucide-react';
+import { MapPin, AlertTriangle, Navigation, CheckCircle2, X } from 'lucide-react';
 import * as motion from 'motion/react-client';
 
 export const SafetyWidget: React.FC<{ isVisible?: boolean, onClose?: () => void }> = ({ isVisible = true, onClose }) => {
@@ -13,12 +13,12 @@ export const SafetyWidget: React.FC<{ isVisible?: boolean, onClose?: () => void 
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
-      className="fixed bottom-6 right-6 z-40"
+      className="fixed bottom-24 md:bottom-12 left-1/2 -translate-x-1/2 z-50"
     >
       <div className="bg-[#17191C] rounded-2xl shadow-2xl border border-[#2A2D31] p-4 w-72 flex flex-col gap-3 relative">
         {onClose && (
-           <button onClick={onClose} className="absolute top-2 right-2 text-[#8E9299] hover:text-white p-1">
-             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+           <button onClick={onClose} aria-label="Close safety widget" className="absolute top-2 right-2 text-[#8E9299] hover:text-white p-1">
+             <X className="w-4 h-4" />
            </button>
         )}
         <div className="flex items-center gap-3">

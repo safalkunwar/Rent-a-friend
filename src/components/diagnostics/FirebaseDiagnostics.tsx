@@ -1,5 +1,5 @@
 import React from 'react';
-import { app, auth, db, storage, messaging, firebaseConfig } from '../firebase';
+import { app, auth, db, storage, messaging, firebaseConfig } from '../../firebase';
 
 export const FirebaseDiagnostics: React.FC = () => {
   const [info, setInfo] = React.useState<any>({});
@@ -50,7 +50,7 @@ export const FirebaseDiagnostics: React.FC = () => {
 
         if (db) {
           try {
-            const testDoc = await import('../services/firestore').then(m => m.firestore.getDocument('__test__'));
+            const testDoc = await import('../../services/firestore').then(m => m.firestore.getDocument('__test__'));
             results.firestoreRead = testDoc ? 'success' : 'empty';
           } catch (err: any) {
             results.errors.push(`Firestore error: ${err.message || err}`);

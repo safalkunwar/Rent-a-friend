@@ -49,11 +49,6 @@ export const authService = {
     await signOut(auth);
   },
 
-  updateProfile: async (displayName?: string, photoURL?: string): Promise<void> => {
-    if (!auth || !auth.currentUser) return;
-    await updateProfile(auth.currentUser, { displayName, photoURL });
-  },
-
   resetPassword: async (email: string): Promise<void> => {
     if (!auth) throw new Error('Firebase Auth is not initialized');
     await sendPasswordResetEmail(auth, email);
@@ -96,11 +91,12 @@ export const authService = {
     }
   },
 
-  toAuthUser: (user: FirebaseUser): Omit<AuthUser, 'claims'> => ({
+  toAuthUser: (user: FirebaseUser): AuthUser => ({
     uid: user.uid,
     email: user.email,
     displayName: user.displayName,
     photoURL: user.photoURL,
     emailVerified: user.emailVerified,
+    claims: {},
   }),
 };

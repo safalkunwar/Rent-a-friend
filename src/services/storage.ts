@@ -1,5 +1,5 @@
 const DB_NAME = 'sathi-offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 type StoreSchema = {
   companions: { key: string; value: any };
@@ -8,6 +8,8 @@ type StoreSchema = {
   events: { key: string; value: any };
   favorites: { key: string; value: any };
   pendingBookings: { key: string; value: any };
+  partners: { key: string; value: any };
+  community_posts: { key: string; value: any };
 };
 
 type StoreName = keyof StoreSchema;
@@ -28,6 +30,8 @@ const openDb = (): Promise<IDBDatabase> => {
         events: null,
         favorites: null,
         pendingBookings: null,
+        partners: null,
+        community_posts: null,
       }) as StoreName[]).forEach((store) => {
         if (!db.objectStoreNames.contains(store)) {
           db.createObjectStore(store, { keyPath: 'id' });

@@ -23,5 +23,4 @@ createRoot(rootEl!).render(
     <App />
   </StrictMode>,
 );
-
 console.log('[SATHI] App rendered');

@@ -114,7 +114,7 @@ describe('notifications service', () => {
 
   it('requestPermission returns false when Notification is unavailable', async () => {
     vi.doMock('../firebase', () => ({ messaging: null }));
-    // @ts-expect-error simulate missing Notification
+    //  simulate missing Notification
     delete globalThis.Notification;
     const { notificationService } = await import('../services/notifications');
     const result = await notificationService.requestPermission();
@@ -137,7 +137,7 @@ describe('notifications service', () => {
 
   it('showLocalNotification does nothing when Notification is unavailable', async () => {
     vi.doMock('../firebase', () => ({ messaging: null }));
-    // @ts-expect-error simulate missing Notification
+    //  simulate missing Notification
     delete globalThis.Notification;
     const { notificationService } = await import('../services/notifications');
     expect(() => notificationService.showLocalNotification({ title: 'Test', body: 'Body' })).not.toThrow();

@@ -108,9 +108,9 @@ export const paymentService = {
     const secretKey = import.meta.env.VITE_ESEWA_SECRET_KEY;
     if (secretKey) {
       const signature = await generateEsewaSignature(secretKey, fields.signed_field_names, {
-        total_amount,
-        transaction_uuid,
-        product_code,
+        total_amount: totalAmount,
+        transaction_uuid: transactionUuid,
+        product_code: productCode,
       });
       fields.signature = signature;
     }

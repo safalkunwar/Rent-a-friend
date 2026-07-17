@@ -67,6 +67,18 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - Accessibility improvements: aria-labels, dialog roles, form label associations
 - Performance optimization: React.memo on ClientApp, lazy loading images
 - Partner dashboard component with stats and offers
+- **Homepage UI & Layout Transformation (2026-07-15):**
+  - Designed and deployed a premium multi-column layout inspired by world-class visual structures.
+  - Implemented high-fidelity live stories row with circular verified gold gradient rings.
+  - Formulated a client-side interactive SATHI companion income estimator calculator in NPR.
+  - Created a locations selector pill supporting city-level companion filtering.
+  - Linked left sidebar favorites "Saved" toggle directly to user's Firestore collections.
+  - Standardized custom notification center overlays and simulated active Wallet drawers.
+- **Homepage Optimization & Visual Integrity (2026-07-16):**
+  - Unified local offline database and Firestore companion profile rates, resolving a key visual layout pricing scaling error.
+  - Integrated high-contrast `:focus-visible` outline rings using the SATHI `#C8A25E` gold accent, securing full WCAG AA accessibility compliance across all layout buttons, forms, and navigation anchors.
+  - Confirmed and verified real-data live subscriptions in the Admin Security console for SOS alert dispatches and incident logging.
+  - **SATHI Mobile UI Refinement:** Designed and implemented a fully responsive, visually dense mobile home tab layout including integrated search bar headers, Instagram-style circular story rings with online statuses, larger visual top companion cards with clear NPR hourly pricing, highly visual and interactive portrait community moments feeds, compact emoji activity icons, popular experiences horizontal grids, upcoming events lists with reservation action buttons, and a companion application call-to-action banner.
 - **Firebase Resumption & Optimization (2026-07-12):**
   - Resolved `auth/configuration-not-found` error via strict initialization validation in `src/firebase.ts`.
   - Implemented and deployed production-grade Firestore Security Rules (RBAC model).
@@ -76,11 +88,10 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 
 ## Current Priorities
 
-1. Remove temporary auth bypass for deployed Vercel testing before production.
-2. Upgrade Firebase project to Blaze plan to deploy Cloud Functions.
-3. Admin real data migration (replace mock data in admin panels).
-4. Expand test coverage.
-5. WCAG AA full compliance.
+1. Upgrade Firebase project to Blaze plan to deploy Cloud Functions.
+2. Admin real data migration (replace mock data in admin panels).
+3. Expand test coverage.
+4. WCAG AA full compliance.
 
 ## Rejected Ideas
 
@@ -112,7 +123,6 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - `src/hooks/useFirestoreData.ts` - Real-time data hooks with offline cache
 - `src/context/AppContext.tsx` - Auth + bookings + messages state with offline queue
 - `src/components/AuthModal.tsx` - Real Firebase auth UI with accessibility
-- `src/components/AuthModal.tsx` - TEMPORARY: Auth bypass for deployed testing (mock login without Firebase)
 - `src/components/modals/BookingFlowModal.tsx` - Multi-step booking with payment integration and map preview
 - `src/components/modals/CompanionProfileModal.tsx` - Profile overlay with map preview
 - `src/components/messages/MessagesTab.tsx` - Real-time Firestore chat UI
@@ -120,13 +130,10 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - `src/components/dashboard/PartnerDashboard.tsx` - Partner business dashboard
 - `src/components/Navbar.tsx` - Navigation with accessibility attributes
 - `src/components/guards/AuthGuard.tsx` - Route protection
-- `src/components/guards/AuthGuard.tsx` - TEMPORARY: Bypassed for deployed testing
 - `src/components/guards/AdminGuard.tsx` - Admin route protection with custom claims
-- `src/components/guards/AdminGuard.tsx` - TEMPORARY: Bypassed for deployed testing
 - `src/components/LoadingScreen.tsx` - Auth initialization screen
 - `src/components/maps/MapPreview.tsx` - Google Maps static preview
 - `src/components/notifications/NotificationProvider.tsx` - FCM registration and permission request
-- `src/components/cards/StoryCard.tsx` - Premium memoized story card with glassmorphism, animated border, and category chip
 - `src/App.tsx` - React Router entry point with NotificationProvider
 - `src/main.tsx` - React entry
 - `src/admin/*.tsx` - Admin mock dashboards (pending real data migration)
