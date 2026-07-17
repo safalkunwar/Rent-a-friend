@@ -30,44 +30,50 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
     setLoading(true);
 
     try {
+      // TEMPORARY: Bypass Firebase auth for deployed testing. Remove after testing.
+      const mockId = `temp-user-${Date.now()}`;
+      const mockUser = {
+        uid: mockId,
+        email: email || 'test@example.com',
+        displayName: name || email?.split('@')[0] || 'Test User',
+        photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(name || email || 'Test User')}&background=random`,
+      };
+
       if (mode === 'login') {
-        const authUser = await authService.login(email, password);
         setCurrentUser({
-          id: authUser.uid,
-          name: authUser.displayName || email.split('@')[0],
-          email: authUser.email || email,
-          avatar: authUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.displayName || email)}&background=random`,
+          id: mockUser.uid,
+          name: mockUser.displayName || 'Test User',
+          email: mockUser.email || 'test@example.com',
+          avatar: mockUser.photoURL || `https://ui-avatars.com/api/?name=Test&background=random`,
           role: 'customer',
           favorites: [],
         });
-        showToast('Welcome back!', 'success');
+        showToast('Welcome back! (test mode)', 'success');
       } else if (mode === 'signup') {
-        const authUser = await authService.signup(email, password, name);
-        await firestore.setDocument(`users/${authUser.uid}`, {
-          name,
-          email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+        await firestore.setDocument(`users/${mockUser.uid}`, {
+          name: name || 'Test User',
+          email: mockUser.email,
+          avatar: mockUser.photoURL,
           role: 'customer',
           favorites: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
         setCurrentUser({
-          id: authUser.uid,
-          name,
-          email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+          id: mockUser.uid,
+          name: name || 'Test User',
+          email: mockUser.email || 'test@example.com',
+          avatar: mockUser.photoURL || `https://ui-avatars.com/api/?name=Test&background=random`,
           role: 'customer',
           favorites: [],
         });
-        showToast('Account created successfully!', 'success');
+        showToast('Account created successfully! (test mode)', 'success');
        } else if (mode === 'guide') {
-        const authUser = await authService.signup(email, password, name);
-        const companionId = `companion-${authUser.uid}`;
-        await firestore.setDocument(`users/${authUser.uid}`, {
-          name,
-          email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+        const companionId = `companion-${mockUser.uid}`;
+        await firestore.setDocument(`users/${mockUser.uid}`, {
+          name: name || 'Test Guide',
+          email: mockUser.email,
+          avatar: mockUser.photoURL,
           role: 'customer',
           favorites: [],
           createdAt: new Date().toISOString(),
@@ -75,10 +81,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
         });
         await firestore.setDocument(`guideApplications/${companionId}`, {
           id: companionId,
-          name,
-          email,
-          location,
-          hourlyRate: Number(rate) || 0,
+          name: name || 'Test Guide',
+          email: mockUser.email,
+          location: location || 'Kathmandu',
+          hourlyRate: Number(rate) || 1500,
           bio: '',
           gender: '',
           languages: [],
@@ -90,14 +96,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
           updatedAt: new Date().toISOString(),
         });
         setCurrentUser({
-          id: authUser.uid,
-          name,
-          email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+          id: mockUser.uid,
+          name: name || 'Test Guide',
+          email: mockUser.email || 'test@example.com',
+          avatar: mockUser.photoURL || `https://ui-avatars.com/api/?name=Test&background=random`,
           role: 'customer',
           favorites: [],
         });
-        showToast('Guide application submitted! An admin will review your profile shortly.', 'success');
+        showToast('Guide application submitted! (test mode)', 'success');
       }
 
       if (onSuccess) onSuccess(mode);

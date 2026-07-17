@@ -49,6 +49,7 @@ Completed
 ✅ SATHI Mobile UI Refinement (Fully integrated search bar into header, circular snapping Instagram-style stories with online indicators, visual-first premium top companions cards, redesigned interactive Community Feed, compact activity icon-cards, popular experiences, upcoming events list, and Become a Companion recruitment banner)
 ✅ Cross-Platform Data Synchronization (Unified Website and Mobile layouts to consume identical live Firestore collections for Local Experience Partners, Community Stories/Feed, Activities, and Events)
 ✅ Realistic Database Expansion (Implemented massive development seed dataset in Firestore containing 220+ Companions, 560+ Reviews, 1050+ Favorites, 160+ Stories, 110+ Posts, 85+ Activities, 55+ Events, 35+ Partners, 100+ Bookings, and 25+ Conversations)
+✅ TEMPORARY auth bypass for deployed Vercel testing (AuthGuard, AdminGuard, and AuthModal bypassed) - must be removed before production
 
 In Progress
 
@@ -64,4 +65,4 @@ Production-ready SATHI with full test suite and accessibility compliance
 
 Known Blockers
 
-None
+- TEMPORARY auth bypass for deployed Vercel testing must be removed before production.

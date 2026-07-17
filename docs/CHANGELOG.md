@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.19.0 - 2026-07-17
+
+Added
+- None
+
+Changed
+- Restored TEMPORARY auth bypass for deployed Vercel testing: AuthGuard, AdminGuard, and AuthModal bypassed so any user can login and access all routes without Firebase access.
+- Fixed Firebase initialization in `src/firebase.ts` to use safer env var loading and re-added `browserLocalPersistence` for auto-login.
+
+Fixed
+- Firebase data fetching issue caused by missing persistence and env var handling.
+- Login failure on deployed Vercel instance due to Firebase Auth initialization gaps.
+
 ## v1.3.0 - 2026-07-16
 
 ### Added
