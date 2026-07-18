@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Navigation } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import { MapPin, Navigation, Compass } from 'lucide-react';
 
 interface MapPreviewProps {
   center?: { lat: number; lng: number };
@@ -9,6 +10,7 @@ interface MapPreviewProps {
     position: { lat: number; lng: number };
     title: string;
     subtitle?: string;
+    type?: 'companion' | 'activity' | 'event' | 'attraction' | 'hotel';
   }>;
   height?: string;
   onMarkerClick?: (id: string) => void;
@@ -16,74 +18,192 @@ interface MapPreviewProps {
 }
 
 export const MapPreview: React.FC<MapPreviewProps> = ({
-  center,
-  zoom = 14,
+  center = { lat: 27.7172, lng: 85.3240 }, // Kathmandu Default
+  zoom = 13,
   markers = [],
   height = '320px',
   onMarkerClick,
   className = '',
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [staticMapUrl, setStaticMapUrl] = useState<string | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markersGroupRef = useRef<L.LayerGroup | null>(null);
+  const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>('dark');
 
-  const buildStaticMapUrl = useCallback(() => {
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (!apiKey || !center) return null;
+  // Detect theme changes on HTML element
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const isLight = document.documentElement.classList.contains('theme-light');
+      setCurrentTheme(isLight ? 'light' : 'dark');
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    
+    const isLight = document.documentElement.classList.contains('theme-light');
+    setCurrentTheme(isLight ? 'light' : 'dark');
+    
+    return () => observer.disconnect();
+  }, []);
 
-    const centerStr = `${center.lat},${center.lng}`;
-    const markerParams = markers
-      .map(m => `color:0xC8A25E|${m.position.lat},${m.position.lng}`)
-      .join('&markers=');
+  // Initialize Map Instance
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    if (mapInstanceRef.current) return;
 
-    const params = new URLSearchParams({
-      center: centerStr,
-      zoom: String(zoom),
-      size: '600x320',
-      maptype: 'roadmap',
-      markers: markerParams,
-      key: apiKey,
+    const map = L.map(mapContainerRef.current, {
+      center: [center.lat, center.lng],
+      zoom: zoom,
+      zoomControl: false,
+      attributionControl: false,
     });
 
-    return `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;
-  }, [center, markers, zoom]);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+    const markersGroup = L.layerGroup().addTo(map);
+    mapInstanceRef.current = map;
+    markersGroupRef.current = markersGroup;
+
+    // Fix rendering issues on quick tab transitions
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // Set tile layer on theme shift
   useEffect(() => {
-    const url = buildStaticMapUrl();
-    setStaticMapUrl(url);
-  }, [buildStaticMapUrl]);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Clear existing tile layers
+    map.eachLayer(layer => {
+      if (layer instanceof L.TileLayer) {
+        map.removeLayer(layer);
+      }
+    });
+
+    const tileUrl = currentTheme === 'light'
+      ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+
+    L.tileLayer(tileUrl, {
+      maxZoom: 20,
+    }).addTo(map);
+  }, [currentTheme]);
+
+  // Handle map centering updates
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !center) return;
+    map.setView([center.lat, center.lng], zoom, { animate: true, duration: 1 });
+  }, [center.lat, center.lng, zoom]);
+
+  // Populate interactive custom marker layers
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const markersGroup = markersGroupRef.current;
+    if (!map || !markersGroup) return;
+
+    markersGroup.clearLayers();
+
+    markers.forEach(marker => {
+      let pinColor = '#C8A25E'; // Default Gold SATHI Theme
+      if (marker.type === 'activity') pinColor = '#3B82F6'; // Adventure Blue
+      if (marker.type === 'event') pinColor = '#EF4444'; // Festive Red
+      if (marker.type === 'attraction') pinColor = '#10B981'; // Emerald Nature
+      if (marker.type === 'hotel') pinColor = '#8B5CF6'; // Partner Purple
+
+      const markerIcon = L.divIcon({
+        html: `
+          <div class="relative flex items-center justify-center w-8 h-8 group">
+            <div class="absolute w-8 h-8 rounded-full bg-[${pinColor}]/20 animate-ping"></div>
+            <div class="absolute w-4.5 h-4.5 rounded-full bg-[${pinColor}] border-2 border-[#17191C] shadow-lg flex items-center justify-center transition-transform group-hover:scale-125 duration-300">
+              <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+            </div>
+          </div>
+        `,
+        className: 'custom-sathi-marker',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+
+      const leafletMarker = L.marker([marker.position.lat, marker.position.lng], { icon: markerIcon });
+      
+      const popupThemeText = currentTheme === 'light' ? '#1D1B18' : '#FFFFFF';
+      const popupThemeBg = currentTheme === 'light' ? '#FFFFFF' : '#17191C';
+      const popupThemeBorder = currentTheme === 'light' ? '#E6DFD5' : '#2A2D31';
+
+      const popupContent = `
+        <div style="
+          padding: 8px 12px; 
+          border-radius: 12px; 
+          background-color: ${popupThemeBg}; 
+          border: 1px solid ${popupThemeBorder}; 
+          font-family: sans-serif; 
+          min-width: 140px; 
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        ">
+          <p style="
+            font-weight: 700; 
+            font-size: 13px; 
+            color: ${popupThemeText}; 
+            margin: 0 0 2px 0 !important;
+          ">${marker.title}</p>
+          ${marker.subtitle ? `<p style="font-size: 11px; color: #8E9299; margin: 0 !important;">${marker.subtitle}</p>` : ''}
+        </div>
+      `;
+
+      leafletMarker.bindPopup(popupContent, {
+        className: 'sathi-leaflet-popup',
+        closeButton: false,
+      });
+
+      leafletMarker.on('click', () => {
+        onMarkerClick?.(marker.id);
+      });
+
+      leafletMarker.addTo(markersGroup);
+    });
+  }, [markers, onMarkerClick, currentTheme]);
 
   return (
     <div
-      ref={containerRef}
-      className={`relative w-full rounded-xl border border-[#2A2D31] overflow-hidden bg-[#17191C] ${className}`}
+      className={`relative w-full rounded-3xl border border-[#2A2D31] overflow-hidden bg-[#17191C] ${className} shadow-2xl transition-all duration-300`}
       style={{ height }}
     >
-      {staticMapUrl ? (
-        <img
-          src={staticMapUrl}
-          alt="Map preview"
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[#8E9299] p-4 text-center">
-          <MapPin className="w-8 h-8 text-[#C8A25E]" />
-          <p className="text-sm font-medium">Map preview</p>
-          <p className="text-xs">Add VITE_GOOGLE_MAPS_API_KEY to enable interactive maps.</p>
-        </div>
-      )}
+      <div ref={mapContainerRef} className="w-full h-full z-10" />
 
+      {/* Map Header Overlay */}
+      <div className="absolute top-4 left-4 z-[400] bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl px-3 py-1.5 flex items-center gap-2 pointer-events-none">
+        <Compass className="w-4 h-4 text-[#C8A25E] animate-spin" style={{ animationDuration: '6s' }} />
+        <span className="text-[10px] md:text-xs font-bold text-white tracking-wide">
+          SATHI Live Map • Kathmandu
+        </span>
+      </div>
+
+      {/* Map Actions Overlay */}
       {markers.length > 0 && (
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-          <div className="flex flex-wrap gap-2">
-            {markers.slice(0, 5).map(marker => (
+        <div className="absolute inset-x-0 bottom-4 z-[400] flex justify-center px-4 pointer-events-none">
+          <div className="flex flex-wrap justify-center gap-1.5 max-w-full">
+            {markers.slice(0, 4).map(marker => (
               <button
                 key={marker.id}
-                onClick={() => onMarkerClick?.(marker.id)}
-                className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md border border-white/10 rounded-full px-2.5 py-1 text-xs text-white hover:bg-[#C8A25E]/20 hover:border-[#C8A25E]/50 transition-colors"
+                onClick={() => {
+                  onMarkerClick?.(marker.id);
+                  const map = mapInstanceRef.current;
+                  if (map) {
+                    map.setView([marker.position.lat, marker.position.lng], 15, { animate: true });
+                  }
+                }}
+                className="pointer-events-auto flex items-center gap-1 bg-[#17191C]/90 backdrop-blur-md border border-[#2A2D31] rounded-full px-2.5 py-1 text-[10px] text-white hover:bg-[#C8A25E] hover:text-[#0F1113] hover:border-[#C8A25E] transition-all duration-300 shadow-lg"
               >
-                <Navigation className="w-3 h-3 text-[#C8A25E]" />
-                <span className="truncate max-w-[120px]">{marker.title}</span>
+                <Navigation className="w-2.5 h-2.5" />
+                <span className="truncate max-w-[80px] font-medium">{marker.title}</span>
               </button>
             ))}
           </div>

@@ -1,17 +1,18 @@
 # Changelog
 
-## v0.19.0 - 2026-07-17
+## v2.0.0 - 2026-07-17
 
-Added
-- None
+### Added
 
-Changed
-- Restored TEMPORARY auth bypass for deployed Vercel testing: AuthGuard, AdminGuard, and AuthModal bypassed so any user can login and access all routes without Firebase access.
-- Fixed Firebase initialization in `src/firebase.ts` to use safer env var loading and re-added `browserLocalPersistence` for auto-login.
+- **Unified Stories Synchronization**: Fully synchronized stories between desktop and mobile layouts to read from the exact same live Firestore collection, using matching story IDs, identical ordering, metadata rendering, and full story lists on both responsive designs without artificial slicing.
+- **Seamless Messaging Pipeline & Deep Linking**: Implemented a pre-selected companion ID deep linking mechanism so that clicking "Message" on any companion profile automatically navigates to the messages tab and selects/initializes their active conversation.
+- **Full-Fidelity Messages Tab Compilation**: Corrected the TypeScript key/id mapping inside the `MessagesTab` component, making it compile and build cleanly while restoring real-time message state streaming.
 
-Fixed
-- Firebase data fetching issue caused by missing persistence and env var handling.
-- Login failure on deployed Vercel instance due to Firebase Auth initialization gaps.
+### Fixed
+
+- **Authentication & Logout Consistency**: Fixed the multi-state desynchronization bugs by routing all logout procedures through a centralized `logout` sequence in `AppContext` that properly disposes of active sessions, companion bookings, favorites lists, and resets the UI to a fully unauthenticated Guest Mode.
+- **TypeScript State-Shadowing Bug**: Resolved a critical name-shadowing bug in `LoadingScreen.tsx` where the local state hook shadowed browser-native `setTimeout` functions, restoring loading bar functionality.
+- **Aesthetic & Typo Correctness**: Removed invalid Lucide attributes, corrected companion type definitions, and aligned companion profiles across the platform to use valid properties like `interests` instead of non-existent titles.
 
 ## v1.3.0 - 2026-07-16
 

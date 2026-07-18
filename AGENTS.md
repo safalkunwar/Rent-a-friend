@@ -8,7 +8,7 @@ The Firebase backend has been fully audited, redesigned, and implemented. The pr
 
 ### Critical Implementation Details
 
-1.  **Firebase Initialization:** `src/firebase.ts` now enforces strict validation of `VITE_FIREBASE_*` environment variables and explicit `browserLocalPersistence` for auto-login. If any are missing, it will log a clear error instead of failing silently with obscure auth errors.
+1.  **Firebase Initialization:** `src/firebase.ts` now enforces strict validation of `VITE_FIREBASE_*` environment variables. If any are missing, it will log a clear error instead of failing silently with obscure auth errors.
 2.  **Security Model:** We use a Role-Based Access Control (RBAC) system. Rules are in `firestore.rules`. Access is governed by custom claims (`admin`, `role: 'companion'`, `role: 'customer'`).
 3.  **Performance:** Composite indexes are defined in `firestore.indexes.json`. Do not run complex queries without checking if an index exists.
 4.  **Cloud Functions:** The logic for bookings, messaging, and ratings is implemented in `functions/src/index.ts`. 
@@ -16,8 +16,6 @@ The Firebase backend has been fully audited, redesigned, and implemented. The pr
 
 ### Ongoing Tasks & Priorities
 
-- **TEMPORARY TESTING BYPASS:** Auth guards and login are currently bypassed for deployed Vercel testing. Remove this bypass before production.
-- **Firebase initialization hardened:** `src/firebase.ts` now uses safer env var loading and explicit `browserLocalPersistence` for auto-login.
 - **Blaze Plan Upgrade:** Deferred. Paused until the user confirms billing is enabled.
 - **User Experience Improvements:** Make the client-side features more functional (booking flow, messaging, dashboard, map interactions).
 - **Testing:** Expand Vitest coverage for service logic.

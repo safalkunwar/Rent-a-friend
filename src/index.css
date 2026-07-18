@@ -8,12 +8,144 @@
   display: none;
 }
 
+/* SATHI Handcrafted Light Mode Theme */
 html.theme-light {
-    filter: invert(1) hue-rotate(180deg);
-    background-color: #0F1113;
+  background-color: #FAF8F5 !important;
+  color: #1C1A17 !important;
 }
 
-html.theme-light img,
-html.theme-light video {
-    filter: invert(1) hue-rotate(180deg);
+html.theme-light body {
+  background-color: #FAF8F5 !important;
+  color: #1C1A17 !important;
+}
+
+/* Background utilities override */
+html.theme-light .bg-\[\#0F1113\] {
+  background-color: #FAF8F5 !important;
+}
+html.theme-light .bg-\[\#17191C\] {
+  background-color: #FFFFFF !important;
+}
+html.theme-light .bg-\[\#1a1c1e\] {
+  background-color: #FFFFFF !important;
+}
+html.theme-light .bg-\[\#111214\] {
+  background-color: #FAF8F5 !important;
+}
+html.theme-light .bg-black {
+  background-color: #FAF8F5 !important;
+}
+html.theme-light .bg-[#17191C]\/90 {
+  background-color: rgba(250, 248, 245, 0.9) !important;
+}
+html.theme-light .bg-black\/30 {
+  background-color: rgba(28, 26, 23, 0.05) !important;
+}
+html.theme-light .bg-black\/40 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+html.theme-light .bg-black\/50 {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+}
+html.theme-light .bg-black\/60 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+html.theme-light .bg-\[\#17191C\]\/50 {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Hover state overrides */
+html.theme-light .hover\:bg-\[\#1c1f22\]:hover,
+html.theme-light .hover\:bg-\[\#222529\]:hover,
+html.theme-light .hover\:bg-white\/5:hover {
+  background-color: #F5EFEB !important;
+}
+
+/* Border overrides */
+html.theme-light .border-\[\#2A2D31\] {
+  border-color: #EAE3D8 !important;
+}
+html.theme-light .border-white\/5 {
+  border-color: rgba(28, 26, 23, 0.06) !important;
+}
+html.theme-light .border-white\/10 {
+  border-color: rgba(28, 26, 23, 0.1) !important;
+}
+html.theme-light .border-white\/20 {
+  border-color: rgba(28, 26, 23, 0.15) !important;
+}
+
+/* Text overrides */
+html.theme-light .text-white {
+  color: #1C1A17 !important;
+}
+html.theme-light .text-white\/40 {
+  color: #9C9485 !important;
+}
+html.theme-light .text-white\/60 {
+  color: #7C7364 !important;
+}
+html.theme-light .text-white\/80 {
+  color: #4C463C !important;
+}
+html.theme-light .text-white\/90 {
+  color: #2D2B26 !important;
+}
+html.theme-light .text-\[\#8E9299\] {
+  color: #70695E !important;
+}
+
+/* Rich Contrast Enhancements */
+html.theme-light .shadow-2xl,
+html.theme-light .shadow-lg {
+  box-shadow: 0 10px 40px -10px rgba(122, 114, 101, 0.15) !important;
+}
+
+/* Premium Gold accents */
+html.theme-light .text-\[\#C8A25E\] {
+  color: #AF853E !important;
+}
+html.theme-light .bg-\[\#C8A25E\] {
+  background-color: #AF853E !important;
+}
+html.theme-light .border-\[\#C8A25E\] {
+  border-color: #AF853E !important;
+}
+
+/* Input Fields and Selects */
+html.theme-light input,
+html.theme-light textarea,
+html.theme-light select {
+  background-color: #FFFFFF !important;
+  color: #1C1A17 !important;
+  border-color: #EAE3D8 !important;
+}
+html.theme-light input::placeholder,
+html.theme-light textarea::placeholder {
+  color: #9C9485 !important;
+}
+
+/* Clean transparent gradients for fading elements */
+html.theme-light .from-black\/80 {
+  --tw-gradient-from: rgba(250, 248, 245, 0.9) !important;
+}
+html.theme-light .from-black {
+  --tw-gradient-from: #FAF8F5 !important;
+}
+html.theme-light .to-transparent {
+  --tw-gradient-to: transparent !important;
+}
+
+/* Leaflet map general fixes */
+.sathi-leaflet-popup .leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border: none !important;
+}
+.sathi-leaflet-popup .leaflet-popup-tip {
+  display: none !important;
+}
+.leaflet-container {
+  font-family: inherit !important;
 }

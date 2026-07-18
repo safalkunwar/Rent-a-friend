@@ -16,7 +16,8 @@ import {
   MapPin, Star, ShieldCheck, Languages, Search, Play, Clock, 
   Home, Compass, Users, Calendar, MessageSquare, BookOpen, Heart, 
   Wallet, Smile, ArrowRight, CheckCircle, Info, Menu, X, Bell, 
-  ChevronDown, Award, Sparkles, AlertTriangle, Coins, Briefcase, ChevronRight, HelpCircle, UserCircle, SlidersHorizontal
+  ChevronDown, Award, Sparkles, AlertTriangle, Coins, Briefcase, ChevronRight, HelpCircle, UserCircle, SlidersHorizontal,
+  Lock, Settings, LogOut, Sun, Moon
 } from 'lucide-react';
 import * as motion from 'motion/react-client';
 import { useAppContext } from './context/AppContext';
@@ -29,7 +30,7 @@ interface ClientAppProps {
 }
 
 export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
-  const { bookings, currentUser, updateBookingStatus, favorites, toggleFavorite, notifications, markNotificationRead, setCurrentUser } = useAppContext();
+  const { bookings, currentUser, updateBookingStatus, favorites, toggleFavorite, notifications, markNotificationRead, logout } = useAppContext();
   const { showToast } = useToast();
   
   const { companions: fetchedCompanions, loading: companionsLoading } = useCompanions();
@@ -49,7 +50,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'recommended' | 'priceAsc' | 'priceDesc' | 'rating'>('recommended');
   const [showSOS, setShowSOS] = useState(false);
-  const [recentlyViewed, setRecentlyViewed] = useState<Companion[]>([]);
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   
   // Custom dashboard / UI states
@@ -60,7 +60,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [showProfileDropdown, setShowProfileDropdown] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
   const [showCalculator, setShowCalculator] = useState<boolean>(false);
-  const [mobileTab, setMobileTab] = useState<'home' | 'explore' | 'experiences' | 'bookings' | 'messages'>('home');
+  const [mobileTab, setMobileTab] = useState<'home' | 'explore' | 'experiences' | 'bookings' | 'messages' | 'profile'>('home');
+  const [activeChatCompanionId, setActiveChatCompanionId] = useState<string | null>(null);
   
   // Earnings Calculator States
   const [calcHourlyRate, setCalcHourlyRate] = useState<number>(1200); // NPR per hour
@@ -93,21 +94,17 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
   const handleViewCompanion = (companion: Companion) => {
     setSelectedCompanion(companion);
-    setRecentlyViewed(prev => {
-      const filtered = prev.filter(c => c.id !== companion.id);
-      return [companion, ...filtered].slice(0, 6);
-    });
   };
 
-  const handleToggleLikeMoment = (index: number) => {
+  const handleToggleLikeMoment = (id: string | number) => {
     setMomentLiked(prev => {
-      const liked = !prev[index];
+      const liked = !prev[id];
       setMomentLikes(likes => ({
         ...likes,
-        [index]: liked ? likes[index] + 1 : likes[index] - 1
+        [id]: liked ? (likes[id] || 0) + 1 : Math.max(0, (likes[id] || 0) - 1)
       }));
       showToast(liked ? "Liked community adventure!" : "Removed like", "success");
-      return { ...prev, [index]: liked };
+      return { ...prev, [id]: liked };
     });
   };
 
@@ -472,12 +469,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               >
                 <img 
                   src={currentUser?.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"} 
-                  alt={currentUser?.name || "Profile"} 
+                  alt={currentUser?.name || "Guest User"} 
                   className="w-7 h-7 rounded-full object-cover border border-[#2A2D31]"
                 />
                 <div className="hidden md:block text-left select-none">
-                  <span className="text-[11px] font-bold text-white block -mb-0.5 leading-tight">{currentUser?.name || "Safal Kunwar"}</span>
-                  <span className="text-[9px] font-semibold text-[#C8A25E] block leading-none">Premium</span>
+                  <span className="text-[11px] font-bold text-white block -mb-0.5 leading-tight">{currentUser?.name || "Guest User"}</span>
+                  <span className="text-[9px] font-semibold text-[#C8A25E] block leading-none">{currentUser ? "Premium" : "Guest Mode"}</span>
                 </div>
                 <ChevronDown className="w-3 h-3 text-[#8E9299] hidden md:block" />
               </div>
@@ -493,8 +490,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       className="absolute right-0 top-11 mt-2 w-52 bg-[#17191C] border border-[#2A2D31] rounded-2xl shadow-2xl py-2 z-50 overflow-hidden text-left"
                     >
                       <div className="px-4 py-2.5 border-b border-[#2A2D31]/60">
-                        <span className="text-xs font-bold text-white block truncate">{currentUser?.name || "Safal Kunwar"}</span>
-                        <span className="text-[10px] text-[#8E9299] block truncate">{currentUser?.email || "safal.sathi@gmail.com"}</span>
+                        <span className="text-xs font-bold text-white block truncate">{currentUser?.name || "Guest User"}</span>
+                        <span className="text-[10px] text-[#8E9299] block whitespace-normal leading-normal">{currentUser?.email || "Sign in to unlock messaging, bookings, favorites, and companion features."}</span>
                       </div>
                       
                       <div className="py-1">
@@ -515,7 +512,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <div className="py-1 border-t border-[#2A2D31]/60">
                         {currentUser ? (
                           <button 
-                            onClick={() => { setCurrentUser(null); setShowProfileDropdown(false); showToast("Logged out successfully", "success"); }}
+                            onClick={async () => { await logout(); setShowProfileDropdown(false); showToast("Logged out successfully", "success"); }}
                             className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-500/10 flex items-center gap-2"
                           >
                             Log Out
@@ -651,26 +648,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   </div>
                 </section>
 
-                {/* Recently Viewed Section if exists */}
-                {recentlyViewed.length > 0 && (
-                  <section>
-                    <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-[#8E9299] mb-4">Recently Viewed Companions</h3>
-                    <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 snap-x snap-mandatory">
-                      {recentlyViewed.map(comp => (
-                        <div
-                          key={`recent-${comp.id}`}
-                          onClick={() => handleViewCompanion(comp)}
-                          className="shrink-0 w-16 flex flex-col items-center gap-1.5 cursor-pointer group snap-start text-center"
-                        >
-                          <div className="w-14 h-14 rounded-full p-[1.5px] bg-[#C8A25E]/40 group-hover:bg-[#C8A25E] transition-all">
-                            <img src={comp.imageUrl} alt={comp.name} className="w-full h-full rounded-full border border-[#17191C] object-cover" />
-                          </div>
-                          <span className="text-[10px] text-white truncate w-full">{comp.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
 
                 {/* 3. COMPANION CATEGORY / FILTER SELECTION */}
                 <section className="space-y-4">
@@ -808,7 +785,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                               <div className="space-y-1">
                                 <div className="flex items-center gap-1.5 text-white font-black text-xl drop-shadow-md">
                                   {comp.name}, {comp.age}
-                                  {comp.isVerified && <ShieldCheck className="w-5 h-5 text-[#C8A25E]" title="ID Verified" />}
+                                  {comp.isVerified && <ShieldCheck className="w-5 h-5 text-[#C8A25E]" />}
                                 </div>
                                 <p className="text-[#8E9299] text-xs flex items-center gap-1 font-medium">
                                   <MapPin className="w-3.5 h-3.5 text-[#C8A25E]" /> {comp.location}, Nepal
@@ -962,7 +939,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         return (
                           <div 
                             key={act.id} 
-                            onClick={() => { setSelectedCategory(act.category || 'All'); showToast(`Filtered by ${act.title}`, 'success'); }} 
+                            onClick={() => { setSelectedCategory((act as any).category || 'All'); showToast(`Filtered by ${act.title}`, 'success'); }} 
                             className="group relative aspect-[4/3] rounded-[32px] overflow-hidden border border-[#2A2D31]/40 bg-[#17191C] hover:border-[#C8A25E]/40 hover:shadow-2xl hover:shadow-[#C8A25E]/5 transition-all duration-500 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#C8A25E]"
                           >
                             <img 
@@ -1291,7 +1268,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
             {activeTab === 'messages' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <MessagesTab onOpenAuth={setAuthMode} />
+                <MessagesTab onOpenAuth={setAuthMode} initialCompanionId={activeChatCompanionId} />
               </motion.div>
             )}
 
@@ -1578,7 +1555,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   src={currentUser?.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"} 
                   className="w-9 h-9 rounded-full object-cover border-2 border-[#C8A25E] cursor-pointer" 
                   alt="Profile"
-                  onClick={() => { setMobileTab('bookings'); setActiveTab('bookings'); showToast('My Profile / Bookings dashboard', 'info'); }}
+                  onClick={() => { setMobileTab('profile'); }}
                 />
               </div>
             </div>
@@ -1598,18 +1575,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 </div>
                 
                 {/* Dynamic Stories based on companions */}
-                {fetchedStories.slice(0, 10).map((st, i) => (
+                {fetchedStories.map((st, i) => (
                   <div 
                     key={st.id || i} 
-                    onClick={() => setViewingStory({ 
-                      id: st.id, 
-                      imageUrl: st.imageUrl, 
-                      userAvatar: st.userAvatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150', 
-                      userName: st.userName, 
-                      companionName: st.companionName, 
-                      caption: st.caption, 
-                      timeAgo: st.timeAgo || '2h ago' 
-                    })}
+                    onClick={() => setViewingStory(st)}
                     className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start"
                   >
                     <div className="relative p-[2px] rounded-full bg-gradient-to-tr from-[#C8A25E] via-pink-600 to-purple-600">
@@ -1688,7 +1657,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </div>
               
               <div className="space-y-4">
-                {fetchedStories.slice(0, 10).map((post, idx) => {
+                {fetchedStories.map((post, idx) => {
                   const isLiked = momentLiked[post.id];
                   const currentLikesCount = (momentLikes[post.id] || post.likes || 15) + (isLiked ? 1 : 0);
                   
@@ -1928,7 +1897,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         <h4 className="text-xs font-black text-white flex items-center gap-1 leading-tight">
                           {comp.name} <span className="text-[#C8A25E]">✔</span>
                         </h4>
-                        <p className="text-[9px] text-white/80">{comp.title}</p>
+                        <p className="text-[9px] text-white/80">{comp.interests[0] || 'SATHI Companion'}</p>
                         <div className="flex items-center gap-1 text-[9px] text-[#C8A25E] font-black">
                           <Star className="w-3 h-3 fill-current" />
                           <span>{comp.rating} (128)</span>
@@ -2132,38 +2101,265 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           </div>
         )}
 
-        {/* Render Mobile Tab Bookings */}
-        {mobileTab === 'bookings' && (
-          <div className="p-4 space-y-6">
-            <h2 className="text-xl font-extrabold text-white">My Companion Bookings</h2>
-            {bookings.filter(b => b.userId === currentUser?.id).length > 0 ? (
-              <div className="space-y-4 pb-8">
-                {bookings.filter(b => b.userId === currentUser?.id).map(booking => {
-                  const companion = companions.find(c => c.id === booking.companionId);
-                  return (
-                    <div key={booking.id} className="bg-[#17191C] border border-white/5 rounded-2xl p-4 space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-bold text-sm text-white">Booking with {companion?.name || 'Companion'}</h3>
-                          <p className="text-[10px] text-[#8E9299]">{booking.date} at {booking.time}</p>
-                        </div>
-                        <span className={`text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded border ${booking.status === 'confirmed' ? 'bg-green-500/10 border-green-500/30 text-green-500' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'}`}>
-                          {booking.status}
-                        </span>
+        {/* Render Mobile Tab Profile */}
+        {mobileTab === 'profile' && (
+          <div className="p-4 space-y-6 pb-20 overflow-y-auto max-h-[calc(100vh-120px)] custom-scrollbar">
+            {!currentUser ? (
+              // ==================== GUEST USER ACCOUNT VIEW ====================
+              <div className="space-y-6">
+                {/* Guest Header Card */}
+                <div className="bg-[#17191C] border border-white/5 rounded-3xl p-6 flex items-center gap-4 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#C8A25E]/5 rounded-full blur-2xl" />
+                  <div className="w-16 h-16 rounded-full border-2 border-[#C8A25E]/40 bg-[#1E2124] flex items-center justify-center text-[#C8A25E]">
+                    <UserCircle className="w-10 h-10" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h3 className="text-lg font-bold text-[#C8A25E] flex items-center gap-1.5">Guest User</h3>
+                    <p className="text-[10px] text-[#8E9299] leading-relaxed mt-1">Sign in to unlock messaging, bookings, favorites, and companion features.</p>
+                  </div>
+                </div>
+
+                {/* Main Action Button */}
+                <button 
+                  onClick={() => setAuthMode('login')}
+                  className="w-full py-3.5 bg-[#C8A25E] hover:bg-[#B69150] text-[#0F1113] font-bold text-xs rounded-xl uppercase tracking-wider transition-colors shadow-lg shadow-[#C8A25E]/10"
+                >
+                  Sign In / Register
+                </button>
+
+                {/* Dashboard Options (Disabled / Locked for Guest) */}
+                <div className="space-y-3.5">
+                  <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] text-left px-1">My Dashboard</h4>
+                  
+                  <div className="bg-[#17191C] border border-white/5 rounded-2xl divide-y divide-white/5">
+                    {/* Personal Dashboard (Disabled) */}
+                    <div className="flex items-center justify-between p-4 opacity-50 cursor-not-allowed">
+                      <div className="flex items-center gap-3">
+                        <UserCircle className="w-4 h-4 text-[#8E9299]" />
+                        <span className="text-xs font-bold text-white">Personal Dashboard</span>
                       </div>
-                      <div className="flex justify-between items-center text-[10px] pt-1 border-t border-white/5">
-                        <span className="font-black text-[#C8A25E]">NPR {booking.totalPrice}</span>
-                        <span className="text-[#8E9299]">{booking.duration} hours</span>
-                      </div>
+                      <Lock className="w-3.5 h-3.5 text-[#8E9299]" />
                     </div>
-                  );
-                })}
+
+                    {/* Partner Dashboard (Disabled) */}
+                    <div className="flex items-center justify-between p-4 opacity-50 cursor-not-allowed">
+                      <div className="flex items-center gap-3">
+                        <Briefcase className="w-4 h-4 text-[#8E9299]" />
+                        <span className="text-xs font-bold text-white">Partner Dashboard</span>
+                      </div>
+                      <Lock className="w-3.5 h-3.5 text-[#8E9299]" />
+                    </div>
+
+                    {/* My Wallet (Disabled) */}
+                    <div className="flex items-center justify-between p-4 opacity-50 cursor-not-allowed">
+                      <div className="flex items-center gap-3">
+                        <Wallet className="w-4 h-4 text-[#8E9299]" />
+                        <span className="text-xs font-bold text-white">My Wallet (NPR)</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-[#8E9299]">NPR 0.00</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Active Join SATHI Guide Link for Guest */}
+                <div className="bg-gradient-to-r from-[#C8A25E]/10 to-[#C8A25E]/5 border border-[#C8A25E]/20 rounded-2xl p-5 text-left space-y-3">
+                  <div className="flex items-center gap-2 text-[#C8A25E]">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-xs font-bold">Earn in Nepal</span>
+                  </div>
+                  <h4 className="text-xs font-bold text-white">Join SATHI as a Companion Guide</h4>
+                  <p className="text-[10px] text-[#8E9299] leading-relaxed">Turn your local knowledge, storytelling, or hiking skills into high-paying earnings in NPR.</p>
+                  <button 
+                    onClick={() => setAuthMode('guide')}
+                    className="mt-1 px-4 py-2 bg-[#C8A25E] text-[#0F1113] font-black text-[10px] rounded-lg hover:bg-[#B69150] uppercase tracking-wider transition-all"
+                  >
+                    Apply Now
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="bg-[#17191C] border border-white/5 p-6 rounded-2xl text-center space-y-3">
-                <p className="text-xs text-[#8E9299]">You do not have any active bookings scheduled yet.</p>
-                <button onClick={() => setMobileTab('explore')} className="py-2.5 px-4 bg-[#C8A25E] text-black font-black text-xs rounded-xl uppercase tracking-wider">
-                  Discover Companions
+              // ==================== LOGGED-IN USER PROFILE VIEW ====================
+              <div className="space-y-6">
+                {/* Logged-In User Header */}
+                <div className="bg-[#17191C] border border-white/5 rounded-3xl p-6 flex items-center gap-4 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#C8A25E]/5 rounded-full blur-2xl" />
+                  <img 
+                    src={currentUser.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"} 
+                    alt={currentUser.name} 
+                    className="w-16 h-16 rounded-full object-cover border-2 border-[#C8A25E]" 
+                  />
+                  <div className="flex-1 text-left">
+                    <h3 className="text-base font-bold text-white flex items-center gap-1">
+                      {currentUser.name}
+                      <ShieldCheck className="w-4 h-4 text-[#C8A25E]" />
+                    </h3>
+                    <p className="text-[10px] text-[#8E9299] mt-0.5">{currentUser.email}</p>
+                    <span className="inline-block mt-1.5 px-2 py-0.5 bg-[#C8A25E]/10 border border-[#C8A25E]/30 text-[#C8A25E] text-[8px] font-extrabold rounded uppercase tracking-wider">
+                      {currentUser.role === 'companion' ? 'SATHI Partner' : 'Premium Member'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* SATHI Wallet Section */}
+                <div className="bg-[#17191C] border border-white/5 rounded-2xl p-5 text-left">
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="w-4 h-4 text-[#C8A25E]" />
+                      <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299]">SATHI Wallet</span>
+                    </div>
+                    <span className="text-xs font-bold text-white">NPR Balance</span>
+                  </div>
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <span className="text-2xl font-black text-white">NPR 4,500.00</span>
+                      <p className="text-[9px] text-[#8E9299] mt-0.5">Nepal Local Market Rate currency</p>
+                    </div>
+                    <button 
+                      onClick={() => setShowWalletModal(true)}
+                      className="px-4 py-2 bg-[#C8A25E] text-black font-extrabold text-[10px] rounded-lg uppercase tracking-wider hover:bg-[#B69150] transition-colors"
+                    >
+                      Deposit Fund
+                    </button>
+                  </div>
+                </div>
+
+                {/* My Companion Bookings Panel */}
+                <div className="space-y-3 text-left">
+                  <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] px-1">My Bookings</h4>
+                  {bookings.filter(b => b.userId === currentUser.id).length > 0 ? (
+                    <div className="space-y-3">
+                      {bookings.filter(b => b.userId === currentUser.id).map(booking => {
+                        const companion = companions.find(c => c.id === booking.companionId);
+                        return (
+                          <div key={booking.id} className="bg-[#17191C] border border-white/5 rounded-2xl p-4 space-y-3.5">
+                            <div className="flex items-center gap-3">
+                              {companion && (
+                                <img src={companion.imageUrl} className="w-9 h-9 rounded-full object-cover border border-[#2A2D31]" alt={companion.name} />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h5 className="font-bold text-xs text-white truncate">Trip with {companion?.name || 'Companion'}</h5>
+                                <p className="text-[9px] text-[#8E9299] mt-0.5">{booking.date} at {booking.time}</p>
+                              </div>
+                              <span className={`text-[8px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded border ${booking.status === 'confirmed' ? 'bg-green-500/10 border-green-500/30 text-green-500' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'}`}>
+                                {booking.status}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] pt-2.5 border-t border-white/5">
+                              <span className="font-black text-[#C8A25E]">NPR {booking.totalPrice}</span>
+                              <span className="text-[#8E9299]">{booking.duration} hours • {booking.participants} persons</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="bg-[#17191C] border border-white/5 p-5 rounded-2xl text-center space-y-2.5">
+                      <p className="text-[10px] text-[#8E9299]">No scheduled companion bookings yet.</p>
+                      <button onClick={() => setMobileTab('explore')} className="py-2 px-4 bg-[#C8A25E] text-black font-extrabold text-[10px] rounded-lg uppercase tracking-wider">
+                        Discover Companions
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Saved Favorites Section */}
+                <div className="space-y-3 text-left">
+                  <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] px-1">Saved Companions</h4>
+                  {fetchedCompanions.filter(c => favorites.includes(c.id)).length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {fetchedCompanions.filter(c => favorites.includes(c.id)).map(comp => (
+                        <div key={comp.id} className="bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden flex flex-col relative">
+                          <img src={comp.imageUrl} className="w-full h-24 object-cover" alt={comp.name} />
+                          <button 
+                            onClick={() => toggleFavorite(comp.id)}
+                            className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10"
+                          >
+                            <Heart className="w-3 h-3 fill-[#C8A25E] text-[#C8A25E]" />
+                          </button>
+                          <div className="p-2.5 space-y-1">
+                            <h5 className="font-bold text-xs text-white truncate">{comp.name}</h5>
+                            <p className="text-[9px] text-[#8E9299] flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5" /> {comp.location}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-[#17191C] border border-white/5 p-4 rounded-2xl text-center">
+                      <p className="text-[10px] text-[#8E9299]">No saved SATHI guides yet.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* SATHI Partner Companion Section if Role matches */}
+                {currentUser.role === 'companion' && (
+                  <div className="bg-gradient-to-r from-[#C8A25E]/10 to-[#C8A25E]/5 border border-[#C8A25E]/20 rounded-2xl p-5 text-left space-y-3">
+                    <div className="flex items-center gap-2 text-[#C8A25E]">
+                      <Briefcase className="w-4 h-4" />
+                      <span className="text-[10px] uppercase tracking-wider font-extrabold">Guide Console</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3.5 pt-1">
+                      <div className="bg-[#1E2124] rounded-xl p-3 border border-white/5">
+                        <span className="text-[9px] text-[#8E9299] uppercase tracking-wider">Earnings</span>
+                        <p className="text-sm font-bold text-white mt-1">NPR 1,250</p>
+                      </div>
+                      <div className="bg-[#1E2124] rounded-xl p-3 border border-white/5">
+                        <span className="text-[9px] text-[#8E9299] uppercase tracking-wider">Requests</span>
+                        <p className="text-sm font-bold text-[#C8A25E] mt-1">3 Pending</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Responsive Settings block */}
+                <div className="space-y-3 text-left">
+                  <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] px-1">Settings & Preferences</h4>
+                  <div className="bg-[#17191C] border border-white/5 rounded-2xl divide-y divide-white/5">
+                    {/* Theme Switcher Toggle */}
+                    <div className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-3">
+                        <Sun className="w-4 h-4 text-[#C8A25E]" />
+                        <span className="text-xs font-bold text-white">Light Theme Mode</span>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          const isCurrentlyLight = document.documentElement.classList.toggle('theme-light');
+                          showToast(isCurrentlyLight ? 'SATHI Premium Light Theme Active' : 'SATHI Cosmic Dark Theme Active', 'success');
+                        }}
+                        className="w-10 h-6 rounded-full bg-[#1E2124] border border-white/10 p-0.5 flex items-center relative cursor-pointer"
+                        aria-label="Toggle Light Theme Mode"
+                      >
+                        <div className="w-4 h-4 rounded-full bg-[#C8A25E] transition-all duration-300 absolute" style={{
+                          left: typeof document !== 'undefined' && document.documentElement.classList.contains('theme-light') ? '20px' : '2px'
+                        }} />
+                      </button>
+                    </div>
+
+                    {/* Notification settings toggle */}
+                    <div className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-3">
+                        <Bell className="w-4 h-4 text-[#C8A25E]" />
+                        <span className="text-xs font-bold text-white">Push Alerts</span>
+                      </div>
+                      <button 
+                        onClick={() => showToast('Push notifications enabled!', 'success')}
+                        className="px-2 py-1 bg-[#1E2124] border border-white/10 text-[9px] uppercase tracking-wider font-extrabold rounded-md text-white hover:border-[#C8A25E]"
+                      >
+                        Enabled
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Logout Button */}
+                <button 
+                  onClick={async () => {
+                    await logout();
+                    setMobileTab('home');
+                    showToast("Logged out successfully from SATHI", "success");
+                  }}
+                  className="w-full py-3.5 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/25 font-bold text-xs rounded-xl uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" /> Logout Account
                 </button>
               </div>
             )}
@@ -2175,7 +2371,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           <div className="p-4 space-y-4">
             <h2 className="text-xl font-extrabold text-white">My Messages</h2>
             <div className="bg-[#17191C] border border-white/5 rounded-2xl p-2 min-h-[400px]">
-              <MessagesTab onOpenAuth={setAuthMode} />
+              <MessagesTab onOpenAuth={setAuthMode} initialCompanionId={activeChatCompanionId} />
             </div>
           </div>
         )}
@@ -2190,8 +2386,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 <span className="text-xl font-extrabold leading-none">+</span>
               </div>
             ), label: '' },
-            { tab: 'bookings', icon: <Calendar className="w-5 h-5" />, label: 'Bookings' },
             { tab: 'messages', icon: <MessageSquare className="w-5 h-5" />, label: 'Messages' },
+            { tab: 'profile', icon: <UserCircle className="w-5 h-5" />, label: 'Profile' },
           ].map((item) => {
             const isActive = mobileTab === item.tab;
             return (
@@ -2353,8 +2549,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           onClose={() => setSelectedCompanion(null)} 
           onOpenAuth={setAuthMode}
           onMessage={() => {
+            if (selectedCompanion) {
+              setActiveChatCompanionId(selectedCompanion.id);
+            }
             setSelectedCompanion(null);
             setActiveTab('messages');
+            setMobileTab('messages');
           }}
         />
       )}

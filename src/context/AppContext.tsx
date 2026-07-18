@@ -16,6 +16,7 @@ interface AppState {
   notifications: Notification[];
   markNotificationRead: (id: string) => void;
   loading: boolean;
+  logout: () => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -57,6 +58,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           console.log('[SATHI] Firestore user profile:', profile ? 'found' : 'not found');
           if (profile && !cancelled) {
             setCurrentUser({ ...user, role: profile.role || 'customer', favorites: profile.favorites || [] });
+            setFavorites(profile.favorites || []);
           } else if (!cancelled) {
             await firestore.setDocument(`users/${user.id}`, {
               name: user.name,
@@ -67,14 +69,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             });
-            if (!cancelled) setCurrentUser(user);
+            if (!cancelled) {
+              setCurrentUser(user);
+              setFavorites([]);
+            }
           }
         } else {
-          if (!cancelled) setCurrentUser(null);
+          if (!cancelled) {
+            setCurrentUser(null);
+            setFavorites([]);
+          }
         }
       } catch (err) {
         console.error('[SATHI] Failed to load user profile:', err);
-        if (!cancelled) setCurrentUser(null);
+        if (!cancelled) {
+          setCurrentUser(null);
+          setFavorites([]);
+        }
       } finally {
         if (!cancelled) {
           console.log('[SATHI] AppProvider loading=false');
@@ -195,6 +206,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return getConversationId(currentUser.id, otherUserId);
   }, [currentUser]);
 
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+    } catch (err) {
+      console.error('[SATHI] Error logging out:', err);
+    }
+    setCurrentUser(null);
+    setFavorites([]);
+    setBookings([]);
+    setNotifications([]);
+  }, []);
+
   return (
     <AppContext.Provider value={{
       currentUser,
@@ -208,6 +231,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       notifications,
       markNotificationRead,
       loading,
+      logout,
     }}>
       {children}
     </AppContext.Provider>

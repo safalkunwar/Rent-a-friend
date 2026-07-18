@@ -99,7 +99,7 @@ export function AdminApp() {
                  </div>
               </div>
 
-                {activeTab === 'overview' && <AdminOverview onNavigate={setActiveTab} />}
+                {activeTab === 'overview' && <AdminOverview onNavigate={(tab) => setActiveTab(tab as any)} />}
                {activeTab === 'users' && <AdminUsers />}
                {activeTab === 'guides' && <AdminGuides />}
                {activeTab === 'companions' && <AdminCompanions />}

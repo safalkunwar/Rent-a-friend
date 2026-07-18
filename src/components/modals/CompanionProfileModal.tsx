@@ -86,7 +86,7 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                 <div className="flex items-end gap-3 md:gap-4 mb-3 md:mb-4">
                   <h1 id="companion-profile-name" className="text-2xl md:text-4xl font-bold text-white flex items-center gap-2">
                     {companion.name}, {companion.age}
-                    {companion.isVerified && <ShieldCheck className="w-5 h-5 md:w-6 md:h-6 text-[#C8A25E]" title="Verified" />}
+                    {companion.isVerified && <ShieldCheck className="w-5 h-5 md:w-6 md:h-6 text-[#C8A25E]" />}
                   </h1>
                 </div>
 

@@ -13,7 +13,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenAuth, searchQuery, setSearchQuery, onLogoClick }) => {
-  const { currentUser, setCurrentUser, notifications } = useAppContext();
+  const { currentUser, logout, notifications } = useAppContext();
   const { showToast } = useToast();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -47,9 +47,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
     }
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    await logout();
     setIsDropdownOpen(false);
+    showToast('Logged out successfully', 'success');
   };
 
   return (

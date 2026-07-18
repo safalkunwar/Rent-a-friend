@@ -47,6 +47,7 @@ export interface Companion {
   images?: string[];
   reviews?: Review[];
   availableDays?: string[]; // e.g. ['Monday', 'Tuesday']
+  responseTime?: string;
 }
 
 export interface Booking {
