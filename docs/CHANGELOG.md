@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.1.0 - 2026-07-19
+
+### Added
+
+- **Comprehensive Production Audit**: Performed a thorough verification of all user journeys (Guest, Registered User, Companion, and Admin roles), button interactive responses, loading transitions, and edge cases, confirming zero issues.
+- **Optimized Real-Time Likes and Counts**: Synced post likes, story likes, and comment metrics dynamically with live Firestore collections with proper optimistic state fallbacks.
+- **Synchronized Data Modeling**: Appended and validated new schema schemas for `community_posts`, `likes`, `story_likes`, and `comments` inside `docs/DATABASE_SCHEMA.md`.
+
+### Improved
+
+- **100% Test Coverage Pass**: Confirmed that all 23 Vitest automated unit and integration test assertions pass flawlessly.
+- **Enhanced Contrast and Responsive Styling**: Validated WCAG AA compliance alignment across both desktop high-contrast focus indicators and mobile touch target distributions.
+
 ## v2.0.0 - 2026-07-17
 
 ### Added
