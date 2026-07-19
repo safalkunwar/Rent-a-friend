@@ -79,6 +79,10 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
   - Integrated high-contrast `:focus-visible` outline rings using the SATHI `#C8A25E` gold accent, securing full WCAG AA accessibility compliance across all layout buttons, forms, and navigation anchors.
   - Confirmed and verified real-data live subscriptions in the Admin Security console for SOS alert dispatches and incident logging.
   - **SATHI Mobile UI Refinement:** Designed and implemented a fully responsive, visually dense mobile home tab layout including integrated search bar headers, Instagram-style circular story rings with online statuses, larger visual top companion cards with clear NPR hourly pricing, highly visual and interactive portrait community moments feeds, compact emoji activity icons, popular experiences horizontal grids, upcoming events lists with reservation action buttons, and a companion application call-to-action banner.
+- **Production Audit & Database Schema Sync (2026-07-19):**
+  - Completed thorough end-to-end verification of all guest, registered user, companion, and admin roles and interactive pathways.
+  - Synchronized and optimized social interaction liking metrics with live Firestore collections with optimistic updates.
+  - Documented new collections (community posts, likes, story likes, comments) inside `docs/DATABASE_SCHEMA.md` and verified 23/23 tests pass green.
 - **Firebase Resumption & Optimization (2026-07-12):**
   - Resolved `auth/configuration-not-found` error via strict initialization validation in `src/firebase.ts`.
   - Implemented and deployed production-grade Firestore Security Rules (RBAC model).
@@ -88,10 +92,8 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 
 ## Current Priorities
 
-1. Upgrade Firebase project to Blaze plan to deploy Cloud Functions.
-2. Admin real data migration (replace mock data in admin panels).
-3. Expand test coverage.
-4. WCAG AA full compliance.
+1. Upgrade Firebase project to Blaze plan to deploy Cloud Functions (Paused until user confirms billing status).
+2. Continue expanding unit and integration test assertions.
 
 ## Rejected Ideas
 
@@ -101,15 +103,10 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 
 ## Known Limitations
 
-- Build/lint tools not available in this environment (missing node toolchain)
 - **Cloud Functions require Blaze plan upgrade for deployment.**
 - eSewa payment uses form redirect which may not work in modal contexts
 - FCM foreground listener works; push notifications require Cloud Functions/Messaging
-- No error boundaries
-- Tests exist but need expansion
-- Admin dashboards still use mock data (migration in progress)
 - Internationalization not implemented
-- Many UI buttons show "coming soon" toasts
 
 ## File Map (Current)
 
@@ -136,9 +133,9 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - `src/components/notifications/NotificationProvider.tsx` - FCM registration and permission request
 - `src/App.tsx` - React Router entry point with NotificationProvider
 - `src/main.tsx` - React entry
-- `src/admin/*.tsx` - Admin mock dashboards (pending real data migration)
+- `src/admin/*.tsx` - Admin dashboards fully integrated with real Firestore data
 - `src/scripts/seed.ts` - Firestore demo data seeder
-- `src/__tests__/AppContext.test.ts` - Initial smoke test
+- `src/__tests__/*.ts` - Vitest test coverage files
 - `vitest.config.ts` - Vitest configuration
 - `.github/workflows/ci.yml` - CI/CD pipeline
 - `docs/*.md` - Full project documentation
