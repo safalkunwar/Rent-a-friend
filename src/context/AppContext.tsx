@@ -1,8 +1,12 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { User, Companion, Booking, Message, Notification } from '../types';
+import { User, Companion, Booking, Message, Notification, CommunityPost, ExperienceStory } from '../types';
 import { authService, AuthUser } from '../services/auth';
 import { firestore } from '../services/firestore';
 import { offlineStorage } from '../services/storage';
+import { userRepository } from '../repositories/UserRepository';
+import { companionRepository } from '../repositories/CompanionRepository';
+import { bookingRepository } from '../repositories/BookingRepository';
+import { socialRepository, Comment } from '../repositories/SocialRepository';
 
 interface AppState {
   currentUser: User | null;
@@ -17,6 +21,26 @@ interface AppState {
   markNotificationRead: (id: string) => void;
   loading: boolean;
   logout: () => Promise<void>;
+  
+  // Social Layer Operations
+  updateUserProfile: (updates: Partial<User & { 
+    phone?: string; 
+    bio?: string;
+    languages?: string[];
+    skills?: string[];
+    availability?: string;
+    interests?: string[];
+    location?: string;
+  }>) => Promise<void>;
+  becomeCompanion: (companion: Omit<Companion, 'id'>, customId?: string) => Promise<string>;
+  createPost: (post: Omit<CommunityPost, 'id'>) => Promise<string>;
+  likePost: (postId: string) => Promise<void>;
+  unlikePost: (postId: string) => Promise<void>;
+  checkUserLikedPost: (postId: string) => Promise<boolean>;
+  createComment: (comment: Omit<Comment, 'id' | 'createdAt'>) => Promise<string>;
+  deleteComment: (id: string, postId: string) => Promise<void>;
+  uploadStory: (story: Omit<ExperienceStory, 'id'>) => Promise<string>;
+  deleteStory: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -218,6 +242,64 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setNotifications([]);
   }, []);
 
+  const updateUserProfile = useCallback(async (updates: Partial<User & { 
+    phone?: string; 
+    bio?: string;
+    languages?: string[];
+    skills?: string[];
+    availability?: string;
+    interests?: string[];
+    location?: string;
+  }>) => {
+    if (!currentUser) return;
+    await userRepository.updateUserProfile(currentUser.id, updates);
+    setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+  }, [currentUser]);
+
+  const becomeCompanion = useCallback(async (companion: Omit<Companion, 'id'>, customId?: string) => {
+    if (!currentUser) throw new Error('Must be logged in to apply to become a companion.');
+    const id = await companionRepository.createCompanionProfile(companion, customId);
+    // Update local role
+    await userRepository.updateUserProfile(currentUser.id, { role: 'companion' });
+    setCurrentUser(prev => prev ? { ...prev, role: 'companion' } : null);
+    return id;
+  }, [currentUser]);
+
+  const createPost = useCallback(async (post: Omit<CommunityPost, 'id'>) => {
+    return await socialRepository.createPost(post);
+  }, []);
+
+  const likePost = useCallback(async (postId: string) => {
+    if (!currentUser) return;
+    await socialRepository.likePost(currentUser.id, postId);
+  }, [currentUser]);
+
+  const unlikePost = useCallback(async (postId: string) => {
+    if (!currentUser) return;
+    await socialRepository.unlikePost(currentUser.id, postId);
+  }, [currentUser]);
+
+  const checkUserLikedPost = useCallback(async (postId: string) => {
+    if (!currentUser) return false;
+    return await socialRepository.checkUserLikedPost(currentUser.id, postId);
+  }, [currentUser]);
+
+  const createComment = useCallback(async (comment: Omit<Comment, 'id' | 'createdAt'>) => {
+    return await socialRepository.createComment(comment);
+  }, []);
+
+  const deleteComment = useCallback(async (id: string, postId: string) => {
+    await socialRepository.deleteComment(id, postId);
+  }, []);
+
+  const uploadStory = useCallback(async (story: Omit<ExperienceStory, 'id'>) => {
+    return await socialRepository.uploadStory(story);
+  }, []);
+
+  const deleteStory = useCallback(async (id: string) => {
+    await socialRepository.deleteStory(id);
+  }, []);
+
   return (
     <AppContext.Provider value={{
       currentUser,
@@ -232,6 +314,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       markNotificationRead,
       loading,
       logout,
+      updateUserProfile,
+      becomeCompanion,
+      createPost,
+      likePost,
+      unlikePost,
+      checkUserLikedPost,
+      createComment,
+      deleteComment,
+      uploadStory,
+      deleteStory,
     }}>
       {children}
     </AppContext.Provider>

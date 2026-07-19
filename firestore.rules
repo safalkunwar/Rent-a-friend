@@ -181,7 +181,7 @@ service cloud.firestore {
       // Admins can update and delete any post
       allow update, delete: if isAdmin();
 
-      // Comments Subcollection: /community_posts/{postId}/comments/{commentId}
+      // Comments Subcollection (legacy/nested): /community_posts/{postId}/comments/{commentId}
       match /comments/{commentId} {
         // Anyone can read comments on published posts
         allow read: if get(/databases/$(database)/documents/community_posts/$(postId)).data.status == 'published' || isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
@@ -195,6 +195,36 @@ service cloud.firestore {
         // Admins can update and delete any comment
         allow update, delete: if isAdmin();
       }
+    }
+
+    // Top-level Likes Collection: /likes/{likeId}
+    match /likes/{likeId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    // Top-level Story Likes Collection: /story_likes/{likeId}
+    match /story_likes/{likeId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    // Top-level Comments Collection: /comments/{commentId}
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    // Top-level Stories Collection: /stories/{storyId}
+    match /stories/{storyId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
     }
 
     // Events Collection: /events/{eventId}

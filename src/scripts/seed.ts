@@ -380,8 +380,8 @@ async function runSeed() {
       companionName: companionProfile ? companionProfile.name : 'Safal Kunwar',
       imageUrl: activityImages[i % activityImages.length],
       caption: storyCaptions[i % storyCaptions.length],
-      likes: 12 + (i * 7) % 250,
-      comments: 1 + (i * 2) % 40,
+      likes: 0,
+      comments: 0,
       timeAgo: `${(i % 5) + 1}d ago`,
       createdAt: new Date(Date.now() - (i * 86400000)).toISOString()
     });
@@ -410,6 +410,8 @@ async function runSeed() {
       tags: [contentObj.tag.toLowerCase(), 'nepal', 'sathi'],
       imageUrl: activityImages[i % activityImages.length],
       status: 'published',
+      likesCount: 0,
+      commentsCount: 0,
       createdAt: new Date(Date.now() - (i * 4 * 3600000)).toISOString(),
       updatedAt: new Date(Date.now() - (i * 4 * 3600000)).toISOString()
     });

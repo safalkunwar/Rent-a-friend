@@ -6,6 +6,9 @@ export interface User {
   role: 'guest' | 'customer' | 'companion' | 'admin';
   favorites: string[]; // Companion IDs
   claims?: Record<string, unknown>;
+  phone?: string;
+  bio?: string;
+  location?: string;
 }
 
 export interface Review {
@@ -27,10 +30,13 @@ export interface ExperienceStory {
   caption: string;
   likes?: number;
   comments?: number;
+  likesCount?: number;
+  commentsCount?: number;
 }
 
 export interface Companion {
   id: string;
+  userId?: string;
   name: string;
   age: number;
   gender: string;
@@ -132,4 +138,11 @@ export interface CommunityPost {
   status: 'published' | 'draft';
   createdAt?: string;
   updatedAt?: string;
+  likesCount?: number;
+  commentsCount?: number;
+  sharesCount?: number;
+  reportsCount?: number;
+  userName?: string;
+  userAvatar?: string;
+  location?: string;
 }

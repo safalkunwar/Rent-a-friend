@@ -11,7 +11,10 @@ import { MessagesTab } from './components/messages/MessagesTab';
 import { DashboardTab } from './components/dashboard/DashboardTab';
 import { PartnerDashboard } from './components/dashboard/PartnerDashboard';
 import { SafetyWidget } from './components/SafetyWidget';
+import { CommunityFeed } from './components/social/CommunityFeed';
+import { ProfileEditModal } from './components/modals/ProfileEditModal';
 import { Companion, ExperienceStory } from './types';
+import { socialRepository } from './repositories/SocialRepository';
 import { 
   MapPin, Star, ShieldCheck, Languages, Search, Play, Clock, 
   Home, Compass, Users, Calendar, MessageSquare, BookOpen, Heart, 
@@ -23,6 +26,7 @@ import * as motion from 'motion/react-client';
 import { useAppContext } from './context/AppContext';
 import { useToast } from './components/ui/Toast';
 import { useCompanions, useStories, useActivities, useEvents, usePartners, useCommunityPosts } from './hooks/useFirestoreData';
+import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
 
 interface ClientAppProps {
@@ -59,6 +63,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState<boolean>(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
+  const [showProfileEditModal, setShowProfileEditModal] = useState<boolean>(false);
   const [showCalculator, setShowCalculator] = useState<boolean>(false);
   const [mobileTab, setMobileTab] = useState<'home' | 'explore' | 'experiences' | 'bookings' | 'messages' | 'profile'>('home');
   const [activeChatCompanionId, setActiveChatCompanionId] = useState<string | null>(null);
@@ -68,8 +73,16 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [calcWeeklyHours, setCalcWeeklyHours] = useState<number>(15); // Hours per week
   
   // Interactive social reaction counts
-  const [momentLikes, setMomentLikes] = useState<Record<number, number>>({ 0: 24, 1: 42, 2: 18 });
-  const [momentLiked, setMomentLiked] = useState<Record<number, boolean>>({});
+  const [momentLiked, setMomentLiked] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!currentUser || !fetchedStories) return;
+    fetchedStories.forEach(story => {
+      socialRepository.checkUserLikedStory(currentUser.id, story.id).then(liked => {
+        setMomentLiked(prev => ({ ...prev, [story.id]: liked }));
+      });
+    });
+  }, [fetchedStories, currentUser]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -96,16 +109,29 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     setSelectedCompanion(companion);
   };
 
-  const handleToggleLikeMoment = (id: string | number) => {
-    setMomentLiked(prev => {
-      const liked = !prev[id];
-      setMomentLikes(likes => ({
-        ...likes,
-        [id]: liked ? (likes[id] || 0) + 1 : Math.max(0, (likes[id] || 0) - 1)
-      }));
-      showToast(liked ? "Liked community adventure!" : "Removed like", "success");
-      return { ...prev, [id]: liked };
-    });
+  const handleToggleLikeMoment = async (id: string | number) => {
+    if (!currentUser) {
+      showToast('Please sign in to like community adventures!', 'info');
+      return;
+    }
+
+    const storyId = String(id);
+    const isLiked = momentLiked[storyId] || false;
+
+    // Optimistic UI update
+    setMomentLiked(prev => ({ ...prev, [storyId]: !isLiked }));
+
+    try {
+      if (isLiked) {
+        await socialRepository.unlikeStory(currentUser.id, storyId);
+      } else {
+        await socialRepository.likeStory(currentUser.id, storyId);
+      }
+    } catch (err) {
+      // Revert optimistic state
+      setMomentLiked(prev => ({ ...prev, [storyId]: isLiked }));
+      showToast('Failed to sync like with Firebase. Try again.', 'error');
+    }
   };
 
   const handleCitySelect = (city: string) => {
@@ -467,9 +493,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                 className="flex items-center gap-2 p-1 md:pr-3 bg-[#1E2124]/60 border border-[#2A2D31]/40 rounded-full cursor-pointer hover:border-[#C8A25E] transition-all"
               >
-                <img 
-                  src={currentUser?.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"} 
+                <SafeImage 
+                  src={currentUser?.avatar} 
                   alt={currentUser?.name || "Guest User"} 
+                  fallbackType="avatar"
+                  textForInitials={currentUser?.name || "Guest User"}
                   className="w-7 h-7 rounded-full object-cover border border-[#2A2D31]"
                 />
                 <div className="hidden md:block text-left select-none">
@@ -592,9 +620,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       className="shrink-0 w-20 flex flex-col items-center gap-2 cursor-pointer group snap-start"
                     >
                       <div className="w-16 h-16 rounded-full p-[2.5px] bg-[#1E2124] border border-[#2A2D31]/60 relative hover:scale-105 transition-all">
-                        <img 
-                          src={currentUser?.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"} 
+                        <SafeImage 
+                          src={currentUser?.avatar} 
                           alt="Your Story" 
+                          fallbackType="avatar"
+                          textForInitials={currentUser?.name || "Your Story"}
                           className="w-full h-full rounded-full border-2 border-[#1E2124] object-cover" 
                         />
                         <div className="absolute bottom-0 right-0 bg-[#C8A25E] text-[#0F1113] w-5 h-5 rounded-full flex items-center justify-center font-bold text-base leading-none border border-[#1E2124] hover:bg-[#B69150]">+</div>
@@ -624,9 +654,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                             className="shrink-0 w-20 flex flex-col items-center gap-2 cursor-pointer group snap-start"
                           >
                             <div className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-[#C8A25E] via-red-500 to-purple-600 relative hover:scale-105 transition-all">
-                              <img 
-                                src={story.imageUrl} 
+                              <SafeImage 
+                                src={story.userAvatar} 
                                 alt={story.userName} 
+                                fallbackType="avatar"
+                                textForInitials={story.userName}
                                 className="w-full h-full rounded-full border-2 border-[#17191C] object-cover" 
                               />
                               {(story.id === 's1' || story.id === 's2') && (
@@ -758,10 +790,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                             className="group relative aspect-[3/4.2] rounded-[32px] overflow-hidden border border-[#2A2D31]/40 bg-[#17191C] hover:border-[#C8A25E]/40 hover:shadow-2xl hover:shadow-[#C8A25E]/5 transition-all duration-500 cursor-pointer snap-start focus-visible:ring-2 focus-visible:ring-[#C8A25E]"
                           >
                             {/* Card Image */}
-                            <img 
+                            <SafeImage 
                               src={comp.imageUrl} 
                               alt={comp.name} 
                               className="absolute inset-0 w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" 
+                              fallbackType="thumbnail"
                               loading="lazy"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-black/10 group-hover:via-black/35 transition-all duration-300 z-10" />
@@ -1051,59 +1084,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <h2 className="text-xl md:text-3xl font-extrabold text-white">📸 Community Moments Feed</h2>
                       <p className="text-xs text-[#8E9299] mt-1">Live adventures shared by travelers and companion guides in Kathmandu valley.</p>
                     </div>
-                    <button onClick={() => showToast('Social Moments feed fully connected!', 'success')} className="text-xs font-bold text-[#C8A25E] hover:underline">View All Feed</button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {[
-                      { id: 0, user: 'Sarah', companion: 'Safal', text: 'Stunning hike up the Sarangkot ridge at dawn. Safal knew the exact photography angles!', image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=800&auto=format&fit=crop', userAvatar: 'https://ui-avatars.com/api/?name=Sarah&background=random', location: 'Pokhara' },
-                      { id: 1, user: 'Marcus', companion: 'Priya', text: 'Amazing food crawl through Patan back alleys. Priya helped us discover authentic Newari culinary!', image: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?q=80&w=800&auto=format&fit=crop', userAvatar: 'https://ui-avatars.com/api/?name=Marcus&background=random', location: 'Patan Durbar' },
-                      { id: 2, user: 'Elena', companion: 'Sita', text: 'Sita guided us through traditional clay molding workshops at Bhaktapur square. Learned so much!', image: 'https://images.unsplash.com/photo-1529156069898-49953eb1b5ce?q=80&w=800&auto=format&fit=crop', userAvatar: 'https://ui-avatars.com/api/?name=Elena&background=random', location: 'Bhaktapur' }
-                    ].map((post) => (
-                      <div 
-                        key={post.id} 
-                        className="group relative aspect-[4/5] rounded-[32px] overflow-hidden border border-[#2A2D31]/40 bg-[#17191C] hover:border-[#C8A25E]/40 hover:shadow-2xl transition-all duration-500"
-                      >
-                        {/* Background Post Image */}
-                        <img 
-                          src={post.image} 
-                          alt="Adventure Moment" 
-                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" 
-                          loading="lazy" 
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent z-10" />
-
-                        {/* Top Location Pin Badge */}
-                        <span className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] text-white flex items-center gap-1 border border-white/10 z-20">
-                          <MapPin className="w-3 h-3 text-[#C8A25E]" /> {post.location}
-                        </span>
-
-                        {/* Bottom Info Overlay */}
-                        <div className="absolute bottom-5 left-5 right-5 z-20 space-y-3 text-left">
-                          <div className="flex items-center gap-2">
-                            <img src={post.userAvatar} alt={post.user} className="w-7 h-7 rounded-full border-2 border-[#C8A25E]" />
-                            <span className="text-xs font-black text-white drop-shadow-md">
-                              {post.user} <span className="font-light text-white/70">with {post.companion}</span>
-                            </span>
-                          </div>
-
-                          <p className="text-[11px] text-white/80 leading-relaxed font-light line-clamp-2 drop-shadow-sm">
-                            "{post.text}"
-                          </p>
-
-                          <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10px]">
-                            <button 
-                              onClick={() => handleToggleLikeMoment(post.id)}
-                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-sm transition-all hover:bg-white/20 ${momentLiked[post.id] ? 'text-red-500' : 'text-white'}`}
-                            >
-                              <Heart className={`w-3.5 h-3.5 ${momentLiked[post.id] ? 'fill-current' : ''}`} /> {momentLikes[post.id]}
-                            </button>
-                            <span className="text-white/50">Shared 1d ago</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <CommunityFeed />
                 </section>
 
                 {/* 8. COMMISSION-SUPPORTING PARTNERS ROW */}
@@ -1583,7 +1566,13 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   >
                     <div className="relative p-[2px] rounded-full bg-gradient-to-tr from-[#C8A25E] via-pink-600 to-purple-600">
                       <div className="p-[1.5px] rounded-full bg-[#0F1113]">
-                        <img src={st.userAvatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150'} className="w-[60px] h-[60px] rounded-full object-cover" alt={st.userName} />
+                        <SafeImage 
+                          src={st.userAvatar} 
+                          alt={st.userName} 
+                          fallbackType="avatar"
+                          textForInitials={st.userName}
+                          className="w-[60px] h-[60px] rounded-full object-cover" 
+                        />
                       </div>
                       <span className="absolute bottom-1 right-1 w-3 h-3 bg-green-500 border-2 border-[#0F1113] rounded-full" />
                     </div>
@@ -1608,7 +1597,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     className="shrink-0 w-44 bg-[#17191C] rounded-[24px] border border-white/5 overflow-hidden shadow-xl flex flex-col snap-start cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-200 text-left"
                   >
                     <div className="relative h-44 bg-[#1E2124]">
-                      <img src={comp.imageUrl} className="w-full h-full object-cover" alt={comp.name} />
+                      <SafeImage src={comp.imageUrl} className="w-full h-full object-cover" alt={comp.name} fallbackType="thumbnail" />
                       <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[8px] text-[#C8A25E] font-extrabold flex items-center gap-0.5 border border-[#C8A25E]/20">
                         VERIFIED
                       </span>
@@ -1658,15 +1647,15 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               
               <div className="space-y-4">
                 {fetchedStories.map((post, idx) => {
-                  const isLiked = momentLiked[post.id];
-                  const currentLikesCount = (momentLikes[post.id] || post.likes || 15) + (isLiked ? 1 : 0);
+                  const isLiked = momentLiked[post.id] || false;
+                  const currentLikesCount = post.likesCount || post.likes || 0;
                   
                   return (
                     <div key={post.id || idx} className="bg-[#17191C] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col text-left">
                       {/* Top profile header */}
                       <div className="p-3 flex justify-between items-center">
                         <div className="flex items-center gap-2.5">
-                          <img src={post.userAvatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150'} className="w-8 h-8 rounded-full object-cover border border-[#C8A25E]" alt={post.userName} />
+                          <SafeImage src={post.userAvatar} className="w-8 h-8 rounded-full object-cover border border-[#C8A25E]" alt={post.userName} fallbackType="avatar" textForInitials={post.userName} />
                           <div>
                             <span className="text-xs font-bold text-white block leading-tight">{post.userName}</span>
                             <span className="text-[9px] text-[#8E9299] flex items-center gap-0.5">
@@ -1681,7 +1670,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       
                       {/* Large Portrait Image */}
                       <div className="relative aspect-[4/4.5] w-full bg-[#1E2124]">
-                        <img src={post.imageUrl} className="w-full h-full object-cover" alt="Adventure moment" />
+                        <SafeImage src={post.imageUrl} className="w-full h-full object-cover" alt="Adventure moment" fallbackType="thumbnail" />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent p-4 flex flex-col justify-end">
                           <p className="text-xs text-white/95 leading-relaxed font-medium drop-shadow">{post.caption}</p>
                         </div>
@@ -1695,14 +1684,16 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                             className="flex items-center gap-1.5 text-white active:scale-90 transition-transform"
                           >
                             <Heart className={`w-4 h-4 ${isLiked ? 'text-red-500 fill-current' : 'text-white/80 hover:text-red-500'}`} />
-                            <span className="text-[11px] font-bold">{currentLikesCount}</span>
+                            {currentLikesCount > 0 && <span className="text-[11px] font-bold">{currentLikesCount}</span>}
                           </button>
                           <button 
                             onClick={() => showToast('Comments are synchronized in peer-to-peer chat!', 'info')}
                             className="flex items-center gap-1.5 text-white/80 hover:text-[#C8A25E] transition-colors"
                           >
                             <MessageSquare className="w-4 h-4" />
-                            <span className="text-[11px] font-bold">{post.comments || 5}</span>
+                            {(post.comments || 0) > 0 && (
+                              <span className="text-[11px] font-bold">{post.comments}</span>
+                            )}
                           </button>
                         </div>
                         <span className="text-[9px] text-[#5A5E66] font-bold">{post.timeAgo || '2h ago'}</span>
@@ -1879,7 +1870,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     onClick={() => handleViewCompanion(comp)}
                     className="relative aspect-[4/4.5] rounded-[28px] overflow-hidden border border-white/5 shadow-2xl bg-[#17191C] cursor-pointer"
                   >
-                    <img src={comp.imageUrl} className="absolute inset-0 w-full h-full object-cover" alt={comp.name} />
+                    <SafeImage src={comp.imageUrl} className="absolute inset-0 w-full h-full object-cover" alt={comp.name} fallbackType="thumbnail" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent"></div>
                     
                     <span className="absolute top-4 left-4 bg-[#C8A25E] text-[#0F1113] text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
@@ -2183,9 +2174,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 {/* Logged-In User Header */}
                 <div className="bg-[#17191C] border border-white/5 rounded-3xl p-6 flex items-center gap-4 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-[#C8A25E]/5 rounded-full blur-2xl" />
-                  <img 
-                    src={currentUser.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"} 
+                  <SafeImage 
+                    src={currentUser.avatar} 
                     alt={currentUser.name} 
+                    fallbackType="avatar"
+                    textForInitials={currentUser.name}
                     className="w-16 h-16 rounded-full object-cover border-2 border-[#C8A25E]" 
                   />
                   <div className="flex-1 text-left">
@@ -2194,9 +2187,17 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <ShieldCheck className="w-4 h-4 text-[#C8A25E]" />
                     </h3>
                     <p className="text-[10px] text-[#8E9299] mt-0.5">{currentUser.email}</p>
-                    <span className="inline-block mt-1.5 px-2 py-0.5 bg-[#C8A25E]/10 border border-[#C8A25E]/30 text-[#C8A25E] text-[8px] font-extrabold rounded uppercase tracking-wider">
-                      {currentUser.role === 'companion' ? 'SATHI Partner' : 'Premium Member'}
-                    </span>
+                    <div className="flex gap-2 items-center mt-2.5">
+                      <span className="inline-block px-2 py-0.5 bg-[#C8A25E]/10 border border-[#C8A25E]/30 text-[#C8A25E] text-[8px] font-extrabold rounded uppercase tracking-wider">
+                        {currentUser.role === 'companion' ? 'SATHI Partner' : 'Premium Member'}
+                      </span>
+                      <button 
+                        onClick={() => setShowProfileEditModal(true)}
+                        className="text-[9px] font-black text-white hover:text-[#C8A25E] border border-white/10 px-2.5 py-1 rounded transition-all bg-white/5 cursor-pointer"
+                      >
+                        Edit Profile
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -2234,7 +2235,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                           <div key={booking.id} className="bg-[#17191C] border border-white/5 rounded-2xl p-4 space-y-3.5">
                             <div className="flex items-center gap-3">
                               {companion && (
-                                <img src={companion.imageUrl} className="w-9 h-9 rounded-full object-cover border border-[#2A2D31]" alt={companion.name} />
+                                <SafeImage src={companion.imageUrl} className="w-9 h-9 rounded-full object-cover border border-[#2A2D31]" alt={companion.name} fallbackType="avatar" textForInitials={companion.name} />
                               )}
                               <div className="flex-1 min-w-0">
                                 <h5 className="font-bold text-xs text-white truncate">Trip with {companion?.name || 'Companion'}</h5>
@@ -2269,7 +2270,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     <div className="grid grid-cols-2 gap-3">
                       {fetchedCompanions.filter(c => favorites.includes(c.id)).map(comp => (
                         <div key={comp.id} className="bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden flex flex-col relative">
-                          <img src={comp.imageUrl} className="w-full h-24 object-cover" alt={comp.name} />
+                          <SafeImage src={comp.imageUrl} className="w-full h-24 object-cover" alt={comp.name} fallbackType="thumbnail" />
                           <button 
                             onClick={() => toggleFavorite(comp.id)}
                             className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10"
@@ -2411,13 +2412,13 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       {viewingStory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setViewingStory(null)}>
           <div className="relative w-full max-w-sm aspect-[9/16] bg-[#17191C] rounded-3xl overflow-hidden border border-[#2A2D31]/80" onClick={e => e.stopPropagation()}>
-            <img src={viewingStory.imageUrl} className="w-full h-full object-cover" alt="SATHI Story" />
+            <SafeImage src={viewingStory.imageUrl} className="w-full h-full object-cover" alt="SATHI Story" fallbackType="thumbnail" />
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/85"></div>
             
             {/* Top Bar inside Story */}
             <div className="absolute top-0 inset-x-0 p-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-3 text-left">
-                <img src={viewingStory.userAvatar} className="w-9 h-9 rounded-full border border-[#C8A25E] object-cover" alt={viewingStory.userName} />
+                <SafeImage src={viewingStory.userAvatar} className="w-9 h-9 rounded-full border border-[#C8A25E] object-cover" alt={viewingStory.userName} fallbackType="avatar" textForInitials={viewingStory.userName} />
                 <div>
                   <span className="text-white font-bold text-xs block leading-tight">{viewingStory.userName}</span>
                   <span className="text-[#8E9299] text-[9px]">with {viewingStory.companionName} • {viewingStory.timeAgo}</span>
@@ -2541,6 +2542,14 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           <SafetyWidget isVisible={showSOS} onClose={() => setShowSOS(false)} />
         )}
       </AnimatePresence>
+
+      {/* Profile Edit Modal */}
+      {showProfileEditModal && (
+        <ProfileEditModal 
+          isOpen={showProfileEditModal}
+          onClose={() => setShowProfileEditModal(false)}
+        />
+      )}
       
       {/* Companion Profile Multi-Step booking details panel */}
       {selectedCompanion && (

@@ -23,6 +23,7 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - Icons: lucide-react
 - Routing: React Router DOM v7 (BrowserRouter)
 - Backend: Firebase Auth, Firestore, Storage, Cloud Functions (in progress)
+- Repositories: BaseRepository, UserRepository, CompanionRepository, BookingRepository, SocialRepository (with automatic retry, caching, and error-handling)
 - Auth: Firebase Auth (email/password, Google) with custom claims
 - Database: Firestore (real-time subscriptions via service layer)
 - Maps: Google Maps Static API via `MapPreview` component
@@ -67,6 +68,8 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - Accessibility improvements: aria-labels, dialog roles, form label associations
 - Performance optimization: React.memo on ClientApp, lazy loading images
 - Partner dashboard component with stats and offers
+- Phase 3: Social Layer fully completed (Dynamic Community Feed, Stories, scalable Likes Transaction Engine, real-time Comments engine, and ProfileEditModal for editing companions and user details)
+- Repositories design implemented (BaseRepository with retry logic, SocialRepository, UserRepository, CompanionRepository, BookingRepository)
 
 ## Current Priorities
 
@@ -102,6 +105,9 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - `src/services/payments.ts` - Khalti/eSewa payment integration
 - `src/services/notifications.ts` - FCM + Web Notifications
 - `src/services/storage.ts` - IndexedDB offline cache
+- `src/repositories/*.ts` - Repositories (UserRepository, CompanionRepository, BookingRepository, SocialRepository, BaseRepository)
+- `src/components/social/CommunityFeed.tsx` - Live-synchronized feed with comments and likes
+- `src/components/modals/ProfileEditModal.tsx` - Profile & Companion editing modal
 - `src/hooks/useFirestoreData.ts` - Real-time data hooks with offline cache
 - `src/context/AppContext.tsx` - Auth + bookings + messages state with offline queue
 - `src/components/AuthModal.tsx` - Real Firebase auth UI with accessibility

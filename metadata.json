@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "SATHI",
+  "description": "SATHI is a companion guide booking and co-experience sharing platform for travelers in Nepal.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

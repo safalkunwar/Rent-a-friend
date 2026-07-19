@@ -216,3 +216,58 @@ Fields:
 - imageUrl (string)
 - companionCount (number)
 - category (string)
+
+## Collection: community_posts
+
+Purpose: Travel community posts/adventures
+
+Fields:
+- id (string, PK)
+- userId (string, ref users.uid)
+- title (string)
+- content (string)
+- category (string)
+- imageUrl (string)
+- status (string) - published | drafted
+- userAvatar (string)
+- userName (string)
+- likesCount (number)
+- commentsCount (number)
+- sharesCount (number)
+- reportsCount (number)
+- location (string)
+- createdAt (timestamp)
+- updatedAt (timestamp)
+
+## Collection: likes
+
+Purpose: Likes on community posts
+
+Fields:
+- id (string, PK) - composite of userId_postId
+- userId (string, ref users.uid)
+- postId (string, ref community_posts.id)
+- createdAt (timestamp)
+
+## Collection: story_likes
+
+Purpose: Likes on experience stories
+
+Fields:
+- id (string, PK) - composite of userId_storyId
+- userId (string, ref users.uid)
+- storyId (string, ref stories.id)
+- createdAt (timestamp)
+
+## Collection: comments
+
+Purpose: Comments on community posts
+
+Fields:
+- id (string, PK)
+- postId (string, ref community_posts.id)
+- userId (string, ref users.uid)
+- userName (string)
+- userAvatar (string)
+- text (string)
+- createdAt (timestamp)

@@ -6,6 +6,7 @@ import { useAppContext } from '../../context/AppContext';
 import { BookingFlowModal } from './BookingFlowModal';
 import { MapPreview } from '../maps/MapPreview';
 import { MAP_CENTER } from '../../services/maps';
+import { SafeImage } from '../ui/SafeImage';
 
 interface CompanionProfileModalProps {
   companion: Companion | null;
@@ -60,7 +61,7 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
         >
           {/* Header Image */}
           <div className="h-48 md:h-80 relative shrink-0">
-            <img src={companion.imageUrl} alt={companion.name} className="w-full h-full object-cover" />
+            <SafeImage src={companion.imageUrl} alt={companion.name} className="w-full h-full object-cover" fallbackType="thumbnail" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0F1113] via-[#0F1113]/40 to-transparent" />
             
             <button 

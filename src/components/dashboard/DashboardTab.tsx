@@ -4,6 +4,7 @@ import { useToast } from '../ui/Toast';
 import { useCompanions } from '../../hooks/useFirestoreData';
 import { Star, ShieldCheck, Heart, MapPin, Settings, Calendar, X, Bell } from 'lucide-react';
 import * as motion from 'motion/react-client';
+import { SafeImage } from '../ui/SafeImage';
 
 export const DashboardTab: React.FC = () => {
   const { currentUser, favorites, toggleFavorite, bookings, setCurrentUser, notifications } = useAppContext();
@@ -24,7 +25,7 @@ export const DashboardTab: React.FC = () => {
       {/* Profile Header */}
       <div className="bg-[#17191C] border border-[#2A2D31] rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#C8A25E]/5 rounded-full blur-3xl" />
-        <img src={currentUser.avatar} alt={currentUser.name} className="w-32 h-32 rounded-full border-4 border-[#1E2124] shadow-xl relative z-10" />
+        <SafeImage src={currentUser.avatar} alt={currentUser.name} className="w-32 h-32 rounded-full border-4 border-[#1E2124] shadow-xl relative z-10" fallbackType="avatar" textForInitials={currentUser.name} />
         
         <div className="flex-1 text-center md:text-left relative z-10">
           <h1 className="text-3xl font-bold text-white mb-2">{currentUser.name}</h1>
@@ -120,7 +121,7 @@ export const DashboardTab: React.FC = () => {
                     <div key={booking.id} className="bg-[#17191C] border border-[#2A2D31] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
                         {companion && (
-                          <img src={companion.imageUrl} alt={companion.name} className="w-12 h-12 rounded-full object-cover border border-[#2A2D31]" />
+                          <SafeImage src={companion.imageUrl} alt={companion.name} className="w-12 h-12 rounded-full object-cover border border-[#2A2D31]" fallbackType="avatar" textForInitials={companion.name} />
                         )}
                         <div>
                           <h3 className="font-bold text-white mb-1">Booking with {companion?.name || 'Companion'}</h3>
@@ -154,7 +155,7 @@ export const DashboardTab: React.FC = () => {
                 {favoriteCompanions.map(companion => (
                   <div key={companion.id} className="group bg-[#17191C] rounded-[20px] overflow-hidden shadow-lg border border-[#2A2D31]/50 relative flex flex-col">
                     <div className="relative aspect-[4/5]">
-                      <img src={companion.imageUrl} alt={companion.name} className="w-full h-full object-cover" />
+                      <SafeImage src={companion.imageUrl} alt={companion.name} className="w-full h-full object-cover" fallbackType="thumbnail" />
                       <button onClick={() => toggleFavorite(companion.id)} className="absolute top-3 right-3 bg-black/40 backdrop-blur-md p-2 rounded-full border border-white/10 z-20">
                          <Heart className="w-4 h-4 fill-[#C8A25E] text-[#C8A25E]" />
                       </button>

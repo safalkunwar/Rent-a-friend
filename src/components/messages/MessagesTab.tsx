@@ -4,6 +4,7 @@ import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { firestore } from '../../services/firestore';
 import { useCompanions } from '../../hooks/useFirestoreData';
+import { SafeImage } from '../ui/SafeImage';
 
 interface MessagesTabProps {
   onOpenAuth?: (mode: 'login' | 'signup' | 'guide') => void;
@@ -246,7 +247,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                   className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-[#1E2124] transition-colors border-b border-[#2A2D31]/30 ${selectedConvo === convo.id ? 'bg-[#1E2124]' : ''}`}
                 >
                   <div className="relative shrink-0">
-                    <img src={comp.imageUrl} alt={comp.name} className="w-11 h-11 rounded-full object-cover border border-white/5 shadow-inner" />
+                    <SafeImage src={comp.imageUrl} alt={comp.name} className="w-11 h-11 rounded-full object-cover border border-white/5 shadow-inner" fallbackType="avatar" textForInitials={comp.name} />
                     <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#17191C] bg-green-500"></span>
                     {(convo.unreadCount || 0) > 0 && (
                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C8A25E] text-[#0F1113] text-[9px] font-black rounded-full flex items-center justify-center">
@@ -286,7 +287,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
               </button>
               {companion ? (
                 <>
-                  <img src={companion.imageUrl} className="w-9 h-9 rounded-full object-cover border border-white/5" />
+                  <SafeImage src={companion.imageUrl} className="w-9 h-9 rounded-full object-cover border border-white/5" alt={companion.name} fallbackType="avatar" textForInitials={companion.name} />
                   <div className="text-left">
                     <h3 className="font-bold text-white text-xs flex items-center gap-1">
                       {companion.name}
