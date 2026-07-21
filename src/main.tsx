@@ -2,6 +2,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { getStoredPreferences, applyThemeMode } from './services/preferences';
+
+// Apply initial user theme preference immediately
+applyThemeMode(getStoredPreferences().theme);
 
 window.addEventListener('error', (event) => {
   console.error('Global error:', event.error);

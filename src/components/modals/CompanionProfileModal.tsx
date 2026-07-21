@@ -13,9 +13,10 @@ interface CompanionProfileModalProps {
   onClose: () => void;
   onMessage?: () => void;
   onOpenAuth?: (mode: 'login' | 'signup' | 'guide') => void;
+  onComplete?: () => void;
 }
 
-export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ companion, onClose, onMessage, onOpenAuth }) => {
+export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ companion, onClose, onMessage, onOpenAuth, onComplete }) => {
   const { favorites, toggleFavorite, currentUser } = useAppContext();
   const [showBookingFlow, setShowBookingFlow] = useState(false);
 
@@ -228,7 +229,16 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
       </div>
 
       {showBookingFlow && (
-        <BookingFlowModal companion={companion} onClose={() => setShowBookingFlow(false)} onComplete={() => { setShowBookingFlow(false); onClose(); }} />
+        <BookingFlowModal 
+          companion={companion} 
+          onClose={() => setShowBookingFlow(false)} 
+          onComplete={() => { 
+            setShowBookingFlow(false); 
+            onClose(); 
+            if (onComplete) onComplete();
+          }} 
+          onMessageCompanion={onMessage ? () => { setShowBookingFlow(false); onClose(); onMessage(); } : undefined}
+        />
       )}
     </AnimatePresence>
   );

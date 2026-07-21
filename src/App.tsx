@@ -37,6 +37,10 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/companions"
+        element={<ClientApp initialTab="explore" />}
+      />
+      <Route
         path="/messages"
         element={
           <AuthGuard>
@@ -57,6 +61,14 @@ function AppRoutes() {
         element={
           <AuthGuard>
             <ClientApp initialTab="partner" />
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <AuthGuard>
+            <ClientApp initialTab="settings" />
           </AuthGuard>
         }
       />

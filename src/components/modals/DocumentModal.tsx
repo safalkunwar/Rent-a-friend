@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { DOCS_CONFIG } from '../../config';
 
 interface DocumentModalProps {
-  documentType: 'terms' | 'privacy';
+  documentType: 'terms' | 'privacy' | 'help';
   onClose: () => void;
 }
 
@@ -12,7 +12,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({ documentType, onCl
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
 
-  const title = documentType === 'terms' ? 'Terms of Service' : 'Privacy Policy';
+  const title = documentType === 'terms' ? 'Terms of Service' : documentType === 'privacy' ? 'Privacy Policy' : 'SATHI Help & Support';
 
   useEffect(() => {
     let active = true;
@@ -30,8 +30,16 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({ documentType, onCl
         return;
       }
 
-      const primaryUrl = documentType === 'terms' ? DOCS_CONFIG.termsOfServiceUrl : DOCS_CONFIG.privacyPolicyUrl;
-      const fallbackUrl = documentType === 'terms' ? DOCS_CONFIG.localTermsOfServiceUrl : DOCS_CONFIG.localPrivacyPolicyUrl;
+      const primaryUrl = documentType === 'terms' 
+        ? DOCS_CONFIG.termsOfServiceUrl 
+        : documentType === 'privacy' 
+          ? DOCS_CONFIG.privacyPolicyUrl 
+          : (DOCS_CONFIG as any).helpUrl;
+      const fallbackUrl = documentType === 'terms' 
+        ? DOCS_CONFIG.localTermsOfServiceUrl 
+        : documentType === 'privacy' 
+          ? DOCS_CONFIG.localPrivacyPolicyUrl 
+          : (DOCS_CONFIG as any).localHelpUrl;
 
       try {
         console.log(`[SATHI Docs] Fetching ${documentType} from primary URL: ${primaryUrl}`);
@@ -122,7 +130,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({ documentType, onCl
             onClick={onClose}
             className="px-6 py-2.5 bg-[#C8A25E] hover:bg-[#B69150] text-[#0F1113] rounded-xl font-bold transition-colors text-sm uppercase tracking-wider"
           >
-            Return to Sign Up
+            Close Document
           </button>
         </div>
       </div>

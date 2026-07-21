@@ -78,24 +78,60 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const user = mapAuthUserToUser(authUser);
         console.log('[SATHI] AppProvider auth user:', user ? `uid=${user.id}` : 'null');
         if (user) {
-          const profile = await firestore.getDocument<User>(`users/${user.id}`);
-          console.log('[SATHI] Firestore user profile:', profile ? 'found' : 'not found');
+          let profile: User | null = null;
+          try {
+            profile = await firestore.getDocument<User>(`users/${user.id}`);
+            console.log('[SATHI] Firestore user profile loaded:', profile ? 'found' : 'not found');
+          } catch (docErr) {
+            console.warn('[SATHI] Failed to get user profile from Firestore, attempting local cache fallback:', docErr);
+          }
+
+          if (!profile) {
+            try {
+              const cachedProfileStr = localStorage.getItem(`sathi_user_profile_${user.id}`);
+              if (cachedProfileStr) {
+                profile = JSON.parse(cachedProfileStr);
+                console.log('[SATHI] Fallback user profile loaded from localStorage:', profile);
+              }
+            } catch (cacheErr) {
+              console.error('[SATHI] Failed to load user profile from localStorage:', cacheErr);
+            }
+          }
+
           if (profile && !cancelled) {
-            setCurrentUser({ ...user, role: profile.role || 'customer', favorites: profile.favorites || [] });
+            const mergedUser: User = { 
+              ...user, 
+              role: profile.role || 'customer', 
+              favorites: profile.favorites || [] 
+            };
+            setCurrentUser(mergedUser);
             setFavorites(profile.favorites || []);
+            try {
+              localStorage.setItem(`sathi_user_profile_${user.id}`, JSON.stringify(profile));
+            } catch (cacheWriteErr) {
+              console.warn('[SATHI] Failed to cache user profile in localStorage:', cacheWriteErr);
+            }
           } else if (!cancelled) {
-            await firestore.setDocument(`users/${user.id}`, {
-              name: user.name,
-              email: user.email,
-              avatar: user.avatar,
-              role: 'customer',
-              favorites: [],
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
+            const defaultUser: User = { ...user, role: 'customer', favorites: [] };
+            try {
+              await firestore.setDocument(`users/${user.id}`, {
+                name: user.name,
+                email: user.email,
+                avatar: user.avatar,
+                role: 'customer',
+                favorites: [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+            } catch (writeErr) {
+              console.warn('[SATHI] Could not save new user document to Firestore (offline?):', writeErr);
+            }
             if (!cancelled) {
-              setCurrentUser(user);
+              setCurrentUser(defaultUser);
               setFavorites([]);
+              try {
+                localStorage.setItem(`sathi_user_profile_${user.id}`, JSON.stringify(defaultUser));
+              } catch (e) {}
             }
           }
         } else {
@@ -128,8 +164,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const unsubBookings = firestore.subscribe<Booking>('bookings', { where: [{ field: 'userId', operator: '==', value: currentUser.id }] }, (items) => {
       setBookings(items);
     });
-    const unsubNotifications = firestore.subscribe<Notification>('notifications', { where: [{ field: 'userId', operator: '==', value: currentUser.id }], orderByField: 'timestamp', orderDirection: 'desc' }, (items) => {
-      setNotifications(items);
+    const unsubNotifications = firestore.subscribe<Notification>('notifications', { where: [{ field: 'userId', operator: '==', value: currentUser.id }] }, (items) => {
+      const sorted = [...items].sort((a, b) => {
+        const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return timeB - timeA;
+      });
+      setNotifications(sorted);
     });
     return () => {
       unsubBookings();
@@ -192,6 +233,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       };
       setNotifications(prev => [notification, ...prev]);
       await firestore.setDocument(`notifications/${notification.id}`, notification as any);
+
+      // SATHI Business Rule: Auto-create conversation on accepted/confirmed booking
+      if (status === 'confirmed') {
+        const convoId = getConversationId(booking.userId, booking.companionId);
+        try {
+          const existingConvo = await firestore.getDocument<any>(`conversations/${convoId}`);
+          if (!existingConvo) {
+            await firestore.setDocument(`conversations/${convoId}`, {
+              id: convoId,
+              participantIds: [booking.userId, booking.companionId],
+              unreadCount: 0,
+              lastMessage: {
+                text: 'Your booking is accepted! You can now chat directly.',
+                timestamp: new Date().toISOString(),
+              },
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        } catch (e) {
+          console.warn('[SATHI] Error checking/creating booking conversation:', e);
+        }
+      }
     }
   }, [bookings, currentUser]);
 

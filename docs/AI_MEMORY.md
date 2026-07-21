@@ -1,6 +1,6 @@
 # AI Memory
 
-Last Updated: 2026-07-12
+Last Updated: 2026-07-21
 
 ## Business Vision
 
@@ -83,6 +83,23 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
   - Completed thorough end-to-end verification of all guest, registered user, companion, and admin roles and interactive pathways.
   - Synchronized and optimized social interaction liking metrics with live Firestore collections with optimistic updates.
   - Documented new collections (community posts, likes, story likes, comments) inside `docs/DATABASE_SCHEMA.md` and verified 23/23 tests pass green.
+- **Visual Redesign & Mobile Alignment (2026-07-20):**
+  - Redesigned default home search to group SATHI companions into elegant horizontal category-based rows, hiding empty sections and supporting "See All" grid overrides.
+  - Audited and updated SATHI multi-field companion search filters to real-time search across name, location, biography, categories, and spoken languages.
+  - Substituted the mobile/drawer "Explore" tab with "Companions" tab, using a clean user-centric vector icon layout.
+  - Migrated Light Mode theme styling from legacy gold accents to crisp, modern blue accents (#1877F2) and neutral backgrounds (#F0F2F5).
+  - Enhanced visual elements, spacing, typography, and card layouts on both desktop and mobile views.
+- **Mobile Experience & Bottom Navigation Refinement (2026-07-20):**
+  - Designed and deployed a polished 5-tab bottom navigation system (Home, Search, Companions, Messages, Alerts/Notifications) matching top-tier travel platforms.
+  - Implemented responsive mobile Account Hub as an immersive sliding drawer loaded with 16 options: Profile, Bookings, Messages, Favorites, Companion Dashboard, Wallet, Settings, Language, Appearance, Privacy & Security, Terms of Service, Privacy Policy, Help & Support, Contact Us, and Log Out.
+  - Reconstructed top-right desktop profile menu to map identically with the same 16 options, ensuring feature-rich desktop/mobile parity.
+  - Added dedicated full-screen overlay components `DocumentModal` to read Terms & Conditions and Privacy Policy directly without disrupting user flows.
+  - Optimized Search tab on mobile with city quick-filters, interest categories, sorting criteria, and real-time result counts.
+- **Mobile Parity & Booking Flow Premium Hotfix (2026-07-21):**
+  - Aligned Mobile Home tab companion lists with Desktop by implementing dynamically grouped, horizontal-scrolling category sections (Hiking Guides, Coffee Buddies, etc.) that hide empty collections and lazy-load data.
+  - Developed full mobile Tab support for Bookings, allowing mobile users to Cancel, Mark Complete, or message their companion dynamically.
+  - Fixed sandboxed iframe page freezes during checkout by configuring eSewa verification forms with `target="_blank"` and Khalti payment redirect URLs with `window.open`.
+  - Added seamless automatic navigation redirect to `/bookings` upon successful booking creations.
 - **Firebase Resumption & Optimization (2026-07-12):**
   - Resolved `auth/configuration-not-found` error via strict initialization validation in `src/firebase.ts`.
   - Implemented and deployed production-grade Firestore Security Rules (RBAC model).
@@ -104,7 +121,6 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 ## Known Limitations
 
 - **Cloud Functions require Blaze plan upgrade for deployment.**
-- eSewa payment uses form redirect which may not work in modal contexts
 - FCM foreground listener works; push notifications require Cloud Functions/Messaging
 - Internationalization not implemented
 

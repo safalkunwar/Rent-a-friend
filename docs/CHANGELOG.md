@@ -1,5 +1,43 @@
 # Changelog
 
+## v2.5.0 - 2026-07-21
+
+### Added
+
+- **Mobile Companion Discovery Parity**: Aligned the Mobile Home layout with Desktop by rendering horizontal-scrolling companion sections grouped dynamically by category (Hiking Partners, Coffee Buddies, Food Explorers, etc.), utilizing the repository layer and filtering out empty groups.
+- **Mobile Bookings Tab Implementation**: Created a dedicated Bookings tab view for the mobile viewport to display scheduled companion trips, allowing mobile users to Cancel, Mark Complete, or message their companion.
+- **Booking Flow IFrame Escape**: Prevented sandboxed iframe page freezes during checkout by submitting the eSewa verification form with `target="_blank"` and opening the Khalti gateway in a new window, keeping the app interactive.
+- **Post-Booking Navigation Redirect**: Linked the booking confirmation modal to automatically navigate and redirect the user to `/bookings` upon clicking "Done" or completing the checkout process.
+
+## v2.4.0 - 2026-07-20
+
+### Added
+
+- **Complete Leaflet Map of Nepal**: Removed Kathmandu-only restriction to enable full geographic search across all cities, regions, and districts in Nepal using OSM Nominatim.
+- **Interactive Map Autocomplete & Geolocate**: Integrated dynamic live Autocomplete suggestions in the location search field, along with a "Current Location" button leveraging the browser's Geolocation API.
+- **Marker Lock Feature**: Added a "Lock Selected Location" toggle to explicitly secure chosen coordinate markers and prevent accidental dragging.
+- **Mobile Companion Discovery Parity**: Redesigned the Mobile explore page to render horizontal-scrolling companion sections categorized by activity type (Hiking Partners, Coffee Buddies, Food Explorers, etc.) matching the Desktop layout, with complete independent lazy loading and zero duplicated listings.
+- **Firebase Booking Coordinate Storage**: Validated real-time Firestore database schema compliance by saving precise coordinate values (latitude and longitude) alongside custom client names, emails, and contact details directly into bookings.
+
+## v2.3.0 - 2026-07-20
+
+### Added
+
+- **Real Settings Page**: Created a modern, clean, and modular Settings page (Appearance, Account, Privacy, Notifications, Security, and About) matching premium app aesthetics like Airbnb and Apple.
+- **Dynamic Theme System**: Implemented persistent client-side preference syncing using our robust `preferences.ts` utility, enabling users to switch between Light Mode, Dark Mode, and System Default instantly.
+- **Preloaded Profile Management**: Enabled editing and saving of Name, Email, and Phone directly to the Firestore database with automatic local context synchronization.
+- **Firebase Auth Session Persistence**: Configured explicit `browserLocalPersistence` for Firebase Auth initialization, ensuring logged-in users remain signed in across page refreshes.
+
+## v2.2.0 - 2026-07-20
+
+### Added
+
+- **Category-Based Companion Discovery**: Grouped the main homepage companion list into horizontal-scrolling categories, dynamic grouping with dynamic loading, hiding empty category folders automatically, and providing "See All" triggers.
+- **Robust Companion Search Engine**: Fully redesigned the search logic to search across name, location, biography, categories/interests, and spoken languages with instant UI updates and loading/empty indicators.
+- **Integrated Mobile Companions Tab**: Replaced "Explore" tab with "Companions" in mobile bottom bars and drawers, selecting standard human-centric visual icons and matching correct layouts.
+- **Universal Light Mode Accent Redesign**: Replaced legacy luxury-gold palettes in light mode with standard, blue-based accents (#1877F2), custom styling, and clean backgrounds (#F0F2F5).
+- **Aesthetic Card Design & Shadows**: Redesigned and polished Companion, Experience, and Booking cards with deep rounded corners (`rounded-[32px]`), elegant overlays, and typography scales.
+
 ## v2.1.0 - 2026-07-19
 
 ### Added

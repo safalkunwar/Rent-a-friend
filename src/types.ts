@@ -67,6 +67,7 @@ export interface Booking {
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   totalPrice: number;
   meetingPoint: string;
+  meetingCoordinates?: { latitude: number; longitude: number };
   specialRequests?: string;
   createdAt: string;
 }
@@ -95,6 +96,11 @@ export interface Activity {
   duration: string;
   avgPrice: number;
   companionCount: number;
+  description?: string;
+  location?: string;
+  category?: string;
+  price?: number;
+  coordinates?: { latitude: number; longitude: number; _lat?: number; _lng?: number; lat?: number; lng?: number };
 }
 
 export interface Event {
@@ -105,6 +111,10 @@ export interface Event {
   location: string;
   spots: number;
   participants?: number | { length: number };
+  description?: string;
+  imageUrl?: string;
+  image?: string;
+  coordinates?: { latitude: number; longitude: number; _lat?: number; _lng?: number; lat?: number; lng?: number };
 }
 
 export interface Notification {

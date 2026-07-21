@@ -1,5 +1,6 @@
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, onSnapshot, type Unsubscribe, type Query, type DocumentData, type Firestore } from 'firebase/firestore';
 import { db } from '../firebase';
+import { handleFirestoreError, OperationType } from './firestore-errors';
 
 type QueryCondition = {
   field: string;
@@ -44,32 +45,56 @@ export const firestore = {
   collection: <T = DocumentData>(name: string) => collection(requireDb(), name),
 
   getDocument: async <T = DocumentData>(path: string): Promise<T | null> => {
-    const snap = await getDoc(doc(requireDb(), path));
-    if (!snap.exists()) return null;
-    return { id: snap.id, ...snap.data() } as T;
+    try {
+      const snap = await getDoc(doc(requireDb(), path));
+      if (!snap.exists()) return null;
+      return { id: snap.id, ...snap.data() } as T;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, path);
+      return null;
+    }
   },
 
   setDocument: async (path: string, data: Record<string, unknown>, merge = false) => {
-    const ref = doc(requireDb(), path);
-    await setDoc(ref, data, { merge });
-    return ref.id;
+    try {
+      const ref = doc(requireDb(), path);
+      await setDoc(ref, data, { merge });
+      return ref.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+      throw error;
+    }
   },
 
   updateDocument: async (path: string, data: Record<string, unknown>) => {
-    const ref = doc(requireDb(), path);
-    await updateDoc(ref, data);
-    return ref.id;
+    try {
+      const ref = doc(requireDb(), path);
+      await updateDoc(ref, data);
+      return ref.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, path);
+      throw error;
+    }
   },
 
   deleteDocument: async (path: string) => {
-    await deleteDoc(doc(requireDb(), path));
+    try {
+      await deleteDoc(doc(requireDb(), path));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
   },
 
   getDocuments: async <T = DocumentData>(collectionName: string, options: QueryOptions = {}): Promise<T[]> => {
     if (!db) return [];
-    const q = buildQuery<T>(collectionName, options);
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as T));
+    try {
+      const q = buildQuery<T>(collectionName, options);
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as T));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, collectionName);
+      return [];
+    }
   },
 
   subscribe: <T = DocumentData>(collectionName: string, options: QueryOptions = {}, callback: (items: T[]) => void): Unsubscribe => {
@@ -78,10 +103,16 @@ export const firestore = {
       return () => {};
     }
     const q = buildQuery<T>(collectionName, options);
-    return onSnapshot(q, (snap) => {
-      const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as T));
-      callback(items);
-    });
+    return onSnapshot(
+      q,
+      (snap) => {
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as T));
+        callback(items);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, collectionName);
+      }
+    );
   },
 
   subscribeDocument: <T = DocumentData>(path: string, callback: (item: T | null) => void): Unsubscribe => {
@@ -89,12 +120,18 @@ export const firestore = {
       callback(null);
       return () => {};
     }
-    return onSnapshot(doc(db, path), (snap) => {
-      if (!snap.exists()) {
-        callback(null);
-        return;
+    return onSnapshot(
+      doc(db, path),
+      (snap) => {
+        if (!snap.exists()) {
+          callback(null);
+          return;
+        }
+        callback({ id: snap.id, ...snap.data() } as T);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, path);
       }
-      callback({ id: snap.id, ...snap.data() } as T);
-    });
+    );
   },
 };

@@ -90,6 +90,7 @@ export const paymentService = {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = 'https://rc.esewa.com.np/esepg/epi/verify?av=v2&';
+    form.target = '_blank';
     form.style.display = 'none';
 
     const fields: Record<string, string> = {

@@ -5,14 +5,18 @@
 
 import { useState, useEffect } from 'react';
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { CompanionProfileModal } from './components/modals/CompanionProfileModal';
 import { AuthModal } from './components/AuthModal';
 import { MessagesTab } from './components/messages/MessagesTab';
 import { DashboardTab } from './components/dashboard/DashboardTab';
 import { PartnerDashboard } from './components/dashboard/PartnerDashboard';
+import { SettingsTab } from './components/settings/SettingsTab';
 import { SafetyWidget } from './components/SafetyWidget';
 import { CommunityFeed } from './components/social/CommunityFeed';
 import { ProfileEditModal } from './components/modals/ProfileEditModal';
+import { DocumentModal } from './components/modals/DocumentModal';
+import { MapPreview } from './components/maps/MapPreview';
 import { Companion, ExperienceStory } from './types';
 import { socialRepository } from './repositories/SocialRepository';
 import { 
@@ -30,12 +34,38 @@ import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
 
 interface ClientAppProps {
-  initialTab?: 'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner';
+  initialTab?: 'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings';
 }
 
 export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { bookings, currentUser, updateBookingStatus, favorites, toggleFavorite, notifications, markNotificationRead, logout } = useAppContext();
   const { showToast } = useToast();
+
+  // Sync state with URL path
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/bookings') {
+      setActiveTab('bookings');
+      setMobileTab('bookings');
+    } else if (path === '/companions') {
+      setActiveTab('explore');
+      setMobileTab('explore');
+    } else if (path === '/messages') {
+      setActiveTab('messages');
+      setMobileTab('messages');
+    } else if (path === '/dashboard') {
+      setActiveTab('dashboard');
+      setMobileTab('profile');
+    } else if (path === '/partner') {
+      setActiveTab('partner');
+    } else if (path === '/settings') {
+      setActiveTab('settings');
+    } else if (path === '/') {
+      setActiveTab('explore');
+    }
+  }, [location.pathname]);
   
   const { companions: fetchedCompanions, loading: companionsLoading } = useCompanions();
   const { stories: fetchedStories, loading: storiesLoading } = useStories();
@@ -44,7 +74,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const { partners, loading: partnersLoading } = usePartners();
   const { posts, loading: postsLoading } = useCommunityPosts();
   
-  const [activeTab, setActiveTab] = useState<'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner'>(initialTab || 'explore');
+  const [activeTab, setActiveTab] = useState<'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings'>(initialTab || 'explore');
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingStory, setViewingStory] = useState<ExperienceStory | null>(null);
@@ -65,8 +95,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState<boolean>(false);
   const [showCalculator, setShowCalculator] = useState<boolean>(false);
-  const [mobileTab, setMobileTab] = useState<'home' | 'explore' | 'experiences' | 'bookings' | 'messages' | 'profile'>('home');
+  const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'explore' | 'experiences' | 'bookings' | 'messages' | 'profile' | 'notifications'>('home');
+  const [discoveryTab, setDiscoveryTab] = useState<'all' | 'companions' | 'activities' | 'events'>('all');
   const [activeChatCompanionId, setActiveChatCompanionId] = useState<string | null>(null);
+  const [activeDocType, setActiveDocType] = useState<'terms' | 'privacy' | 'help' | null>(null);
   
   // Earnings Calculator States
   const [calcHourlyRate, setCalcHourlyRate] = useState<number>(1200); // NPR per hour
@@ -149,10 +181,13 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   };
 
   const filteredCompanions = companions.filter(c => {
-    const matchesSearch = 
-      c.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.interests.some(i => i.toLowerCase().includes(searchQuery.toLowerCase()));
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q ||
+      c.location.toLowerCase().includes(q) ||
+      c.name.toLowerCase().includes(q) ||
+      c.bio.toLowerCase().includes(q) ||
+      c.interests.some(i => i.toLowerCase().includes(q)) ||
+      c.languages.some(l => l.toLowerCase().includes(q));
     
     const matchesCategory = 
       selectedCategory === 'All' || 
@@ -173,6 +208,34 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     if (sortBy === 'priceDesc') return b.hourlyRate - a.hourlyRate;
     if (sortBy === 'rating') return b.rating - a.rating;
     return 0; // recommended
+  });
+
+  const filteredActivities = (activities || []).filter(act => {
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q ||
+      act.title?.toLowerCase().includes(q) ||
+      act.description?.toLowerCase().includes(q) ||
+      act.location?.toLowerCase().includes(q);
+    
+    const matchesCity = 
+      selectedCity === 'All' || 
+      act.location?.toLowerCase().includes(selectedCity.toLowerCase());
+      
+    return matchesSearch && matchesCity;
+  });
+
+  const filteredEvents = (events || []).filter(evt => {
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q ||
+      evt.title?.toLowerCase().includes(q) ||
+      evt.description?.toLowerCase().includes(q) ||
+      evt.location?.toLowerCase().includes(q);
+    
+    const matchesCity = 
+      selectedCity === 'All' || 
+      evt.location?.toLowerCase().includes(selectedCity.toLowerCase());
+      
+    return matchesSearch && matchesCity;
   });
 
   // Dynamic calculations for guide earnings
@@ -207,52 +270,52 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           {/* Navigation Links */}
           <nav className="space-y-1" aria-label="Sidebar navigation">
             <button 
-              onClick={() => { setActiveTab('explore'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} 
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${activeTab === 'explore' && !showSavedOnly ? 'bg-[#C8A25E]/10 text-[#C8A25E] border-l-4 border-[#C8A25E]' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
+              onClick={() => { navigate('/'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} 
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${location.pathname === '/' && !showSavedOnly ? 'bg-[#C8A25E]/10 text-[#C8A25E] border-l-4 border-[#C8A25E]' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
             >
               <Home className="w-4 h-4" /> Home
             </button>
             <button 
-              onClick={() => { setActiveTab('explore'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} 
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${activeTab === 'explore' && selectedCategory === 'All' && !showSavedOnly ? 'bg-[#1E2124]/50 text-white' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
+              onClick={() => { navigate('/'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} 
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${location.pathname === '/' && selectedCategory === 'All' && !showSavedOnly ? 'bg-[#1E2124]/50 text-white' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
             >
               <Compass className="w-4 h-4" /> Explore
             </button>
             <button 
-              onClick={() => { setActiveTab('explore'); setSelectedCategory('All'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} 
-              className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40 focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none"
+              onClick={() => { navigate('/companions'); setSelectedCategory('All'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} 
+              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${location.pathname === '/companions' && !showSavedOnly ? 'bg-[#C8A25E]/10 text-[#C8A25E] border-l-4 border-[#C8A25E]' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
             >
               <span className="flex items-center gap-3"><Users className="w-4 h-4" /> Companions</span>
               <span className="text-[10px] bg-[#C8A25E]/20 text-[#C8A25E] px-1.5 py-0.5 rounded font-bold">Active</span>
             </button>
             <button 
-              onClick={() => { setActiveTab('explore'); const actSection = document.getElementById('activities-section'); if (actSection) actSection.scrollIntoView({ behavior: 'smooth' }); }} 
+              onClick={() => { navigate('/'); const actSection = document.getElementById('activities-section'); if (actSection) actSection.scrollIntoView({ behavior: 'smooth' }); }} 
               className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40 focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none"
             >
               <BookOpen className="w-4 h-4" /> Activities
             </button>
             <button 
-              onClick={() => { setActiveTab('explore'); const evSection = document.getElementById('events-section'); if (evSection) evSection.scrollIntoView({ behavior: 'smooth' }); }} 
+              onClick={() => { navigate('/'); const evSection = document.getElementById('events-section'); if (evSection) evSection.scrollIntoView({ behavior: 'smooth' }); }} 
               className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40 focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none"
             >
               <Calendar className="w-4 h-4" /> Events
             </button>
             <button 
-              onClick={() => { setActiveTab('messages'); setIsMobileSidebarOpen(false); }} 
-              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${activeTab === 'messages' ? 'bg-[#C8A25E]/10 text-[#C8A25E] border-l-4 border-[#C8A25E]' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
+              onClick={() => { navigate('/messages'); setIsMobileSidebarOpen(false); }} 
+              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${location.pathname === '/messages' ? 'bg-[#C8A25E]/10 text-[#C8A25E] border-l-4 border-[#C8A25E]' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
             >
               <span className="flex items-center gap-3"><MessageSquare className="w-4 h-4" /> Messages</span>
               <span className="w-2.5 h-2.5 bg-[#C8A25E] rounded-full animate-pulse"></span>
             </button>
             <button 
-              onClick={() => { setActiveTab('bookings'); setIsMobileSidebarOpen(false); }} 
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${activeTab === 'bookings' ? 'bg-[#C8A25E]/10 text-[#C8A25E] border-l-4 border-[#C8A25E]' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
+              onClick={() => { navigate('/bookings'); setIsMobileSidebarOpen(false); }} 
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${location.pathname === '/bookings' ? 'bg-[#C8A25E]/10 text-[#C8A25E] border-l-4 border-[#C8A25E]' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
             >
               <Calendar className="w-4 h-4" /> Bookings
             </button>
             <button 
-              onClick={() => { setActiveTab('explore'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); showToast("Viewing Saved Companions", "success"); }} 
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${showSavedOnly ? 'bg-[#C8A25E]/10 text-[#C8A25E] border-l-4 border-[#C8A25E]' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
+              onClick={() => { navigate('/companions'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); showToast("Viewing Saved Companions", "success"); }} 
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${location.pathname === '/companions' && showSavedOnly ? 'bg-[#C8A25E]/10 text-[#C8A25E] border-l-4 border-[#C8A25E]' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
             >
               <Heart className="w-4 h-4" /> Saved
             </button>
@@ -273,6 +336,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40 focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none"
             >
               <Users className="w-4 h-4" /> Community
+            </button>
+            <button 
+              onClick={() => { navigate('/settings'); }} 
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${location.pathname === '/settings' || activeTab === 'settings' ? 'bg-[#C8A25E]/10 text-[#C8A25E] border-l-4 border-[#C8A25E]' : 'text-[#8E9299] hover:text-white hover:bg-[#1E2124]/40'}`}
+            >
+              <Settings className="w-4 h-4" /> Settings
             </button>
           </nav>
         </div>
@@ -328,29 +397,32 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 </div>
 
                 <nav className="space-y-2">
-                  <button onClick={() => { setActiveTab('explore'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${activeTab === 'explore' && !showSavedOnly ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
+                  <button onClick={() => { navigate('/'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/' && !showSavedOnly ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
                     <Home className="w-4 h-4" /> Home
                   </button>
-                  <button onClick={() => { setActiveTab('explore'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-[#8E9299]">
-                    <Compass className="w-4 h-4" /> Explore
+                  <button onClick={() => { navigate('/companions'); setSelectedCategory('All'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/companions' && !showSavedOnly ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
+                    <Users className="w-4 h-4" /> Companions
                   </button>
-                  <button onClick={() => { setActiveTab('messages'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${activeTab === 'messages' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
+                  <button onClick={() => { navigate('/messages'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/messages' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
                     <MessageSquare className="w-4 h-4" /> Messages
                   </button>
-                  <button onClick={() => { setActiveTab('bookings'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${activeTab === 'bookings' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
+                  <button onClick={() => { navigate('/bookings'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/bookings' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
                     <Calendar className="w-4 h-4" /> Bookings
                   </button>
-                  <button onClick={() => { setActiveTab('explore'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${showSavedOnly ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
+                  <button onClick={() => { navigate('/companions'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/companions' && showSavedOnly ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
                     <Heart className="w-4 h-4" /> Saved Companions
                   </button>
                   <button onClick={() => { setShowWalletModal(true); setIsMobileSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-[#8E9299]">
                     <Wallet className="w-4 h-4" /> My Wallet
                   </button>
-                  <button onClick={() => { setActiveTab('partner'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${activeTab === 'partner' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
+                  <button onClick={() => { navigate('/partner'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/partner' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
                     <Briefcase className="w-4 h-4" /> Partners
                   </button>
-                  <button onClick={() => { setActiveTab('dashboard'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${activeTab === 'dashboard' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
+                  <button onClick={() => { navigate('/dashboard'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/dashboard' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
                     <UserCircle className="w-4 h-4" /> My Profile
+                  </button>
+                  <button onClick={() => { navigate('/settings'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/settings' || activeTab === 'settings' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-[#8E9299]'}`}>
+                    <Settings className="w-4 h-4" /> Settings
                   </button>
                 </nav>
               </div>
@@ -515,46 +587,258 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className="absolute right-0 top-11 mt-2 w-52 bg-[#17191C] border border-[#2A2D31] rounded-2xl shadow-2xl py-2 z-50 overflow-hidden text-left"
+                      className="hidden lg:block absolute right-0 top-11 mt-2 w-64 bg-[#17191C] border border-[#2A2D31] rounded-2xl shadow-2xl py-2 z-50 overflow-hidden text-left"
                     >
                       <div className="px-4 py-2.5 border-b border-[#2A2D31]/60">
                         <span className="text-xs font-bold text-white block truncate">{currentUser?.name || "Guest User"}</span>
-                        <span className="text-[10px] text-[#8E9299] block whitespace-normal leading-normal">{currentUser?.email || "Sign in to unlock messaging, bookings, favorites, and companion features."}</span>
+                        <span className="text-[10px] text-[#8E9299] block whitespace-normal leading-normal">{currentUser?.email || "Explore Nepali companions"}</span>
                       </div>
                       
-                      <div className="py-1">
-                        <button onClick={() => { setActiveTab('dashboard'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#8E9299] hover:bg-[#1E2124] hover:text-white flex items-center gap-2">
-                          <Compass className="w-4 h-4" /> Personal Dashboard
+                      {/* Section 1: Personal & Companion */}
+                      <div className="py-1.5 border-b border-[#2A2D31]/40">
+                        <button onClick={() => { setActiveTab('dashboard'); navigate('/dashboard'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#E0E0E0] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <UserCircle className="w-4 h-4 text-[#C8A25E]" /> My Profile / Dashboard
                         </button>
-                        <button onClick={() => { setActiveTab('partner'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#8E9299] hover:bg-[#1E2124] hover:text-white flex items-center gap-2">
-                          <Briefcase className="w-4 h-4" /> Partner Dashboard
+                        <button onClick={() => { setActiveTab('bookings'); navigate('/bookings'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#E0E0E0] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <Calendar className="w-4 h-4 text-[#C8A25E]" /> My Bookings
                         </button>
-                        <button onClick={() => { setAuthMode('guide'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#C8A25E] hover:bg-[#1E2124] flex items-center gap-2 font-semibold">
-                          <Sparkles className="w-4 h-4" /> Join as SATHI Guide
+                        <button onClick={() => { setActiveTab('messages'); navigate('/messages'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#E0E0E0] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <MessageSquare className="w-4 h-4 text-[#C8A25E]" /> Messages
                         </button>
-                        <button onClick={() => { setShowWalletModal(true); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#8E9299] hover:bg-[#1E2124] hover:text-white flex items-center gap-2">
-                          <Wallet className="w-4 h-4" /> My Wallet (NPR)
+                        <button onClick={() => { setShowSavedOnly(true); setActiveTab('explore'); navigate('/companions'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#E0E0E0] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <Heart className="w-4 h-4 text-red-500 fill-current" /> Favorites
+                        </button>
+                        {(currentUser?.role === 'companion' || currentUser?.role === 'admin') && (
+                          <button onClick={() => { setActiveTab('partner'); navigate('/partner'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#E0E0E0] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                            <Briefcase className="w-4 h-4 text-[#C8A25E]" /> Companion Dashboard
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Section 2: Finances & Customization */}
+                      <div className="py-1.5 border-b border-[#2A2D31]/40">
+                        <button onClick={() => { setShowWalletModal(true); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#E0E0E0] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <Wallet className="w-4 h-4 text-[#C8A25E]" /> Wallet
+                        </button>
+                        <button onClick={() => { setActiveTab('settings'); navigate('/settings'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#E0E0E0] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <Settings className="w-4 h-4 text-[#C8A25E]" /> Settings
+                        </button>
+                        <button onClick={() => { showToast("Language set to English (Nepali translations loading...)", "success"); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#E0E0E0] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <Languages className="w-4 h-4 text-[#C8A25E]" /> Language (EN/NE)
+                        </button>
+                        <button onClick={() => {
+                          const isCurrentlyLight = document.documentElement.classList.toggle('theme-light');
+                          showToast(isCurrentlyLight ? 'SATHI Premium Light Theme Active' : 'SATHI Cosmic Dark Theme Active', 'success');
+                          setShowProfileDropdown(false);
+                        }} className="w-full text-left px-4 py-2 text-xs text-[#E0E0E0] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <Sun className="w-4 h-4 text-[#C8A25E]" /> Appearance
+                        </button>
+                        <button onClick={() => { showToast("Privacy protection active. SATHI uses end-to-end escrow security.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#E0E0E0] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <ShieldCheck className="w-4 h-4 text-[#C8A25E]" /> Privacy & Security
                         </button>
                       </div>
 
-                      <div className="py-1 border-t border-[#2A2D31]/60">
+                      {/* Section 3: Policies & Support */}
+                      <div className="py-1.5 border-b border-[#2A2D31]/40 bg-white/[0.01]">
+                        <button onClick={() => { setActiveDocType('terms'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#8E9299] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <BookOpen className="w-4 h-4" /> Terms of Service
+                        </button>
+                        <button onClick={() => { setActiveDocType('privacy'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#8E9299] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <Lock className="w-4 h-4" /> Privacy Policy
+                        </button>
+                        <button onClick={() => { setActiveDocType('help'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#8E9299] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <HelpCircle className="w-4 h-4" /> Help & Support
+                        </button>
+                        <button onClick={() => { showToast("Emergency Contact: +977-9801234567. Location: Thamel, Kathmandu.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-[#8E9299] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
+                          <Smile className="w-4 h-4" /> Contact Us
+                        </button>
+                      </div>
+
+                      {/* Section 4: Log Out */}
+                      <div className="py-1">
                         {currentUser ? (
                           <button 
-                            onClick={async () => { await logout(); setShowProfileDropdown(false); showToast("Logged out successfully", "success"); }}
-                            className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-500/10 flex items-center gap-2"
+                            onClick={async () => { await logout(); navigate('/'); setShowProfileDropdown(false); showToast("Logged out successfully", "success"); }}
+                            className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-500/10 flex items-center gap-2 font-bold"
                           >
-                            Log Out
+                            <LogOut className="w-4 h-4" /> Log Out
                           </button>
                         ) : (
                           <button 
                             onClick={() => { setAuthMode('login'); setShowProfileDropdown(false); }}
                             className="w-full text-left px-4 py-2 text-xs text-[#C8A25E] hover:bg-[#1E2124] flex items-center gap-2 font-bold"
                           >
-                            Sign In / Register
+                            <UserCircle className="w-4 h-4" /> Sign In / Register
                           </button>
                         )}
                       </div>
                     </motion.div>
+
+                    {/* Mobile sliding bottom drawer (Account Hub) */}
+                    <div className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end animate-fade-in" onClick={() => setShowProfileDropdown(false)}>
+                      <motion.div 
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full max-h-[85vh] bg-[#121416] border-t border-[#2A2D31]/80 rounded-t-[2.5rem] flex flex-col overflow-hidden text-left shadow-2xl"
+                      >
+                        {/* Drag indicator/handle */}
+                        <div className="w-full flex justify-center py-3">
+                          <div className="w-12 h-1 bg-white/20 rounded-full cursor-pointer" onClick={() => setShowProfileDropdown(false)} />
+                        </div>
+
+                        {/* Title / User profile card */}
+                        <div className="px-6 py-4 border-b border-[#2A2D31]/50 flex items-center gap-4">
+                          <SafeImage 
+                            src={currentUser?.avatar} 
+                            alt={currentUser?.name || "Guest User"} 
+                            fallbackType="avatar"
+                            textForInitials={currentUser?.name || "Guest User"}
+                            className="w-12 h-12 rounded-full object-cover border border-[#C8A25E]"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-black text-white block truncate">{currentUser?.name || "Guest User"}</span>
+                            <span className="text-[10px] text-[#8E9299] block truncate leading-relaxed">{currentUser?.email || "Explore Nepali companions"}</span>
+                          </div>
+                          <button 
+                            onClick={() => setShowProfileDropdown(false)} 
+                            className="w-8 h-8 rounded-full bg-[#1E2124] flex items-center justify-center text-[#8E9299] hover:text-white"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {/* Scrollable List of 16 options */}
+                        <div className="flex-1 overflow-y-auto space-y-4 py-4 px-6 select-none hide-scrollbar">
+                          
+                          {/* Group 1: Personal Space */}
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] uppercase tracking-wider font-extrabold text-[#8E9299] block px-1">Personal Space</span>
+                            <button onClick={() => { setActiveTab('dashboard'); setMobileTab('home'); navigate('/dashboard'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <UserCircle className="w-4.5 h-4.5 text-[#C8A25E]" /> My Profile / Dashboard
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                            <button onClick={() => { setActiveTab('bookings'); setMobileTab('home'); navigate('/bookings'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <Calendar className="w-4.5 h-4.5 text-[#C8A25E]" /> My Bookings
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                            <button onClick={() => { setMobileTab('messages'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <MessageSquare className="w-4.5 h-4.5 text-[#C8A25E]" /> Messages
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                            <button onClick={() => { setShowSavedOnly(true); setMobileTab('search'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <Heart className="w-4.5 h-4.5 text-red-500 fill-current" /> Favorites
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                            {(currentUser?.role === 'companion' || currentUser?.role === 'admin') && (
+                              <button onClick={() => { setActiveTab('partner'); setMobileTab('home'); navigate('/partner'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                                <span className="flex items-center gap-3 font-semibold">
+                                  <Briefcase className="w-4.5 h-4.5 text-[#C8A25E]" /> Companion Dashboard
+                                </span>
+                                <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Group 2: Settings & Customization */}
+                          <div className="space-y-1.5 pt-2">
+                            <span className="text-[9px] uppercase tracking-wider font-extrabold text-[#8E9299] block px-1">Preferences</span>
+                            <button onClick={() => { setShowWalletModal(true); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <Wallet className="w-4.5 h-4.5 text-[#C8A25E]" /> Wallet (NPR)
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                            <button onClick={() => { setActiveTab('settings'); setMobileTab('home'); navigate('/settings'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <Settings className="w-4.5 h-4.5 text-[#C8A25E]" /> Settings
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                            <button onClick={() => { showToast("Language set to English (Nepali translations loading...)", "success"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <Languages className="w-4.5 h-4.5 text-[#C8A25E]" /> Language (EN/NE)
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                            <button onClick={() => {
+                              const isCurrentlyLight = document.documentElement.classList.toggle('theme-light');
+                              showToast(isCurrentlyLight ? 'SATHI Premium Light Theme Active' : 'SATHI Cosmic Dark Theme Active', 'success');
+                              setShowProfileDropdown(false);
+                            }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <Sun className="w-4.5 h-4.5 text-[#C8A25E]" /> Appearance (Theme)
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                            <button onClick={() => { showToast("Privacy protection active. SATHI uses end-to-end escrow security.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <ShieldCheck className="w-4.5 h-4.5 text-[#C8A25E]" /> Privacy & Security
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                          </div>
+
+                          {/* Group 3: Help & Policies */}
+                          <div className="space-y-1.5 pt-2">
+                            <span className="text-[9px] uppercase tracking-wider font-extrabold text-[#8E9299] block px-1">Support & Legal</span>
+                            <button onClick={() => { setActiveDocType('terms'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <BookOpen className="w-4.5 h-4.5 text-[#8E9299]" /> Terms of Service
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                            <button onClick={() => { setActiveDocType('privacy'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <Lock className="w-4.5 h-4.5 text-[#8E9299]" /> Privacy Policy
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                            <button onClick={() => { setActiveDocType('help'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <HelpCircle className="w-4.5 h-4.5 text-[#8E9299]" /> Help & Support
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                            <button onClick={() => { showToast("Emergency Contact: +977-9801234567. Location: Thamel, Kathmandu.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                              <span className="flex items-center gap-3 font-semibold">
+                                <Smile className="w-4.5 h-4.5 text-[#8E9299]" /> Contact Us
+                              </span>
+                              <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                            </button>
+                          </div>
+
+                          {/* Action Bar */}
+                          <div className="pt-4 border-t border-[#2A2D31]/40 flex gap-3">
+                            {currentUser ? (
+                              <button 
+                                onClick={async () => { await logout(); navigate('/'); setShowProfileDropdown(false); showToast("Logged out successfully", "success"); }}
+                                className="flex-1 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl text-xs font-black flex items-center justify-center gap-2"
+                              >
+                                <LogOut className="w-4 h-4" /> Log Out
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => { setAuthMode('login'); setShowProfileDropdown(false); }}
+                                className="flex-1 py-3 bg-[#C8A25E] text-[#0F1113] rounded-xl text-xs font-black flex items-center justify-center gap-2"
+                              >
+                                <UserCircle className="w-4 h-4" /> Sign In / Register
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    </div>
                   </>
                 )}
               </AnimatePresence>
@@ -778,6 +1062,149 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         Reset All Filters
                       </button>
                     </div>
+                  ) : selectedCategory === 'All' && !searchQuery && selectedCity === 'All' && !showSavedOnly ? (
+                    /* Grouped category-based horizontal scrolling rows */
+                    (() => {
+                      const companionCategoryMap: Record<string, Companion[]> = {};
+                      filteredCompanions.forEach(c => {
+                        const primaryCat = c.interests[0] || 'Local Companion';
+                        if (!companionCategoryMap[primaryCat]) {
+                          companionCategoryMap[primaryCat] = [];
+                        }
+                        companionCategoryMap[primaryCat].push(c);
+                      });
+
+                      const categoryEmojis: Record<string, string> = {
+                        'Coffee Buddy': '☕',
+                        'Travel Companion': '✈️',
+                        'Language Exchange': '🗣️',
+                        'Food Explorer': '🍜',
+                        'Museum Guide': '🏛️',
+                        'Hiking Partner': '🥾',
+                        'Shopping Buddy': '🛍️',
+                        'Study Partner': '📚',
+                        'Nightlife': '🌙',
+                        'Photography Walk': '📷',
+                        'Local Companion': '✨'
+                      };
+
+                      const orderPref = [
+                        'Hiking Partner',
+                        'Travel Companion',
+                        'Coffee Buddy',
+                        'Food Explorer',
+                        'Photography Walk',
+                        'Language Exchange',
+                        'Museum Guide',
+                        'Shopping Buddy',
+                        'Study Partner',
+                        'Nightlife',
+                        'Local Companion'
+                      ];
+
+                      const activeCats = Object.keys(companionCategoryMap).filter(cat => companionCategoryMap[cat].length > 0);
+                      const sortedActiveCats = [
+                        ...orderPref.filter(cat => activeCats.includes(cat)),
+                        ...activeCats.filter(cat => !orderPref.includes(cat))
+                      ];
+
+                      return (
+                        <div className="space-y-10">
+                          {sortedActiveCats.map(cat => {
+                            const catsList = companionCategoryMap[cat];
+                            return (
+                              <div key={cat} className="space-y-4 text-left">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xl" role="img" aria-label={cat}>{categoryEmojis[cat] || '✨'}</span>
+                                    <h3 className="text-lg font-bold text-white tracking-tight">{cat}</h3>
+                                    <span className="text-[10px] bg-[#1E2124] text-[#8E9299] px-2.5 py-0.5 rounded-full border border-[#2A2D31]/30">
+                                      {catsList.length} {catsList.length === 1 ? 'guide' : 'guides'}
+                                    </span>
+                                  </div>
+                                  <button 
+                                    onClick={() => {
+                                      setSelectedCategory(cat);
+                                      showToast(`Viewing all ${cat} guides`, 'success');
+                                    }}
+                                    className="text-xs font-bold text-[#C8A25E] hover:underline flex items-center gap-1"
+                                  >
+                                    See all <ChevronRight className="w-3 h-3" />
+                                  </button>
+                                </div>
+
+                                <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory pt-1">
+                                  {catsList.map(comp => {
+                                    const isFav = favorites && favorites.includes(comp.id);
+                                    return (
+                                      <div 
+                                        key={comp.id}
+                                        onClick={() => handleViewCompanion(comp)}
+                                        className="shrink-0 w-72 sm:w-80 aspect-[3/4.2] group relative rounded-[32px] overflow-hidden border border-[#2A2D31]/40 bg-[#17191C] hover:border-[#C8A25E]/40 hover:shadow-2xl hover:shadow-[#C8A25E]/5 transition-all duration-500 cursor-pointer snap-start focus-visible:ring-2 focus-visible:ring-[#C8A25E]"
+                                      >
+                                        {/* Card Image */}
+                                        <SafeImage 
+                                          src={comp.imageUrl} 
+                                          alt={comp.name} 
+                                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" 
+                                          fallbackType="thumbnail"
+                                          loading="lazy"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-black/10 group-hover:via-black/35 transition-all duration-300 z-10" />
+                                        
+                                        {/* Top left category tag & Top right save button */}
+                                        <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-20">
+                                          <span className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-bold text-[#C8A25E] border border-white/10 uppercase tracking-widest">
+                                            {comp.interests[0] || 'Local Companion'}
+                                          </span>
+                                          <button 
+                                            onClick={(e) => { e.stopPropagation(); toggleFavorite(comp.id); }}
+                                            className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center border border-white/10 text-white hover:text-red-500 hover:scale-110 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E]"
+                                            aria-label="Save companion"
+                                          >
+                                            <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
+                                          </button>
+                                        </div>
+
+                                        {/* Bottom absolute details overlay */}
+                                        <div className="absolute bottom-5 left-5 right-5 z-20 space-y-3 text-left">
+                                          <div className="space-y-1">
+                                            <div className="flex items-center gap-1.5 text-white font-black text-xl drop-shadow-md">
+                                              {comp.name}, {comp.age}
+                                              {comp.isVerified && <ShieldCheck className="w-5 h-5 text-[#C8A25E]" />}
+                                            </div>
+                                            <p className="text-[#8E9299] text-xs flex items-center gap-1 font-medium">
+                                              <MapPin className="w-3.5 h-3.5 text-[#C8A25E]" /> {comp.location}, Nepal
+                                            </p>
+                                          </div>
+
+                                          <div className="flex items-center justify-between pt-1 border-t border-white/10">
+                                            <div className="space-y-0.5">
+                                              <div className="flex items-center gap-1 text-[#C8A25E] text-xs font-bold">
+                                                <Star className="w-3.5 h-3.5 fill-current" /> {comp.rating}
+                                                <span className="text-white/50 font-light text-[10px]">({comp.reviewsCount || 120})</span>
+                                              </div>
+                                              <span className="text-[10px] text-white/60 block">From <span className="font-bold text-[#C8A25E]">NPR {comp.hourlyRate}</span>/hr</span>
+                                            </div>
+
+                                            <button 
+                                              onClick={(e) => { e.stopPropagation(); handleViewCompanion(comp); }}
+                                              className="px-4 py-2 bg-[#C8A25E] hover:bg-[#B69150] text-[#0F1113] rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md"
+                                            >
+                                              Book
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()
                   ) : (
                     /* High-fidelity Companion grid */
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -1226,6 +1653,16 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                               {booking.status === 'confirmed' && (
                                 <button onClick={() => { updateBookingStatus(booking.id, 'completed'); showToast('Booking marked as completed', 'success'); }} className="text-xs text-green-400 hover:text-green-300 transition-colors">Mark Complete</button>
                               )}
+                              <button 
+                                onClick={() => {
+                                  setActiveChatCompanionId(booking.companionId);
+                                  setActiveTab('messages');
+                                  setMobileTab('messages');
+                                }} 
+                                className="text-xs text-[#C8A25E] hover:text-[#B69150] font-semibold transition-colors ml-2"
+                              >
+                                Message Companion
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -1252,6 +1689,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             {activeTab === 'messages' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <MessagesTab onOpenAuth={setAuthMode} initialCompanionId={activeChatCompanionId} />
+              </motion.div>
+            )}
+
+            {activeTab === 'settings' && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <SettingsTab />
               </motion.div>
             )}
 
@@ -1528,17 +1971,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                {/* Bell notification */}
-                <div onClick={() => showToast('3 unread alerts synchronizing...', 'info')} className="relative cursor-pointer w-9 h-9 rounded-full bg-[#1E2124] flex items-center justify-center border border-white/10">
-                  <Bell className="w-4 h-4 text-white" />
-                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#C8A25E] text-[#0F1113] font-black text-[9px] rounded-full flex items-center justify-center">3</span>
-                </div>
                 {/* User profile with golden border */}
                 <img 
                   src={currentUser?.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"} 
                   className="w-9 h-9 rounded-full object-cover border-2 border-[#C8A25E] cursor-pointer" 
                   alt="Profile"
-                  onClick={() => { setMobileTab('profile'); }}
+                  onClick={() => { setShowProfileDropdown(true); }}
                 />
               </div>
             </div>
@@ -1582,61 +2020,152 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </div>
             </div>
 
-            {/* Top Companions for You */}
-            <div className="px-4 py-1 space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xs font-black uppercase tracking-wider text-[#8E9299]">Top Companions for You</h3>
-                <span className="text-xs font-bold text-[#C8A25E] cursor-pointer" onClick={() => setMobileTab('explore')}>See all</span>
-              </div>
-              
-              <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
-                {companions.slice(0, 4).map((comp) => (
-                  <div 
-                    key={comp.id} 
-                    onClick={() => handleViewCompanion(comp)}
-                    className="shrink-0 w-44 bg-[#17191C] rounded-[24px] border border-white/5 overflow-hidden shadow-xl flex flex-col snap-start cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-200 text-left"
-                  >
-                    <div className="relative h-44 bg-[#1E2124]">
-                      <SafeImage src={comp.imageUrl} className="w-full h-full object-cover" alt={comp.name} fallbackType="thumbnail" />
-                      <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[8px] text-[#C8A25E] font-extrabold flex items-center gap-0.5 border border-[#C8A25E]/20">
-                        VERIFIED
-                      </span>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(comp.id); showToast(favorites.includes(comp.id) ? "Removed from saved" : "Saved companion!", "success"); }}
-                        className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-colors"
-                      >
-                        <Heart className={`w-4 h-4 ${favorites.includes(comp.id) ? 'text-red-500 fill-current' : 'text-white'}`} />
-                      </button>
-                    </div>
-                    <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-extrabold text-white truncate flex items-center gap-1">
-                          {comp.name}
-                          <span className="text-[#C8A25E] text-[12px]">✔</span>
-                        </h4>
-                        <div className="flex items-center gap-1 text-[10px] text-[#8E9299]">
-                          <MapPin className="w-3 h-3 text-[#C8A25E]" />
-                          <span className="truncate">{comp.location}</span>
+            {/* Dynamic category-based horizontal scrolling rows for Mobile */}
+            {(() => {
+              const companionCategoryMap: Record<string, Companion[]> = {};
+              filteredCompanions.forEach(c => {
+                const primaryCat = c.interests[0] || 'Local Companion';
+                if (!companionCategoryMap[primaryCat]) {
+                  companionCategoryMap[primaryCat] = [];
+                }
+                companionCategoryMap[primaryCat].push(c);
+              });
+
+              const categoryEmojis: Record<string, string> = {
+                'Coffee Buddy': '☕',
+                'Travel Companion': '✈️',
+                'Language Exchange': '🗣️',
+                'Food Explorer': '🍜',
+                'Museum Guide': '🏛️',
+                'Hiking Partner': '🥾',
+                'Shopping Buddy': '🛍️',
+                'Study Partner': '📚',
+                'Nightlife': '🌙',
+                'Photography Walk': '📷',
+                'Local Companion': '✨'
+              };
+
+              const categoryDisplayNames: Record<string, string> = {
+                'Hiking Partner': 'Hiking Guides',
+                'Coffee Buddy': 'Coffee Buddies',
+                'Photography Walk': 'Photography Guides',
+                'Food Explorer': 'Food Experiences',
+                'Museum Guide': 'Culture',
+                'Travel Companion': 'Adventure',
+                'Language Exchange': 'Language Exchange',
+                'Shopping Buddy': 'Shopping Buddies',
+                'Study Partner': 'Study Partners',
+                'Nightlife': 'Nightlife Guides',
+                'Local Companion': 'Local Companions'
+              };
+
+              const orderPref = [
+                'Hiking Partner',
+                'Travel Companion',
+                'Coffee Buddy',
+                'Food Explorer',
+                'Photography Walk',
+                'Language Exchange',
+                'Museum Guide',
+                'Shopping Buddy',
+                'Study Partner',
+                'Nightlife',
+                'Local Companion'
+              ];
+
+              const activeCats = Object.keys(companionCategoryMap).filter(cat => companionCategoryMap[cat].length > 0);
+              const sortedActiveCats = [
+                ...orderPref.filter(cat => activeCats.includes(cat)),
+                ...activeCats.filter(cat => !orderPref.includes(cat))
+              ];
+
+              return (
+                <div className="space-y-6">
+                  {sortedActiveCats.map(cat => {
+                    const catsList = companionCategoryMap[cat];
+                    const displayName = categoryDisplayNames[cat] || cat;
+                    return (
+                      <div key={cat} className="px-4 py-1 space-y-3 text-left">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-base" role="img" aria-label={cat}>{categoryEmojis[cat] || '✨'}</span>
+                            <h3 className="text-xs font-black uppercase tracking-wider text-white">
+                              {displayName} ({catsList.length})
+                            </h3>
+                          </div>
+                          <span 
+                            className="text-xs font-bold text-[#C8A25E] cursor-pointer" 
+                            onClick={() => {
+                              setSelectedCategory(cat);
+                              setMobileTab('search');
+                              showToast(`Viewing all ${cat} guides`, 'success');
+                            }}
+                          >
+                            See all
+                          </span>
                         </div>
-                        <div className="flex items-center gap-1 text-[10px] text-[#C8A25E] font-bold">
-                          <Star className="w-3 h-3 fill-current" />
-                          <span>{comp.rating} (42)</span>
+                        
+                        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
+                          {catsList.map((comp) => {
+                            const isFav = favorites && favorites.includes(comp.id);
+                            return (
+                              <div 
+                                key={comp.id} 
+                                onClick={() => handleViewCompanion(comp)}
+                                className="shrink-0 w-44 bg-[#17191C] rounded-[24px] border border-white/5 overflow-hidden shadow-xl flex flex-col snap-start cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-200 text-left"
+                              >
+                                <div className="relative h-44 bg-[#1E2124]">
+                                  <SafeImage src={comp.imageUrl} className="w-full h-full object-cover" alt={comp.name} fallbackType="thumbnail" />
+                                  {comp.isVerified && (
+                                    <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[8px] text-[#C8A25E] font-extrabold flex items-center gap-0.5 border border-[#C8A25E]/20">
+                                      VERIFIED
+                                    </span>
+                                  )}
+                                  <button 
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      toggleFavorite(comp.id); 
+                                      showToast(isFav ? "Removed from saved" : "Saved companion!", "success"); 
+                                    }}
+                                    className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                                  >
+                                    <Heart className={`w-4 h-4 ${isFav ? 'text-red-500 fill-current' : 'text-white'}`} />
+                                  </button>
+                                </div>
+                                <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                                  <div className="space-y-1">
+                                    <h4 className="text-sm font-extrabold text-white truncate flex items-center gap-1">
+                                      {comp.name}, {comp.age}
+                                    </h4>
+                                    <div className="flex items-center gap-1 text-[10px] text-[#8E9299]">
+                                      <MapPin className="w-3 h-3 text-[#C8A25E]" />
+                                      <span className="truncate">{comp.location}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[10px] text-[#C8A25E] font-bold">
+                                      <Star className="w-3 h-3 fill-current" />
+                                      <span>{comp.rating} ({comp.reviewsCount || 0})</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                                    <div>
+                                      <p className="text-[8px] text-[#8E9299] uppercase font-bold leading-none">Rate</p>
+                                      <p className="text-xs font-black text-[#C8A25E] mt-0.5">NPR {comp.hourlyRate}/hr</p>
+                                    </div>
+                                    <div className="w-7 h-7 rounded-full bg-[#C8A25E] flex items-center justify-center text-[#0F1113] shadow-md">
+                                      <ArrowRight className="w-4 h-4" />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-white/5">
-                        <div>
-                          <p className="text-[8px] text-[#8E9299] uppercase font-bold leading-none">Rate</p>
-                          <p className="text-xs font-black text-[#C8A25E] mt-0.5">NPR {comp.hourlyRate}/hr</p>
-                        </div>
-                        <div className="w-7 h-7 rounded-full bg-[#C8A25E] flex items-center justify-center text-[#0F1113] shadow-md">
-                          <ArrowRight className="w-4 h-4" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* Community Feed */}
             <div className="px-4 py-1 space-y-4">
@@ -1836,82 +2365,200 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
         {/* Render Mobile Tab Explore */}
         {mobileTab === 'explore' && (
-          <div className="space-y-4">
+          <div className="space-y-6 pb-20 select-none">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 bg-[#0F1113] border-b border-white/5">
-              <button onClick={() => setMobileTab('home')} className="p-2 text-[#8E9299] hover:text-white rounded-full bg-[#1E2124] text-xs font-black">
-                ← Home
-              </button>
-              <span className="text-sm font-extrabold text-white tracking-wide uppercase">Companions</span>
-              <button onClick={() => { setSelectedCategory('All'); showToast('Filters reset', 'success'); }} className="p-2 text-[#C8A25E] hover:underline text-xs font-bold">
-                Reset
-              </button>
+            <div className="p-4 bg-[#0F1113] border-b border-white/5 flex justify-between items-center sticky top-0 z-20 backdrop-blur-md bg-opacity-95">
+              <div className="text-left">
+                <span className="text-[10px] text-[#C8A25E] font-extrabold uppercase tracking-widest">SATHI Live Radar</span>
+                <h2 className="text-xl font-extrabold text-white">Explore Nearby</h2>
+              </div>
+              <div className="flex items-center gap-1 bg-[#C8A25E]/10 px-2.5 py-1 rounded-full border border-[#C8A25E]/30">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-[9px] font-black uppercase text-[#C8A25E] tracking-wider">Live</span>
+              </div>
             </div>
 
-            {/* Categories scroll */}
-            <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4 py-1">
-              {['All', 'Hiking', 'Coffee', 'Photography', 'Culture', 'Trekking', 'Food'].map((cat) => (
-                <button 
-                  key={cat}
-                  onClick={() => { setSelectedCategory(cat); showToast(`Viewing ${cat} buddies`, 'info'); }}
-                  className={`px-4 py-1.5 rounded-full text-[11px] font-black transition-all shrink-0 ${selectedCategory === cat ? 'bg-[#C8A25E] text-[#0F1113]' : 'bg-[#17191C] text-[#8E9299] border border-white/5'}`}
-                >
-                  {cat}
-                </button>
-              ))}
+            {/* Interactive Map */}
+            <div className="px-4">
+              <div className="bg-[#17191C] border border-white/10 rounded-3xl overflow-hidden relative shadow-2xl shadow-black/40">
+                <div className="p-3 bg-[#1E2124]/40 border-b border-white/5 flex justify-between items-center text-left">
+                  <span className="text-[10px] uppercase font-black tracking-wider text-[#8E9299] flex items-center gap-1">
+                    <Compass className="w-3.5 h-3.5 text-[#C8A25E] animate-spin" /> Interactive Guide Map
+                  </span>
+                  <span className="text-[8px] text-[#8E9299]">Click pins to view details</span>
+                </div>
+                
+                {/* Map Component */}
+                <div className="relative">
+                  {(() => {
+                    // Safe Coordinate Resolver
+                    const getCoords = (item: any) => {
+                      if (!item?.coordinates) return null;
+                      const lat = item.coordinates.latitude ?? item.coordinates._lat ?? item.coordinates.lat;
+                      const lng = item.coordinates.longitude ?? item.coordinates._long ?? item.coordinates.lng;
+                      if (typeof lat === 'number' && typeof lng === 'number') {
+                        return { lat, lng };
+                      }
+                      return null;
+                    };
+
+                    const mapMarkers = [
+                      ...(companions || []).map(c => {
+                        const coords = getCoords(c);
+                        return coords ? {
+                          id: c.id,
+                          position: { lat: coords.lat, lng: coords.lng },
+                          title: c.name,
+                          subtitle: `${c.interests[0] || 'Buddy'} • NPR ${c.hourlyRate}/h`,
+                          type: 'companion' as const
+                        } : null;
+                      }).filter(Boolean),
+                      ...(activities || []).map(act => {
+                        const coords = getCoords(act);
+                        return coords ? {
+                          id: act.id,
+                          position: { lat: coords.lat, lng: coords.lng },
+                          title: act.title,
+                          subtitle: act.location || 'Nepal',
+                          type: 'activity' as const
+                        } : null;
+                      }).filter(Boolean),
+                      ...(events || []).map(evt => {
+                        const coords = getCoords(evt);
+                        return coords ? {
+                          id: evt.id,
+                          position: { lat: coords.lat, lng: coords.lng },
+                          title: evt.title,
+                          subtitle: evt.location || 'Nepal',
+                          type: 'event' as const
+                        } : null;
+                      }).filter(Boolean)
+                    ] as any[];
+
+                    return (
+                      <MapPreview 
+                        center={{ lat: 27.7172, lng: 85.3240 }} // Kathmandu center
+                        zoom={12}
+                        height="260px"
+                        markers={mapMarkers}
+                        onMarkerClick={(id) => {
+                          const comp = companions.find(c => c.id === id);
+                          if (comp) {
+                            handleViewCompanion(comp);
+                            showToast(`Opening ${comp.name}'s profile`, 'info');
+                          } else {
+                            const act = activities.find(a => a.id === id);
+                            if (act) {
+                              showToast(`Experience: ${act.title}`, 'info');
+                            } else {
+                              showToast('Marker selected on map', 'info');
+                            }
+                          }
+                        }}
+                      />
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
 
-            {/* Companions vertical cards feed */}
-            <div className="px-4 space-y-6 pb-8">
-              {filteredCompanions.length > 0 ? (
-                filteredCompanions.map((comp) => (
+            {/* Trending Curated Experiences Nearby */}
+            <div className="px-4 space-y-3 text-left">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] uppercase font-black tracking-widest text-[#8E9299]">Trending Nearby Experiences</span>
+                <button onClick={() => { setMobileTab('search'); setDiscoveryTab('activities'); }} className="text-[10px] font-black text-[#C8A25E] uppercase hover:underline">See All</button>
+              </div>
+
+              <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1">
+                {(activities || []).slice(0, 5).map((act) => (
                   <div 
-                    key={comp.id} 
-                    onClick={() => handleViewCompanion(comp)}
-                    className="relative aspect-[4/4.5] rounded-[28px] overflow-hidden border border-white/5 shadow-2xl bg-[#17191C] cursor-pointer"
+                    key={act.id}
+                    onClick={() => { setMobileTab('search'); setSearchQuery(act.title); setDiscoveryTab('activities'); }}
+                    className="shrink-0 w-48 bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden relative group cursor-pointer active:scale-98 transition-all"
                   >
-                    <SafeImage src={comp.imageUrl} className="absolute inset-0 w-full h-full object-cover" alt={comp.name} fallbackType="thumbnail" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent"></div>
-                    
-                    <span className="absolute top-4 left-4 bg-[#C8A25E] text-[#0F1113] text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
-                      VERIFIED
-                    </span>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); toggleFavorite(comp.id); }}
-                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white"
-                    >
-                      <Heart className={`w-4 h-4 ${favorites.includes(comp.id) ? 'text-red-500 fill-current' : 'text-white'}`} />
-                    </button>
-
-                    <div className="absolute bottom-4 inset-x-4 bg-black/55 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-left flex justify-between items-center">
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-black text-white flex items-center gap-1 leading-tight">
-                          {comp.name} <span className="text-[#C8A25E]">✔</span>
-                        </h4>
-                        <p className="text-[9px] text-white/80">{comp.interests[0] || 'SATHI Companion'}</p>
-                        <div className="flex items-center gap-1 text-[9px] text-[#C8A25E] font-black">
-                          <Star className="w-3 h-3 fill-current" />
-                          <span>{comp.rating} (128)</span>
-                        </div>
-                        <p className="text-[9px] text-[#8E9299] font-light">{comp.location}</p>
+                    <div className="w-full h-28 overflow-hidden bg-[#1E2124] relative">
+                      <SafeImage src={act.imageUrl || act.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={act.title} fallbackType="thumbnail" />
+                      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[8px] font-black text-[#C8A25E] uppercase tracking-wider">
+                        {act.category || 'Curated'}
                       </div>
-                      <div className="text-right">
-                        <span className="text-[8px] text-[#8E9299] block uppercase">From</span>
-                        <span className="text-xs font-black text-[#C8A25E] font-mono">NPR {comp.hourlyRate}</span>
-                        <span className="text-[8px] text-[#8E9299] block">/hr</span>
+                    </div>
+                    <div className="p-3 space-y-1">
+                      <h4 className="text-[11px] font-bold text-white truncate leading-tight">{act.title}</h4>
+                      <p className="text-[9px] text-[#8E9299] truncate flex items-center gap-0.5 font-light">
+                        <MapPin className="w-2.5 h-2.5 text-[#C8A25E]" /> {act.location || 'Nepal'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Popular Meetups and Events nearby */}
+            <div className="px-4 space-y-3 text-left">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] uppercase font-black tracking-widest text-[#8E9299]">Upcoming Local Events</span>
+                <button onClick={() => { setMobileTab('search'); setDiscoveryTab('events'); }} className="text-[10px] font-black text-[#C8A25E] uppercase hover:underline">See All</button>
+              </div>
+
+              <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1">
+                {(events || []).slice(0, 5).map((evt) => (
+                  <div 
+                    key={evt.id}
+                    onClick={() => showToast(`Event details: ${evt.title}`, 'info')}
+                    className="shrink-0 w-64 bg-[#17191C] border border-white/5 rounded-2xl p-3 flex gap-3 cursor-pointer active:scale-98 transition-all"
+                  >
+                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#1E2124] shrink-0">
+                      <SafeImage src={evt.imageUrl} className="w-full h-full object-cover" alt={evt.title} fallbackType="thumbnail" />
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-[11px] font-extrabold text-white truncate leading-tight">{evt.title}</h4>
+                        <p className="text-[9px] text-[#8E9299] mt-0.5 truncate font-light">{evt.location}</p>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[8px] text-[#C8A25E] font-bold font-mono">{evt.date}</span>
+                        <span className="text-[8px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{evt.spots} Left</span>
                       </div>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="py-12 text-center text-[#8E9299] space-y-2 bg-[#17191C] rounded-2xl border border-white/5">
-                  <p className="text-xs">No matching companions found.</p>
-                  <button onClick={() => { setSelectedCategory('All'); setSearchQuery(''); }} className="text-xs text-[#C8A25E] font-bold hover:underline">Clear Filters</button>
-                </div>
-              )}
-              <button onClick={() => showToast('All verified companions loaded!', 'success')} className="w-full py-3 border border-[#C8A25E]/40 hover:border-[#C8A25E] text-[#C8A25E] rounded-xl text-xs font-bold uppercase tracking-wider transition-all bg-transparent">
-                View All Companions
-              </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Suggested Itineraries */}
+            <div className="px-4 space-y-3 text-left">
+              <span className="text-[10px] uppercase font-black tracking-widest text-[#8E9299] block">Suggested Local Itineraries</span>
+              <div className="space-y-3">
+                {[
+                  {
+                    title: "Kathmandu Ancient Durbar Walk",
+                    duration: "3 Hours • Easy",
+                    desc: "Explore Newari pottery, hidden courtyards, and tea points in Patan Durbar Square with a coffee buddy.",
+                    tag: "Culture"
+                  },
+                  {
+                    title: "Sarangkot Sunset Acoustic Picnic",
+                    duration: "4 Hours • Moderate",
+                    desc: "An acoustic jam and evening local snack picnic with panoramic sunset mountain views of Annapurna.",
+                    tag: "Scenic"
+                  }
+                ].map((item, idx) => (
+                  <div 
+                    key={idx}
+                    onClick={() => showToast(`Suggested itinerary selected: ${item.title}`, 'info')}
+                    className="p-3 bg-[#17191C] border border-white/5 rounded-2xl relative overflow-hidden flex flex-col gap-1 cursor-pointer active:scale-99 transition-all hover:border-[#C8A25E]/30"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8px] bg-white/5 text-[#C8A25E] border border-[#C8A25E]/10 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                        {item.tag}
+                      </span>
+                      <span className="text-[9px] font-bold text-[#8E9299] font-mono">{item.duration}</span>
+                    </div>
+                    <h4 className="text-xs font-bold text-white mt-1 leading-snug">{item.title}</h4>
+                    <p className="text-[10px] text-[#8E9299] font-light leading-relaxed mt-0.5">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -2367,6 +3014,71 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           </div>
         )}
 
+        {/* Render Mobile Tab Bookings */}
+        {mobileTab === 'bookings' && (
+          <div className="p-4 space-y-4 pb-20 overflow-y-auto max-h-[calc(100vh-120px)] custom-scrollbar">
+            <h2 className="text-xl font-extrabold text-white text-left flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-[#C8A25E]" /> My Bookings
+            </h2>
+            {bookings.filter(b => b.userId === currentUser?.id).length > 0 ? (
+              <div className="space-y-3">
+                {bookings.filter(b => b.userId === currentUser?.id).map(booking => {
+                  const companion = fetchedCompanions.find(c => c.id === booking.companionId);
+                  const isCancellable = booking.status === 'pending' || booking.status === 'confirmed';
+                  return (
+                    <div key={booking.id} className="bg-[#17191C] border border-white/5 rounded-2xl p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        {companion && (
+                          <SafeImage src={companion.imageUrl} className="w-9 h-9 rounded-full object-cover border border-[#2A2D31]" alt={companion.name} fallbackType="avatar" textForInitials={companion.name} />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h5 className="font-bold text-xs text-white truncate">Trip with {companion?.name || 'Companion'}</h5>
+                          <p className="text-[9px] text-[#8E9299] mt-0.5">{booking.date} at {booking.time}</p>
+                        </div>
+                        <span className={`text-[8px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded border ${booking.status === 'confirmed' ? 'bg-green-500/10 border-green-500/30 text-green-500' : booking.status === 'cancelled' ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'}`}>
+                          {booking.status}
+                        </span>
+                      </div>
+                      {booking.meetingPoint && (
+                        <p className="text-[10px] text-[#8E9299]">Meeting Point: {booking.meetingPoint}</p>
+                      )}
+                      <div className="flex justify-between items-center text-[10px] pt-2.5 border-t border-white/5">
+                        <span className="font-black text-[#C8A25E]">NPR {booking.totalPrice}</span>
+                        <span className="text-[#8E9299]">{booking.duration} hours • {booking.participants} persons</span>
+                      </div>
+                      <div className="flex justify-end gap-2 pt-1">
+                        {isCancellable && (
+                          <button onClick={() => { updateBookingStatus(booking.id, 'cancelled'); showToast('Booking cancelled', 'info'); }} className="text-[10px] text-red-400 hover:text-red-300 transition-colors">Cancel</button>
+                        )}
+                        {booking.status === 'confirmed' && (
+                          <button onClick={() => { updateBookingStatus(booking.id, 'completed'); showToast('Booking marked as completed', 'success'); }} className="text-[10px] text-green-400 hover:text-green-300 transition-colors">Mark Complete</button>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setActiveChatCompanionId(booking.companionId);
+                            setActiveTab('messages');
+                            setMobileTab('messages');
+                          }} 
+                          className="text-[10px] text-[#C8A25E] hover:text-[#B69150] font-semibold transition-colors ml-2"
+                        >
+                          Message
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-[#17191C] border border-white/5 p-5 rounded-2xl text-center space-y-2.5">
+                <p className="text-[10px] text-[#8E9299]">No scheduled companion bookings yet.</p>
+                <button onClick={() => setMobileTab('explore')} className="py-2 px-4 bg-[#C8A25E] text-black font-extrabold text-[10px] rounded-lg uppercase tracking-wider">
+                  Discover Companions
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Render Mobile Tab Messages */}
         {mobileTab === 'messages' && (
           <div className="p-4 space-y-4">
@@ -2377,24 +3089,366 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           </div>
         )}
 
+        {/* Render Mobile Tab Search */}
+        {mobileTab === 'search' && (
+          <div className="p-4 space-y-6 pb-20 select-none">
+            <h2 className="text-xl font-extrabold text-white text-left">Universal Discovery</h2>
+            
+            {/* Elegant Search Input */}
+            <div className="relative flex items-center">
+              <Search className="w-4 h-4 text-[#C8A25E] absolute left-3.5" />
+              <input 
+                type="text" 
+                placeholder="Search companions, activities, and events..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-11 pl-10 pr-10 bg-[#1E2124]/60 backdrop-blur-md rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-[#C8A25E] transition-all"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 text-xs font-bold text-[#8E9299] hover:text-white"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* City Quick Filters */}
+            <div className="space-y-2 text-left">
+              <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] block">Select City</span>
+              <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                {['All', 'Kathmandu', 'Pokhara', 'Patan', 'Bhaktapur', 'Chitwan'].map((city) => (
+                  <button 
+                    key={city}
+                    onClick={() => handleCitySelect(city)}
+                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold shrink-0 transition-all ${selectedCity === city ? 'bg-[#C8A25E] text-[#0F1113]' : 'bg-[#17191C] text-[#8E9299] border border-white/5'}`}
+                  >
+                    {city}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Unified Entity Category Selector Tabs */}
+            <div className="space-y-2 text-left">
+              <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] block">Discovery Type</span>
+              <div className="flex gap-1 bg-[#17191C] p-1 rounded-xl border border-white/5">
+                {[
+                  { id: 'all', label: 'All' },
+                  { id: 'companions', label: `Buddies (${filteredCompanions.length})` },
+                  { id: 'activities', label: `Activities (${filteredActivities.length})` },
+                  { id: 'events', label: `Events (${filteredEvents.length})` }
+                ].map(sub => (
+                  <button
+                    key={sub.id}
+                    onClick={() => setDiscoveryTab(sub.id as any)}
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${discoveryTab === sub.id ? 'bg-[#C8A25E] text-[#0F1113]' : 'text-[#8E9299] hover:text-white'}`}
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Companion Category Chips (only show for all or companions tab) */}
+            {(discoveryTab === 'all' || discoveryTab === 'companions') && (
+              <div className="space-y-2 text-left">
+                <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] block">Interests & Categories</span>
+                <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                  {['All', 'Hiking', 'Coffee', 'Photography', 'Culture', 'Trekking', 'Food'].map((cat) => (
+                    <button 
+                      key={cat}
+                      onClick={() => { setSelectedCategory(cat); showToast(`Viewing ${cat} buddies`, 'info'); }}
+                      className={`px-3 py-1.5 rounded-full text-[10px] font-bold shrink-0 transition-all ${selectedCategory === cat ? 'bg-[#C8A25E] text-[#0F1113]' : 'bg-[#17191C] text-[#8E9299] border border-white/5'}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sort Dropdown for companions */}
+            {(discoveryTab === 'companions') && (
+              <div className="space-y-2 text-left">
+                <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] block">Sort Companions By</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'recommended', label: 'Recommended' },
+                    { value: 'rating', label: 'Top Rated' },
+                    { value: 'priceAsc', label: 'Price: Low to High' },
+                    { value: 'priceDesc', label: 'Price: High to Low' }
+                  ].map((opt) => (
+                    <button 
+                      key={opt.value}
+                      onClick={() => { setSortBy(opt.value as any); showToast(`Sorting set to ${opt.label}`, 'info'); }}
+                      className={`p-2 rounded-xl text-[10px] font-bold border transition-all text-left truncate ${sortBy === opt.value ? 'bg-[#C8A25E]/10 border-[#C8A25E] text-[#C8A25E]' : 'bg-[#17191C] border-white/5 text-[#8E9299]'}`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Combined Results Container */}
+            <div className="space-y-6 pt-2 select-none">
+              
+              {/* 1. Companions Block */}
+              {(discoveryTab === 'all' || discoveryTab === 'companions') && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-[#8E9299] flex items-center gap-1.5">
+                      🤝 Local Companions ({filteredCompanions.length})
+                    </span>
+                    {favorites.length > 0 && (
+                      <button 
+                        onClick={() => { setShowSavedOnly(!showSavedOnly); }} 
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full border transition-all ${showSavedOnly ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-transparent border-white/10 text-[#8E9299]'}`}
+                      >
+                        ❤️ Saved Only
+                      </button>
+                    )}
+                  </div>
+
+                  {filteredCompanions.length === 0 ? (
+                    <div className="py-8 text-center text-[#8E9299] text-xs bg-[#17191C] rounded-2xl border border-white/5">
+                      No matching buddies found.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {filteredCompanions.map((comp) => {
+                        const isFav = favorites && favorites.includes(comp.id);
+                        return (
+                          <div 
+                            key={comp.id}
+                            onClick={() => handleViewCompanion(comp)}
+                            className="bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden flex flex-col relative cursor-pointer hover:border-[#C8A25E]/30 active:scale-98 transition-all text-left group"
+                          >
+                            <div className="relative w-full aspect-[4/3] overflow-hidden bg-[#1E2124]">
+                              <SafeImage 
+                                src={comp.imageUrl} 
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                alt={comp.name} 
+                                fallbackType="thumbnail" 
+                              />
+                              <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded-md flex items-center gap-0.5 text-[#C8A25E] text-[9px] font-bold">
+                                <Star className="w-2.5 h-2.5 fill-current" /> {comp.rating}
+                              </div>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); toggleFavorite(comp.id); }}
+                                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center border border-white/10 text-white hover:text-red-500 active:scale-90 transition-all"
+                              >
+                                <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
+                              </button>
+                            </div>
+
+                            <div className="p-3 flex flex-col flex-1 justify-between space-y-1 bg-gradient-to-b from-[#17191C] to-[#121416]">
+                              <div>
+                                <h4 className="text-xs font-bold text-white truncate flex items-center gap-0.5">
+                                  {comp.name}, {comp.age}
+                                  {comp.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-[#C8A25E] shrink-0" />}
+                                </h4>
+                                <p className="text-[9px] text-[#8E9299] truncate mt-0.5 flex items-center gap-0.5">
+                                  <MapPin className="w-2.5 h-2.5 text-[#C8A25E]" /> {comp.location}
+                                </p>
+                              </div>
+                              
+                              <div className="flex items-center justify-between pt-1 border-t border-white/5 mt-1">
+                                <span className="text-[8px] bg-white/5 text-[#8E9299] px-1 py-0.5 rounded uppercase font-bold truncate max-w-[50px]">
+                                  {comp.interests[0] || 'Guide'}
+                                </span>
+                                <span className="text-[10px] font-black text-[#C8A25E] font-mono truncate">
+                                  NPR {comp.hourlyRate}/h
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 2. Activities Block */}
+              {(discoveryTab === 'all' || discoveryTab === 'activities') && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-[#8E9299] flex items-center gap-1.5">
+                      🥾 Curated Experiences ({filteredActivities.length})
+                    </span>
+                  </div>
+
+                  {filteredActivities.length === 0 ? (
+                    <div className="py-8 text-center text-[#8E9299] text-xs bg-[#17191C] rounded-2xl border border-white/5">
+                      No matching activities found.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {filteredActivities.map((act) => (
+                        <div 
+                          key={act.id}
+                          onClick={() => { setSelectedCategory(act.category || 'All'); showToast(`Filtered by ${act.title}`, 'success'); }}
+                          className="bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden flex items-center p-2 gap-3 cursor-pointer hover:border-[#C8A25E]/30 active:scale-98 transition-all text-left"
+                        >
+                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#1E2124] shrink-0">
+                            <SafeImage src={act.imageUrl || act.image} alt={act.title} className="w-full h-full object-cover" fallbackType="thumbnail" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[8px] bg-[#C8A25E]/10 text-[#C8A25E] px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                              {act.category || 'Activity'}
+                            </span>
+                            <h4 className="text-xs font-bold text-white truncate mt-1 leading-snug">
+                              {act.title}
+                            </h4>
+                            <p className="text-[10px] text-[#8E9299] mt-0.5 flex items-center gap-1 truncate">
+                              <Clock className="w-3 h-3 text-[#C8A25E]" /> {act.duration || 'Flexible'} • {act.location || 'Nepal'}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0 pr-1">
+                            <span className="text-[9px] font-bold text-[#C8A25E] block font-mono">
+                              NPR {act.avgPrice || act.price}
+                            </span>
+                            <span className="text-[8px] text-[#8E9299] block font-light">average</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 3. Events Block */}
+              {(discoveryTab === 'all' || discoveryTab === 'events') && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-[#8E9299] flex items-center gap-1.5">
+                      📅 Upcoming Events ({filteredEvents.length})
+                    </span>
+                  </div>
+
+                  {filteredEvents.length === 0 ? (
+                    <div className="py-8 text-center text-[#8E9299] text-xs bg-[#17191C] rounded-2xl border border-white/5">
+                      No matching events found.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {filteredEvents.map((evt) => (
+                        <div 
+                          key={evt.id}
+                          onClick={() => showToast(`Event: ${evt.title} • spots left: ${evt.spots}`, 'info')}
+                          className="bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden flex flex-col p-3 gap-3 cursor-pointer hover:border-[#C8A25E]/30 active:scale-98 transition-all text-left"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#1E2124] shrink-0">
+                              <SafeImage src={evt.imageUrl} alt={evt.title} className="w-full h-full object-cover" fallbackType="thumbnail" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start">
+                                <span className="text-[8px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                                  {evt.spots ? `${evt.spots} Spots Left` : 'Public Event'}
+                                </span>
+                                <span className="text-[9px] font-mono text-[#8E9299]">{evt.date}</span>
+                              </div>
+                              <h4 className="text-xs font-bold text-white truncate mt-1 leading-snug">
+                                {evt.title}
+                              </h4>
+                              <p className="text-[10px] text-[#8E9299] mt-0.5 flex items-center gap-1 truncate font-light">
+                                <MapPin className="w-3 h-3 text-[#C8A25E]" /> {evt.location}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
+
+        {/* Render Mobile Tab Notifications */}
+        {mobileTab === 'notifications' && (
+          <div className="p-4 space-y-6 pb-20 select-none">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-extrabold text-white">Notifications</h2>
+              {unreadNotifCount > 0 && (
+                <button 
+                  onClick={() => {
+                    notifications?.forEach(n => markNotificationRead(n.id));
+                    showToast("All notifications marked as read", "success");
+                  }}
+                  className="text-xs font-bold text-[#C8A25E] hover:underline"
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-3 text-left">
+              {notifications && notifications.length > 0 ? (
+                notifications.map((n) => (
+                  <div 
+                    key={n.id} 
+                    onClick={() => { markNotificationRead(n.id); }} 
+                    className={`p-4 rounded-2xl border transition-colors cursor-pointer text-left ${!n.isRead ? 'bg-[#C8A25E]/5 border-[#C8A25E]/20' : 'bg-[#17191C] border-white/5'}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <h4 className={`text-xs ${!n.isRead ? 'font-black text-white' : 'font-semibold text-gray-300'}`}>{n.title}</h4>
+                      {!n.isRead && <span className="w-2 h-2 rounded-full bg-[#C8A25E]" />}
+                    </div>
+                    <p className="text-[10px] text-[#8E9299] mt-1 leading-relaxed">{n.message}</p>
+                    <div className="flex justify-between items-center pt-2 mt-2 border-t border-white/5">
+                      <span className="text-[8px] text-[#5A5E66]">{new Date(n.timestamp).toLocaleDateString()} at {new Date(n.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      <span className="text-[9px] text-[#C8A25E] font-bold">Mark Read</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-20 text-center text-[#8E9299] space-y-3 bg-[#17191C] rounded-3xl border border-white/5">
+                  <Bell className="w-10 h-10 mx-auto text-[#C8A25E]/30 animate-bounce" />
+                  <div>
+                    <p className="text-xs font-bold text-white">All caught up!</p>
+                    <p className="text-[10px] text-[#8E9299] mt-1">We will alert you here about bookings, messages, and social updates.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Fixed Bottom Tab Navigation Bar */}
         <div className="fixed bottom-0 left-0 right-0 h-16 bg-[#0F1113]/95 backdrop-blur-md border-t border-white/10 flex justify-between items-center px-6 z-50">
           {[
-            { tab: 'home', icon: <Home className="w-5 h-5" />, label: 'Home' },
-            { tab: 'explore', icon: <Search className="w-5 h-5" />, label: 'Explore' },
-            { tab: 'experiences', icon: (
-              <div className="w-12 h-12 rounded-full bg-[#C8A25E] text-[#0F1113] flex items-center justify-center font-black shadow-lg shadow-[#C8A25E]/20 transform -translate-y-2.5 active:scale-95 transition-all">
-                <span className="text-xl font-extrabold leading-none">+</span>
+            { tab: 'home', path: '/', icon: <Home className="w-5 h-5" />, label: 'Home' },
+            { tab: 'search', path: null, icon: <Search className="w-5 h-5" />, label: 'Discover' },
+            { tab: 'explore', path: null, icon: <Compass className="w-5 h-5" />, label: 'Explore' },
+            { tab: 'messages', path: '/messages', icon: <MessageSquare className="w-5 h-5" />, label: 'Messages' },
+            { tab: 'notifications', path: null, icon: (
+              <div className="relative">
+                <Bell className="w-5 h-5" />
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C8A25E] text-[#0F1113] text-[9px] font-black rounded-full flex items-center justify-center">
+                    {unreadNotifCount}
+                  </span>
+                )}
               </div>
-            ), label: '' },
-            { tab: 'messages', icon: <MessageSquare className="w-5 h-5" />, label: 'Messages' },
-            { tab: 'profile', icon: <UserCircle className="w-5 h-5" />, label: 'Profile' },
+            ), label: 'Alerts' },
           ].map((item) => {
             const isActive = mobileTab === item.tab;
             return (
               <button 
                 key={item.tab}
-                onClick={() => { setMobileTab(item.tab as any); if (item.tab !== 'experiences') setActiveTab(item.tab as any); }}
+                onClick={() => { 
+                  if (item.path) {
+                    navigate(item.path);
+                  }
+                  setMobileTab(item.tab as any);
+                }}
                 className={`flex flex-col items-center justify-center transition-all ${isActive ? 'text-[#C8A25E]' : 'text-[#8E9299]'}`}
               >
                 {item.icon}
@@ -2550,6 +3604,14 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           onClose={() => setShowProfileEditModal(false)}
         />
       )}
+
+      {/* Document Modal */}
+      {activeDocType && (
+        <DocumentModal 
+          documentType={activeDocType}
+          onClose={() => setActiveDocType(null)}
+        />
+      )}
       
       {/* Companion Profile Multi-Step booking details panel */}
       {selectedCompanion && (
@@ -2564,6 +3626,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             setSelectedCompanion(null);
             setActiveTab('messages');
             setMobileTab('messages');
+          }}
+          onComplete={() => {
+            setSelectedCompanion(null);
+            navigate('/bookings');
           }}
         />
       )}

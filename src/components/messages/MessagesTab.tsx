@@ -19,7 +19,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
   onBrowseCompanions,
   onBrowseActivities
 }) => {
-  const { currentUser, getConversationId } = useAppContext();
+  const { currentUser, getConversationId, bookings } = useAppContext();
   const { showToast } = useToast();
   const { companions: fetchedCompanions } = useCompanions();
   const [selectedConvo, setSelectedConvo] = useState<string | null>(null);
@@ -27,6 +27,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [localConversations, setLocalConversations] = useState<Record<string, any>>({});
   const [localMessages, setLocalMessages] = useState<Record<string, any[]>>({});
+  const [travelerProfiles, setTravelerProfiles] = useState<Record<string, { name: string; avatar: string }>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to the bottom when messages load or change
@@ -79,6 +80,62 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
     };
   }, [currentUser, selectedConvo]);
 
+  // Fetch traveler/customer profiles that are not in fetchedCompanions
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchMissingProfiles = async () => {
+      const convoList = Object.values(localConversations);
+      const missingIds = convoList
+        .map(convo => convo.participantIds?.find((id: string) => id !== currentUser.id))
+        .filter((id): id is string => !!id && !fetchedCompanions.some(c => c.id === id) && !travelerProfiles[id]);
+
+      if (missingIds.length === 0) return;
+
+      for (const id of missingIds) {
+        try {
+          const userDoc = await firestore.getDocument<any>(`users/${id}`);
+          if (userDoc) {
+            setTravelerProfiles(prev => ({
+              ...prev,
+              [id]: {
+                name: userDoc.name || "SATHI Traveler",
+                avatar: userDoc.avatar || ""
+              }
+            }));
+          } else {
+            const isCustomer = id.includes('customer');
+            setTravelerProfiles(prev => ({
+              ...prev,
+              [id]: {
+                name: isCustomer ? `Traveler (${id.split('-').pop()})` : "SATHI User",
+                avatar: ""
+              }
+            }));
+          }
+        } catch (err) {
+          console.error("[SATHI Messages] Error fetching traveler profile:", err);
+        }
+      }
+    };
+    fetchMissingProfiles();
+  }, [localConversations, fetchedCompanions, currentUser, travelerProfiles]);
+
+  // Reset unread count when selecting a conversation
+  useEffect(() => {
+    if (!currentUser || !selectedConvo) return;
+    
+    const markAsRead = async () => {
+      try {
+        await firestore.setDocument(`conversations/${selectedConvo}`, {
+          unreadCount: 0
+        }, true);
+      } catch (err) {
+        console.error("[SATHI Messages] Error marking conversation as read:", err);
+      }
+    };
+    markAsRead();
+  }, [currentUser, selectedConvo]);
+
   // Automatically select conversation if initialCompanionId is provided
   useEffect(() => {
     if (initialCompanionId && currentUser) {
@@ -122,12 +179,13 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
   const filteredConversations = useMemo(() => {
     return conversations.filter(convo => {
       if (!searchQuery.trim()) return true;
-      const cId = convo.participantIds.find((id: string) => id !== currentUser?.id);
-      const comp = fetchedCompanions.find(c => c.id === cId);
-      return comp?.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const cId = convo.participantIds.find((id: string) => id !== currentUser?.id) || '';
+      const profile = fetchedCompanions.find(c => c.id === cId) || travelerProfiles[cId];
+      const partnerName = profile?.name || (cId.includes('customer') ? `Traveler (${cId.split('-').pop()})` : "SATHI User");
+      return partnerName.toLowerCase().includes(searchQuery.toLowerCase()) || 
              convo.lastMessage?.text?.toLowerCase().includes(searchQuery.toLowerCase());
     });
-  }, [conversations, searchQuery, currentUser, fetchedCompanions]);
+  }, [conversations, searchQuery, currentUser, fetchedCompanions, travelerProfiles]);
 
   const messages = useMemo(() => {
     if (!selectedConvo) return [];
@@ -137,6 +195,24 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
   const handleSend = async () => {
     if (!inputText.trim() || !currentUser || !selectedConvo) return;
     const text = inputText.trim();
+
+    const otherId = selectedConvo.split('_').find(id => id !== currentUser.id) || '';
+
+    // Business Rule: Restrict pre-booking inquiries to max 2 messages before booking confirmation/request
+    const hasConfirmedBooking = bookings?.some(b => 
+      ((b.userId === currentUser.id && b.companionId === otherId) || 
+       (b.userId === otherId && b.companionId === currentUser.id)) && 
+      (b.status === 'pending' || b.status === 'confirmed' || b.status === 'active' || b.status === 'completed')
+    );
+
+    if (!hasConfirmedBooking) {
+      const sentCount = messages.filter(m => m.senderId === currentUser.id).length;
+      if (sentCount >= 2) {
+        showToast('Pre-booking messages are limited to 2 inquiries. Please request a booking to unlock full chat.', 'info');
+        return;
+      }
+    }
+
     setInputText('');
 
     const msgId = `msg-${Date.now()}`;
@@ -148,8 +224,6 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
       timestamp: new Date().toISOString(),
       isRead: false,
     });
-
-    const otherId = selectedConvo.split('_').find(id => id !== currentUser.id) || '';
 
     await firestore.setDocument(`conversations/${selectedConvo}`, {
       id: selectedConvo,
@@ -170,7 +244,29 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
   const currentChat = conversations.find(c => c.id === selectedConvo);
   const companionId = currentChat?.participantIds.find((id: string) => id !== currentUser?.id) || 
     (selectedConvo ? selectedConvo.split('_').find(id => id !== currentUser?.id) : undefined);
-  const companion = fetchedCompanions.find(c => c.id === companionId);
+  const companion = useMemo(() => {
+    const rawComp = fetchedCompanions.find(c => c.id === companionId);
+    if (rawComp) return rawComp;
+    if (companionId && travelerProfiles[companionId]) {
+      return {
+        id: companionId,
+        name: travelerProfiles[companionId].name,
+        imageUrl: travelerProfiles[companionId].avatar,
+        isVerified: false,
+        interests: []
+      };
+    }
+    if (companionId) {
+      return {
+        id: companionId,
+        name: companionId.includes('customer') ? `Traveler (${companionId.split('-').pop()})` : "SATHI User",
+        imageUrl: "",
+        isVerified: false,
+        interests: []
+      };
+    }
+    return undefined;
+  }, [fetchedCompanions, companionId, travelerProfiles]);
 
   return (
     <div className="h-[calc(100vh-180px)] md:h-[650px] flex rounded-3xl overflow-hidden border border-[#2A2D31] bg-[#0F1113] transition-all duration-300">
@@ -236,9 +332,13 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
             </div>
           ) : (
             filteredConversations.map((convo) => {
-              const cId = convo.participantIds.find((id: string) => id !== currentUser?.id);
-              const comp = fetchedCompanions.find(c => c.id === cId);
-              if (!comp) return null;
+              const cId = convo.participantIds.find((id: string) => id !== currentUser?.id) || '';
+              const profile = fetchedCompanions.find(c => c.id === cId) || travelerProfiles[cId];
+              const comp = {
+                name: profile?.name || (cId.includes('customer') ? `Traveler (${cId.split('-').pop()})` : "SATHI User"),
+                imageUrl: (profile as any)?.imageUrl || (profile as any)?.avatar || "",
+                isVerified: (profile as any)?.isVerified || false
+              };
 
               return (
                 <div

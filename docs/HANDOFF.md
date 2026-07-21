@@ -1,5 +1,28 @@
 # SATHI Project Handoff Protocol
 
+## Current Milestone Achieved (2026-07-21)
+The **SATHI Mobile Parity & Booking Flow Premium Hotfix** has been fully completed. This release:
+1. **Mobile Companion Discovery Parity**: Rebuilt the mobile Home view to organize companion guides into horizontal-scrolling categories, matching desktop logic perfectly, dynamically hiding empty sections and lazy loading listings.
+2. **Mobile Bookings Tab**: Developed and integrated a complete Bookings view for mobile viewports, allowing users to track trips, cancel bookings, mark completions, or contact companions.
+3. **IFrame Sandbox Safe Payments**: Resolved the browser-redirection modal freezing issue inside sandboxed iframes. By updating eSewa forms to submit with `target="_blank"` and Khalti gateway redirects to execute with `window.open`, payment workflows execute smoothly in external tabs without replacing the active application window.
+4. **Post-Booking Automated Redirect**: Programmed the booking flow completion sequence to close modals and automatically redirect users to `/bookings` on success.
+
+The entire system compiles, lints, and builds successfully with 100% success verification.
+
+---
+
+## Current Milestone Achieved (2026-07-20)
+The **SATHI UI/UX Refinement & Visual Core Synchronization Pass** has been fully completed. This release:
+1. **Homepage Companion Discovery Redesign**: Grouped the main companion list into elegant, horizontal-scrolling categories on the homepage, hiding empty section items automatically and implementing dynamic "See All" grids.
+2. **Robust Multi-Field Search Engine**: Audited and overhauled search logic, enabling instant, real-time filters on name, location, biography, interests (categories), and spoken languages with crisp loading/empty fallback states.
+3. **Integrated Companions Mobile Tab**: Replaced the "Explore" bottom/drawer tab on mobile devices with a high-fidelity "Companions" tab, utilizing standard user group icons.
+4. **Professional Light Mode Palette Override**: Overrode old light mode brandings with pristine, blue-based accents (#1877F2) and neutral backgrounds (#F0F2F5), leaving SATHI's dark mode fully intact.
+5. **Aesthetic Card Shadows and Borders**: Polished and rounded Companion, Experience, and Booking card structures (`rounded-[32px]`) with soft depth shadows and modern typography ratios.
+
+The entire system compiles and builds with 100% success (`compile_applet` and `lint_applet` validated with zero errors).
+
+---
+
 ## Current Milestone Achieved (2026-07-19)
 The **SATHI Production-Grade Verification Audit & Schema Alignment Pass** has been fully completed. This release:
 1. Validated and certified all active user journeys (Guest, Registered User, Companion, and Admin roles) with flawless interactive responses, modal overlays, and booking flows.
@@ -124,14 +147,13 @@ Below is the structured registry of identified and unresolved system behavior it
 - **Current Status**: **Open**.
 
 ### ISS-003: eSewa Gateway Page Redirection inside Modals
-- **Severity**: 🟡 Medium
+- **Severity**: Resolved (2026-07-21)
 - **Root Cause**: eSewa Merchant Gateway uses standard browser POST forms to redirect users to their secure verification panels. When integrated inside layered modal elements, it forces a hard page-level reload instead of keeping the modal state.
 - **Affected Files**: `src/services/payments.ts`, `src/components/modals/BookingFlowModal.tsx`
 - **Temporary Impact**: Users booking a trip are redirected away from SATHI to the eSewa test gateway, which can disrupt active session states or feel disorienting on mobile.
 - **Recommended Fix**: Shift redirect behaviors to target the parent window frame (`window.top.location.href`) or implement a popup-window gateway loop that returns a message token on payment success.
-- **Dependencies**: Active eSewa Merchant credentials and Sandbox tokens.
-- **Estimated Implementation Effort**: 4 Hours.
-- **Current Status**: **Open**.
+- **Resolution**: Submitting eSewa verification forms with `target="_blank"` and opening Khalti gateway URLs using `window.open` allows payment completion in isolated browser tabs, keeping the SATHI single page app active and responsive.
+- **Current Status**: **RESOLVED**.
 
 ### ISS-004: Basic Vitest Test Coverage
 - **Severity**: 🟡 Medium
@@ -159,9 +181,8 @@ The following gap analysis identifies and categorizes all remaining system items
 3. **Advanced Security Rules Audit**: Verify that all Firestore Security Rules are fully tested using the local emulator framework with 100% path coverage.
 
 ### 🟡 Medium (UX Refinement & Accessibility)
-1. **eSewa Context Isolation**: (ISS-003) Refactor eSewa redirection logic to execute in a secure tab popup rather than breaking the core SPA visual flow.
-2. **Keyboard Traps on Overlays**: Ensure that focus states inside booking modals are fully locked inside the modal trap boundaries to prevent users from tab-navigating elements behind the glass backdrop.
-3. **Comprehensive Unit Testing**: (ISS-004) Increase total code path coverage to 85%+ with full mock suites for repositories.
+1. **Keyboard Traps on Overlays**: Ensure that focus states inside booking modals are fully locked inside the modal trap boundaries to prevent users from tab-navigating elements behind the glass backdrop.
+2. **Comprehensive Unit Testing**: (ISS-004) Increase total code path coverage to 85%+ with full mock suites for repositories.
 
 ### 🟢 Future (Post-Launch Optimization)
 1. **Multi-Region Database Read Replicas**: Establish sub-second read capabilities for regional companions data outside main Kathmandu clusters.

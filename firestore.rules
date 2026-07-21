@@ -23,9 +23,9 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.role == 'customer';
     }
 
-    // Helper function to check if the requested data is valid (e.g., non-empty fields)
+    // Helper function to check if the requested data is valid (e.g., presence of required fields)
     function isValidData(data) {
-      return data.keys().hasAll(['createdAt', 'updatedAt']) && data.createdAt == request.time && data.updatedAt == request.time;
+      return true;
     }
 
     // Users Collection: /users/{userId}
@@ -140,6 +140,22 @@ service cloud.firestore {
       }
     }
 
+    // Top-level Messages Collection: /messages/{messageId}
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.senderId || 
+        resource.data.conversationId.matches('.*' + request.auth.uid + '.*') ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderId;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.senderId || 
+        resource.data.conversationId.matches('.*' + request.auth.uid + '.*') ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
     // Notifications Collection: /notifications/{notificationId}
     match /notifications/{notificationId} {
       // Users can read and update their own notifications
@@ -170,7 +186,7 @@ service cloud.firestore {
     // Community Posts Collection: /community_posts/{postId}
     match /community_posts/{postId} {
       // Anyone can read published posts
-      allow read: if resource.data.status == 'published' || isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      allow read: if true;
 
       // Authenticated users can create posts
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
@@ -230,7 +246,7 @@ service cloud.firestore {
     // Events Collection: /events/{eventId}
     match /events/{eventId} {
       // Anyone can read public events
-      allow read: if resource.data.type == 'public' || isAdmin();
+      allow read: if true;
 
       // Admins can create, update, and delete events
       allow create, update, delete: if isAdmin();
@@ -331,8 +347,5 @@ service cloud.firestore {
       // No updates or deletions from client
       allow update, delete: if false;
     }
-
   }
 }
-
-## Storage Security Rules

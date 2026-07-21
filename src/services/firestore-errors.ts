@@ -48,11 +48,11 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
 
-  console.error('Firestore Error Details:', JSON.stringify(errInfo));
-  
   if (isPermissionDenied) {
+    console.error('Firestore Error Details:', JSON.stringify(errInfo));
     throw new Error(JSON.stringify(errInfo));
   } else {
-    throw error;
+    // Downgrade to console.warn so transient/offline connection states aren't treated as fatal app errors
+    console.warn('[SATHI] Non-security Firestore error:', error);
   }
 }

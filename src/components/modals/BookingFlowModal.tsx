@@ -4,6 +4,7 @@ import { X, Calendar, Clock, MapPin, Users, Check, CreditCard } from 'lucide-rea
 import { Companion, Booking } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 import { MapPreview } from '../maps/MapPreview';
+import { MeetingLocationSelector } from '../maps/MeetingLocationSelector';
 import { MAP_CENTER } from '../../services/maps';
 import { paymentService, type PaymentProvider } from '../../services/payments';
 import { useToast } from '../ui/Toast';
@@ -12,9 +13,10 @@ interface BookingFlowModalProps {
   companion: Companion;
   onClose: () => void;
   onComplete: () => void;
+  onMessageCompanion?: () => void;
 }
 
-export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, onClose, onComplete }) => {
+export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, onClose, onComplete, onMessageCompanion }) => {
   const { addBooking, currentUser } = useAppContext();
   const { showToast } = useToast();
   const [step, setStep] = useState(1);
@@ -27,6 +29,41 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
   const [paymentMethod, setPaymentMethod] = useState<PaymentProvider | ''>('');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [meetingCoords, setMeetingCoords] = useState<{ latitude: number; longitude: number } | undefined>(
+    companion.coordinates ? { latitude: companion.coordinates.latitude, longitude: companion.coordinates.longitude } : undefined
+  );
+
+  const [clientName, setClientName] = useState(currentUser?.name || '');
+  const [clientPhone, setClientPhone] = useState(currentUser?.phone || '');
+  const [clientEmail, setClientEmail] = useState(currentUser?.email || '');
+
+  // Synchronize with logged in user details dynamically
+  React.useEffect(() => {
+    if (currentUser) {
+      if (!clientName) setClientName(currentUser.name || '');
+      if (!clientEmail) setClientEmail(currentUser.email || '');
+      if (!clientPhone) setClientPhone(currentUser.phone || '');
+    }
+  }, [currentUser]);
+
+  // Pre-fill date/time selection to the closest matching hour when booking process starts
+  React.useEffect(() => {
+    if (!date || !time) {
+      const now = new Date();
+      if (now.getHours() >= 22) {
+        now.setDate(now.getDate() + 1);
+        now.setHours(9, 0, 0, 0);
+      } else {
+        now.setHours(now.getHours() + 1, 0, 0, 0);
+      }
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      setDate(`${yyyy}-${mm}-${dd}`);
+      setTime(`${hh}:00`);
+    }
+  }, []);
 
   const today = new Date().toISOString().split('T')[0];
   const minDateTime = useMemo(() => {
@@ -42,7 +79,9 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
     return selected > now;
   };
 
-  const baseTotal = companion.hourlyRate * duration * participants;
+  const multiplier = 1 + 0.30 * (participants - 1);
+  const calculatedRate = companion.hourlyRate * multiplier;
+  const baseTotal = calculatedRate * duration;
   const serviceFee = baseTotal * 0.1;
   const grandTotal = baseTotal + serviceFee;
 
@@ -59,6 +98,7 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
       status: 'pending',
       totalPrice: grandTotal,
       meetingPoint: location,
+      meetingCoordinates: meetingCoords,
       specialRequests: requests,
       createdAt: new Date().toISOString()
     };
@@ -80,15 +120,16 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
         bookingId,
         returnUrl: requestUrl,
         webhookUrl: requestUrl,
-        customerInfo: currentUser ? {
-          name: currentUser.name,
-          email: currentUser.email,
-          phone: '',
-        } : undefined,
+        customerInfo: {
+          name: clientName || currentUser?.name || 'Guest User',
+          email: clientEmail || currentUser?.email || 'guest@example.com',
+          phone: clientPhone,
+        },
       });
 
       if (paymentMethod === 'khalti') {
-        window.location.href = result.paymentUrl;
+        window.open(result.paymentUrl, '_blank');
+        setStep(4);
         return;
       }
 
@@ -155,7 +196,10 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                        <span className="text-xl font-bold text-white w-8 text-center">{participants}</span>
                        <button onClick={() => setParticipants(Math.min(10, participants + 1))} className="w-10 h-10 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center">+</button>
                      </div>
-                     <p className="text-xs text-[#8E9299] mt-1">NPR {companion.hourlyRate} x {duration} hrs x {participants} people = NPR {(companion.hourlyRate * duration * participants).toLocaleString()}</p>
+                     <p className="text-xs text-[#8E9299] mt-1">
+                       Base Rate: NPR {companion.hourlyRate}/hr. 
+                       {participants > 1 ? ` Additional participants add +30% each = NPR ${calculatedRate.toLocaleString()}/hr total.` : ''} Total = NPR {baseTotal.toLocaleString()}
+                     </p>
                    </div>
 
                     <button 
@@ -183,33 +227,34 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                 
                 <div className="space-y-5">
                    <div>
-                     <label htmlFor="booking-location" className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2"><MapPin className="w-4 h-4" /> Meeting Point</label>
-                     <input id="booking-location" type="text" placeholder="e.g. Starbucks, Downtown" value={location} onChange={e => setLocation(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" aria-required="true" />
+                     <label className="block text-sm font-medium text-[#8E9299] mb-2 flex items-center gap-2">
+                       <MapPin className="w-4 h-4 text-[#2563EB]" /> Set Meeting Location
+                     </label>
+                     <MeetingLocationSelector
+                       initialPosition={companion.coordinates ? { lat: companion.coordinates.latitude, lng: companion.coordinates.longitude } : MAP_CENTER}
+                       onLocationSelected={(address, coords) => {
+                         setLocation(address);
+                         setMeetingCoords(coords);
+                       }}
+                       height="250px"
+                     />
                    </div>
 
-                    {location && (
-                      <div className="mt-3">
-                        <MapPreview
-                          center={companion.coordinates ? { lat: companion.coordinates.latitude, lng: companion.coordinates.longitude } : MAP_CENTER}
-                          zoom={14}
-                          height="200px"
-                          markers={[
-                            ...(companion.coordinates ? [{
-                              id: companion.id,
-                              position: { lat: companion.coordinates.latitude, lng: companion.coordinates.longitude },
-                              title: companion.location,
-                              subtitle: companion.name,
-                            }] : []),
-                            {
-                              id: 'meeting-point',
-                              position: companion.coordinates ? { lat: companion.coordinates.latitude, lng: companion.coordinates.longitude } : MAP_CENTER,
-                              title: location,
-                              subtitle: 'Proposed meeting point',
-                            },
-                          ]}
-                        />
-                      </div>
-                    )}
+                   <div>
+                     <label htmlFor="booking-client-name" className="block text-sm font-medium text-[#8E9299] mb-2">Your Name</label>
+                     <input id="booking-client-name" type="text" placeholder="Full Name" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" aria-required="true" />
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-4">
+                     <div>
+                       <label htmlFor="booking-client-phone" className="block text-sm font-medium text-[#8E9299] mb-2">Phone Number</label>
+                       <input id="booking-client-phone" type="tel" placeholder="e.g. 98XXXXXXXX" value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" aria-required="true" />
+                     </div>
+                     <div>
+                       <label htmlFor="booking-client-email" className="block text-sm font-medium text-[#8E9299] mb-2">Email Address</label>
+                       <input id="booking-client-email" type="email" placeholder="email@domain.com" value={clientEmail} onChange={e => setClientEmail(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C8A25E]" aria-required="true" />
+                     </div>
+                   </div>
 
                    <div>
                      <label htmlFor="booking-requests" className="block text-sm font-medium text-[#8E9299] mb-2">Special Requests (Optional)</label>
@@ -219,7 +264,7 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                    <div className="flex gap-3 mt-4">
                      <button onClick={() => setStep(1)} className="px-6 py-4 bg-[#1E2124] text-white rounded-xl font-bold hover:bg-[#2A2D31] transition-colors">Back</button>
                      <button 
-                       disabled={!location}
+                       disabled={!location || !clientName || !clientPhone || !clientEmail}
                        onClick={() => setStep(3)}
                        className="flex-1 py-4 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                      >
@@ -236,6 +281,14 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                 
                 <div className="bg-[#1E2124] rounded-2xl p-5 border border-[#2A2D31] mb-6 space-y-4">
                   <div className="flex justify-between items-center text-sm">
+                    <span className="text-[#8E9299]">Your Name</span>
+                    <span className="text-white font-medium">{clientName}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-[#8E9299]">Contact Info</span>
+                    <span className="text-white font-medium">{clientPhone}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
                     <span className="text-[#8E9299]">Date & Time</span>
                     <span className="text-white font-medium">{date} at {time}</span>
                   </div>
@@ -250,7 +303,10 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                   
                   <div className="border-t border-[#2A2D31] pt-4 mt-4 space-y-3">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-[#8E9299]">NPR {companion.hourlyRate} x {duration} hrs x {participants}</span>
+                      <span className="text-[#8E9299]">
+                        NPR {companion.hourlyRate}/hr base 
+                        {participants > 1 ? ` x ${multiplier.toFixed(2)}x multi` : ''} x {duration} hrs
+                      </span>
                       <span className="text-white">NPR {baseTotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
@@ -319,12 +375,22 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                 <p className="text-[#8E9299] mb-8">
                   {companion.name} will review your request and get back to you shortly. You can track this in your Bookings tab.
                 </p>
-                <button 
-                  onClick={onComplete}
-                  className="w-full py-4 bg-[#1E2124] text-white rounded-xl font-bold hover:bg-[#2A2D31] transition-colors border border-[#2A2D31]"
-                >
-                  Done
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button 
+                    onClick={onComplete}
+                    className="flex-1 py-4 bg-[#1E2124] text-white rounded-xl font-bold hover:bg-[#2A2D31] transition-colors border border-[#2A2D31]"
+                  >
+                    Done
+                  </button>
+                  {onMessageCompanion && (
+                    <button 
+                      onClick={onMessageCompanion}
+                      className="flex-1 py-4 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] transition-colors"
+                    >
+                      Message Companion
+                    </button>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
