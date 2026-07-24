@@ -3664,175 +3664,175 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       </AnimatePresence>
 
       {/* Mobile sliding bottom drawer (Account Hub) */}
-      <AnimatePresence>
-        {showProfileDropdown && (
-          <div className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-end animate-fade-in" onClick={() => setShowProfileDropdown(false)}>
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-h-[85vh] bg-[#121416] border-t border-[#2A2D31]/80 rounded-t-[2.5rem] flex flex-col overflow-hidden text-left shadow-2xl"
-            >
-              {/* Drag indicator/handle */}
-              <div className="w-full flex justify-center py-3">
-                <div className="w-12 h-1 bg-white/20 rounded-full cursor-pointer" onClick={() => setShowProfileDropdown(false)} />
-              </div>
+       <AnimatePresence>
+         {showProfileDropdown && (
+           <div className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-end animate-fade-in" onClick={() => setShowProfileDropdown(false)}>
+             <motion.div 
+               initial={{ y: '100%' }}
+               animate={{ y: 0 }}
+               exit={{ y: '100%' }}
+               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+               onClick={(e) => e.stopPropagation()}
+               className="w-full max-h-[85vh] bg-[#121416] border-t border-[#2A2D31]/80 rounded-t-[2.5rem] flex flex-col overflow-hidden text-left shadow-2xl"
+             >
+               {/* Drag indicator/handle */}
+               <div className="w-full flex justify-center py-3">
+                 <div className="w-12 h-1 bg-white/20 rounded-full cursor-pointer" onClick={() => setShowProfileDropdown(false)} />
+               </div>
 
-              {/* Title / User profile card */}
-              <div className="px-6 py-4 border-b border-[#2A2D31]/50 flex items-center gap-4">
-                <SafeImage 
-                  src={currentUser?.avatar} 
-                  alt={currentUser?.name || "Guest User"} 
-                  fallbackType="avatar"
-                  textForInitials={currentUser?.name || "Guest User"}
-                  className="w-12 h-12 rounded-full object-cover border border-[#C8A25E]"
-                />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-black text-white block truncate">{currentUser?.name || "Guest User"}</span>
-                  <span className="text-[10px] text-[#8E9299] block truncate leading-relaxed">{currentUser?.email || "Explore Nepali companions"}</span>
-                </div>
-                <button 
-                  onClick={() => setShowProfileDropdown(false)} 
-                  className="w-8 h-8 rounded-full bg-[#1E2124] flex items-center justify-center text-[#8E9299] hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
+               {/* Title / User profile card */}
+               <div className="px-6 py-4 border-b border-[#2A2D31]/50 flex items-center gap-4">
+                 <SafeImage 
+                   src={currentUser?.avatar} 
+                   alt={currentUser?.name || "Guest User"} 
+                   fallbackType="avatar"
+                   textForInitials={currentUser?.name || "Guest User"}
+                   className="w-12 h-12 rounded-full object-cover border border-[#C8A25E]"
+                 />
+                 <div className="flex-1 min-w-0">
+                   <span className="text-sm font-black text-white block truncate">{currentUser?.name || "Guest User"}</span>
+                   <span className="text-[10px] text-[#8E9299] block truncate leading-relaxed">{currentUser?.email || "Explore Nepali companions"}</span>
+                 </div>
+                 <button 
+                   onClick={() => setShowProfileDropdown(false)} 
+                   className="w-8 h-8 rounded-full bg-[#1E2124] flex items-center justify-center text-[#8E9299] hover:text-white"
+                 >
+                   ✕
+                 </button>
+               </div>
 
-              {/* Scrollable List of 16 options */}
-              <div className="flex-1 overflow-y-auto space-y-4 py-4 px-6 select-none hide-scrollbar">
-                
-                {/* Group 1: Personal Space */}
-                <div className="space-y-1.5">
-                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-[#8E9299] block px-1">Personal Space</span>
-                  <button onClick={() => { setActiveTab('dashboard'); setMobileTab('home'); navigate('/dashboard'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <UserCircle className="w-4.5 h-4.5 text-[#C8A25E]" /> My Profile / Dashboard
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                  <button onClick={() => { setActiveTab('bookings'); setMobileTab('home'); navigate('/bookings'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <Calendar className="w-4.5 h-4.5 text-[#C8A25E]" /> My Bookings
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                  <button onClick={() => { setMobileTab('messages'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <MessageSquare className="w-4.5 h-4.5 text-[#C8A25E]" /> Messages
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                  <button onClick={() => { setShowSavedOnly(true); setMobileTab('search'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <Heart className="w-4.5 h-4.5 text-red-500 fill-current" /> Favorites
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                  {(currentUser?.role === 'companion' || currentUser?.role === 'admin') && (
-                    <button onClick={() => { setActiveTab('partner'); setMobileTab('home'); navigate('/partner'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                      <span className="flex items-center gap-3 font-semibold">
-                        <Briefcase className="w-4.5 h-4.5 text-[#C8A25E]" /> Companion Dashboard
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                    </button>
-                  )}
-                </div>
+               {/* Scrollable List of 16 options */}
+               <div className="flex-1 overflow-y-auto space-y-4 py-4 px-6 select-none hide-scrollbar">
+                 
+                 {/* Group 1: Personal Space */}
+                 <div className="space-y-1.5">
+                   <span className="text-[9px] uppercase tracking-wider font-extrabold text-[#8E9299] block px-1">Personal Space</span>
+                   <button onClick={() => { setActiveTab('dashboard'); setMobileTab('home'); navigate('/dashboard'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <UserCircle className="w-4.5 h-4.5 text-[#C8A25E]" /> My Profile / Dashboard
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                   <button onClick={() => { setActiveTab('bookings'); setMobileTab('home'); navigate('/bookings'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <Calendar className="w-4.5 h-4.5 text-[#C8A25E]" /> My Bookings
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                   <button onClick={() => { setMobileTab('messages'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <MessageSquare className="w-4.5 h-4.5 text-[#C8A25E]" /> Messages
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                   <button onClick={() => { setShowSavedOnly(true); setMobileTab('search'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <Heart className="w-4.5 h-4.5 text-red-500 fill-current" /> Favorites
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                   {(currentUser?.role === 'companion' || currentUser?.role === 'admin') && (
+                     <button onClick={() => { setActiveTab('partner'); setMobileTab('home'); navigate('/partner'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                       <span className="flex items-center gap-3 font-semibold">
+                         <Briefcase className="w-4.5 h-4.5 text-[#C8A25E]" /> Companion Dashboard
+                       </span>
+                       <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                     </button>
+                   )}
+                 </div>
 
-                {/* Group 2: Settings & Customization */}
-                <div className="space-y-1.5 pt-2">
-                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-[#8E9299] block px-1">Preferences</span>
-                  <button onClick={() => { setShowWalletModal(true); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <Wallet className="w-4.5 h-4.5 text-[#C8A25E]" /> Wallet (NPR)
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                  <button onClick={() => { setActiveTab('settings'); setMobileTab('home'); navigate('/settings'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <Settings className="w-4.5 h-4.5 text-[#C8A25E]" /> Settings
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                  <button onClick={() => { showToast("Language set to English (Nepali translations loading...)", "success"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <Languages className="w-4.5 h-4.5 text-[#C8A25E]" /> Language (EN/NE)
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                  <button onClick={() => {
-                    const isCurrentlyLight = document.documentElement.classList.toggle('theme-light');
-                    showToast(isCurrentlyLight ? 'SATHI Premium Light Theme Active' : 'SATHI Cosmic Dark Theme Active', 'success');
-                    setShowProfileDropdown(false);
-                  }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <Sun className="w-4.5 h-4.5 text-[#C8A25E]" /> Appearance (Theme)
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                  <button onClick={() => { showToast("Privacy protection active. SATHI uses end-to-end escrow security.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <ShieldCheck className="w-4.5 h-4.5 text-[#C8A25E]" /> Privacy & Security
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                </div>
+                 {/* Group 2: Settings & Customization */}
+                 <div className="space-y-1.5 pt-2">
+                   <span className="text-[9px] uppercase tracking-wider font-extrabold text-[#8E9299] block px-1">Preferences</span>
+                   <button onClick={() => { setShowWalletModal(true); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <Wallet className="w-4.5 h-4.5 text-[#C8A25E]" /> Wallet (NPR)
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                   <button onClick={() => { setActiveTab('settings'); setMobileTab('home'); navigate('/settings'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <Settings className="w-4.5 h-4.5 text-[#C8A25E]" /> Settings
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                   <button onClick={() => { showToast("Language set to English (Nepali translations loading...)", "success"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <Languages className="w-4.5 h-4.5 text-[#C8A25E]" /> Language (EN/NE)
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                   <button onClick={() => {
+                     const isCurrentlyLight = document.documentElement.classList.toggle('theme-light');
+                     showToast(isCurrentlyLight ? 'SATHI Premium Light Theme Active' : 'SATHI Cosmic Dark Theme Active', 'success');
+                     setShowProfileDropdown(false);
+                   }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <Sun className="w-4.5 h-4.5 text-[#C8A25E]" /> Appearance (Theme)
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                   <button onClick={() => { showToast("Privacy protection active. SATHI uses end-to-end escrow security.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <ShieldCheck className="w-4.5 h-4.5 text-[#C8A25E]" /> Privacy & Security
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                 </div>
 
-                {/* Group 3: Help & Policies */}
-                <div className="space-y-1.5 pt-2">
-                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-[#8E9299] block px-1">Support & Legal</span>
-                  <button onClick={() => { setActiveDocType('terms'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <BookOpen className="w-4.5 h-4.5 text-[#8E9299]" /> Terms of Service
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                  <button onClick={() => { setActiveDocType('privacy'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <Lock className="w-4.5 h-4.5 text-[#8E9299]" /> Privacy Policy
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                  <button onClick={() => { setActiveDocType('help'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <HelpCircle className="w-4.5 h-4.5 text-[#8E9299]" /> Help & Support
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                  <button onClick={() => { showToast("Emergency Contact: +977-9801234567. Location: Thamel, Kathmandu.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
-                    <span className="flex items-center gap-3 font-semibold">
-                      <Smile className="w-4.5 h-4.5 text-[#8E9299]" /> Contact Us
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
-                  </button>
-                </div>
+                 {/* Group 3: Help & Policies */}
+                 <div className="space-y-1.5 pt-2">
+                   <span className="text-[9px] uppercase tracking-wider font-extrabold text-[#8E9299] block px-1">Support & Legal</span>
+                   <button onClick={() => { setActiveDocType('terms'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <BookOpen className="w-4.5 h-4.5 text-[#8E9299]" /> Terms of Service
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                   <button onClick={() => { setActiveDocType('privacy'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <Lock className="w-4.5 h-4.5 text-[#8E9299]" /> Privacy Policy
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                   <button onClick={() => { setActiveDocType('help'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <HelpCircle className="w-4.5 h-4.5 text-[#8E9299]" /> Help & Support
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                   <button onClick={() => { showToast("Emergency Contact: +977-9801234567. Location: Thamel, Kathmandu.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-[#E0E0E0] bg-[#17191C]/50 rounded-xl hover:bg-[#1E2124] flex items-center justify-between transition-colors">
+                     <span className="flex items-center gap-3 font-semibold">
+                       <Smile className="w-4.5 h-4.5 text-[#8E9299]" /> Contact Us
+                     </span>
+                     <ChevronRight className="w-4 h-4 text-[#5A5E66]" />
+                   </button>
+                 </div>
 
-                {/* Action Bar */}
-                <div className="pt-4 border-t border-[#2A2D31]/40 flex gap-3">
-                  {currentUser ? (
-                    <button 
-                      onClick={async () => { await logout(); navigate('/'); setShowProfileDropdown(false); showToast("Logged out successfully", "success"); }}
-                      className="flex-1 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl text-xs font-black flex items-center justify-center gap-2"
-                    >
-                      <LogOut className="w-4 h-4" /> Log Out
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => { setAuthMode('login'); setShowProfileDropdown(false); }}
-                      className="flex-1 py-3 bg-[#C8A25E] text-[#0F1113] rounded-xl text-xs font-black flex items-center justify-center gap-2"
-                    >
-                      <UserCircle className="w-4 h-4" /> Sign In / Register
-                    </button>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                 {/* Action Bar */}
+                 <div className="pt-4 border-t border-[#2A2D31]/40 flex gap-3">
+                   {currentUser ? (
+                     <button 
+                       onClick={async () => { await logout(); navigate('/'); setShowProfileDropdown(false); showToast("Logged out successfully", "success"); }}
+                       className="flex-1 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl text-xs font-black flex items-center justify-center gap-2"
+                     >
+                       <LogOut className="w-4 h-4" /> Log Out
+                     </button>
+                   ) : (
+                     <button 
+                       onClick={() => { setAuthMode('login'); setShowProfileDropdown(false); }}
+                       className="flex-1 py-3 bg-[#C8A25E] text-[#0F1113] rounded-xl text-xs font-black flex items-center justify-center gap-2"
+                     >
+                       <UserCircle className="w-4 h-4" /> Sign In / Register
+                     </button>
+                   )}
+                 </div>
+               </div>
+             </motion.div>
+           </div>
+         )}
+       </AnimatePresence>
 
-    </div>
-  );
-});
+     </div>
+   );
+ });
