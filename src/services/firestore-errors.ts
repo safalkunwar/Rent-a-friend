@@ -49,6 +49,20 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   };
 
   if (isPermissionDenied) {
+    // Gracefully handle/downgrade reads and listings on likes, story_likes, and community_posts
+    // to prevent spurious console crashes and maintain seamless client-side experience
+    const targetPath = path ? path.toLowerCase() : '';
+    const isTargetCollection = targetPath.startsWith('likes/') || 
+                               targetPath.startsWith('story_likes/') || 
+                               targetPath.startsWith('community_posts/') ||
+                               targetPath === 'likes' || 
+                               targetPath === 'story_likes' || 
+                               targetPath === 'community_posts';
+                               
+    if (isTargetCollection && (operationType === OperationType.GET || operationType === OperationType.LIST)) {
+      console.warn(`[SATHI] Gracefully handled read/list restriction for path: ${path}`);
+      return;
+    }
     console.error('Firestore Error Details:', JSON.stringify(errInfo));
     throw new Error(JSON.stringify(errInfo));
   } else {

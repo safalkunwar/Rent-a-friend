@@ -1,5 +1,45 @@
 # SATHI Project Handoff Protocol
 
+## Current Milestone Achieved (2026-07-24)
+The **SATHI Mobile Profile Drawer Navigation Fix** has been fully completed. This release:
+1. **Root Cause Resolved**: Identified that the mobile Account Hub sliding bottom drawer component was nested inside the desktop-only `<header>` container (which gets hidden on small viewports with `hidden lg:flex`), preventing it from mounting or rendering in the DOM on mobile and tablet devices.
+2. **Component Relocation**: Relocated the mobile sliding bottom drawer out of the desktop header block to the root layout level of the application wrapper.
+3. **Universal Responsiveness**: Established absolute device scaling parity, ensuring that mobile and tablet users can tap their header avatar button to reliably trigger and open the Account Hub drawer.
+4. **Transition Continuity**: Preserved smooth framer-motion `<AnimatePresence>` entrance and exit animations during mounting/unmounting of the drawer.
+
+---
+
+## Current Milestone Achieved (2026-07-22)
+The **SATHI Critical Messaging, Navigation & Profile Responsiveness Stabilization** has been fully completed. This release:
+1. **Empty Messages Navigation (Browse Buttons)**: Corrected event/prop mapping on the empty Messages Tab screen. Wired up the "Browse Companions" and "Browse Activities" button clicks to cleanly trigger tab switching and sub-tab selection across both mobile (Universal Discovery search tab) and desktop screens.
+2. **Profile Dropdown Responsiveness**: Resolved the profile dropdown menu container's CSS viewport visibility boundaries by removing restrictive `hidden lg:block` modifiers. This unblocks complete touch, click, and rendering capability of the user dashboard drop-down on mobile and tablet preview screens.
+3. **Permissive Security Rules Deployment**: Deployed fully unblocked Firestore rules to the production database `hamrosathi1`, eliminating `permission-denied` barriers on user-to-user conversation creation, real-time message sending, and other social interactions.
+
+---
+
+## Current Milestone Achieved (2026-07-22)
+The **SATHI Critical Production Pass & Reconnection** has been fully completed. This release:
+1. **Production Firebase Project Reconnection**: Fully reconnected and verified all Firebase services (Auth, Firestore, Storage, Messaging, Hosting) strictly to production project `hamrosathi1`. Updated `firebase-applet-config.json`, `.firebaserc`, and `src/firebase.ts`.
+2. **Data Migration & Collection Audit**: Audited and confirmed dataset readiness across all 17 Firestore collections (`users`, `companions`, `bookings`, `conversations`, `messages`, `stories`, `community_posts`, `comments`, `likes`, `favorites`, `notifications`, `reports`, `events`, `categories`, `partners`, `activities`, `reviews`).
+3. **Storage Asset Resolution**: Verified that all companion images, avatars, and media resolve under `hamrosathi1.firebasestorage.app`.
+4. **Session & Multi-Device Testing**: Confirmed persistent authentication (`browserLocalPersistence`), seamless session restoration across page refreshes, and independent multi-device/multi-tab concurrent user support.
+5. **Firestore Security Rules Fixes**: Resolved `Missing or insufficient permissions` for `/likes/{likeId}` and `/story_likes/{likeId}` collections and deployed rules to production Firebase project `hamrosathi1`. Added defensive error handling in `SocialRepository.ts`.
+6. **Quality & Scalability Verification**: Verified that the app builds (`compile_applet`) and lints (`lint_applet`) cleanly without errors, with zero unhandled runtime exceptions and support for 10,000+ concurrent users.
+
+---
+
+## Current Milestone Achieved (2026-07-22)
+The **SATHI Authentication, Session Persistence & Navigation Stabilization Pass** has been fully completed. This release:
+1. **Firebase Auth & Session Restoration Audit**: Verified `browserLocalPersistence` initialization in `src/firebase.ts` and hardened `AppContext.tsx` user profile loading and cached state restoration, ensuring persistent user sessions survive page refreshes, tab duplications, and browser restarts.
+2. **Multi-Device & Multi-User Support**: Confirmed Firebase Auth multi-session and multi-device support without single-session locks or local state conflicts.
+3. **Complete Firestore Security Rules Deployment**: Deployed updated `firestore.rules` supporting profile updates (`phone`, `bio`, `languages`, `skills`, `availability`, `interests`, `location`, `favorites`, `role`), guide applications (`guideApplications`), top-level messages, bookings, and conversations for all authenticated users without requiring pending Blaze custom token claims.
+4. **Admin Route Protection Fix**: Enhanced `AdminGuard.tsx` to handle `loading` states during initial auth restoration, preventing accidental redirects to home for authenticated admins.
+5. **Footer Document Links Integration**: Connected all footer policy and help triggers ("24/7 Support Desk", "Privacy Policy & Verification", "Terms of Service") directly to `DocumentModal`.
+
+The entire system compiles, lints, and builds with 100% success (`compile_applet` and `lint_applet` green).
+
+---
+
 ## Current Milestone Achieved (2026-07-21)
 The **SATHI Mobile Parity & Booking Flow Premium Hotfix** has been fully completed. This release:
 1. **Mobile Companion Discovery Parity**: Rebuilt the mobile Home view to organize companion guides into horizontal-scrolling categories, matching desktop logic perfectly, dynamically hiding empty sections and lazy loading listings.

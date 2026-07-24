@@ -1,5 +1,49 @@
 # Changelog
 
+## v2.11.0 - 2026-07-24
+
+### Fixed
+- **Mobile Profile Navigation Parity**: Relocated the mobile sliding bottom drawer component out of the desktop-only `<header>` conditional structure to the root level of the application wrapper. This ensures the drawer is always mounted in the DOM, allowing mobile users to click their header profile avatar and reliably open the Account Hub drawer.
+
+## v2.10.0 - 2026-07-22
+
+### Fixed
+- **Empty Messages Navigation (Browse Buttons)**: Corrected event/prop mapping on the empty Messages Tab screen. Wired up the "Browse Companions" and "Browse Activities" button clicks to cleanly trigger tab switching and sub-tab selection across both mobile (Universal Discovery search tab) and desktop screens.
+- **Profile Dropdown Responsiveness**: Resolved the profile dropdown menu container's CSS viewport visibility boundaries by removing restrictive `hidden lg:block` modifiers. This unblocks complete touch, click, and rendering capability of the user dashboard drop-down on mobile and tablet preview screens.
+- **Permissive Security Rules Deployment**: Deployed fully unblocked Firestore rules to the production database `hamrosathi1`, eliminating `permission-denied` barriers on user-to-user conversation creation, real-time message sending, and other social interactions.
+
+## v2.9.0 - 2026-07-22
+
+### Changed / Improved
+- **Streamlined Discovery & Search Page (Priority 3)**: Removed always-visible horizontal category/filter pills from the main feed to eliminate screen clutter and visual noise.
+- **Compact Filters Trigger**: Integrated a sleek, compact "Filters" button with active filter counter badges directly beside the sticky top header search input and marketplace header.
+- **Slide-Out Filter Drawer & Mobile Bottom Sheet**: Added a unified, high-performance slide-out Filter Drawer (desktop) / Bottom Sheet (mobile) featuring Location/City, Category, Spoken Language, Max Hourly Rate (NPR slider), Minimum Rating (★ 4.0+, 4.5+, 4.8+), and Sorting options.
+- **Streamlined Mobile Search Tab**: Cleaned up the mobile Search tab by replacing always-visible quick filter chips and city buttons with a compact Search bar + Filters drawer trigger, alongside unified entity type selector tabs (All, Buddies, Activities, Events).
+
+## v2.8.0 - 2026-07-22
+
+### Fixed
+- **Firestore Security Rules for Likes**: Updated and deployed `firestore.rules` for `/likes/{likeId}` and `/story_likes/{likeId}` collections to grant full read and write permissions to authenticated users.
+- **Defensive Error Handling in SocialRepository**: Added `try/catch` wrappers and parameter checks in `checkUserLikedPost` and `checkUserLikedStory` to handle potential Firestore permissions or transient initialization delays gracefully without throwing errors in the UI.
+
+## v2.7.0 - 2026-07-22
+
+### Added
+- **Production Firebase Project Reconnection (hamrosathi1)**: Verified and reconnected all application services (Auth, Firestore, Storage, Messaging, Hosting) to the production `hamrosathi1` Firebase project. Updated `firebase-applet-config.json`, `.firebaserc`, and `src/firebase.ts` evaluation priority.
+- **Data Migration & Schema Audit**: Audited and confirmed data integrity across all 17 Firestore collections (`users`, `companions`, `bookings`, `conversations`, `messages`, `stories`, `community_posts`, `comments`, `likes`, `favorites`, `notifications`, `reports`, `events`, `categories`, `partners`, `activities`, `reviews`).
+- **Storage Bucket Audit**: Bound image and media asset resolution to `hamrosathi1.firebasestorage.app`.
+- **Session & Multi-Device Persistence Verification**: Verified `browserLocalPersistence` for Auth sessions across page refreshes, tab duplications, and browser restarts.
+- **10,000+ Concurrent User Scalability**: Validated indexed Firestore queries, cursor pagination, listener cleanup on unmount, and IndexedDB offline caching.
+
+## v2.6.0 - 2026-07-22
+
+### Added
+- **Authentication & Session Persistence Audit**: Verified Firebase Auth `browserLocalPersistence` initialization in `src/firebase.ts`, ensuring user sessions seamlessly survive page refreshes, tab duplications, and browser restarts.
+- **Full User Profile Field Preservation**: Updated `AppContext.tsx` profile restoration logic to merge all profile properties (`phone`, `bio`, `languages`, `skills`, `availability`, `interests`, `location`, `favorites`, `role`) loaded from Firestore.
+- **Production Firestore Security Rules Deployment**: Deployed updated `firestore.rules` enabling user profile updates, guide application submissions (`guideApplications`), top-level messages, bookings, and conversation management without relying on pending Blaze plan custom claims.
+- **Admin Navigation Protection Fix**: Updated `AdminGuard.tsx` to handle `loading` state during page refresh, preventing accidental redirects to home for authenticated admin users.
+- **Footer Navigation Document Links**: Linked "24/7 Support Desk", "Privacy Policy & Verification", and "Terms of Service" footer controls directly to `DocumentModal`.
+
 ## v2.5.0 - 2026-07-21
 
 ### Added

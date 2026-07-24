@@ -29,8 +29,20 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
   const [paymentMethod, setPaymentMethod] = useState<PaymentProvider | ''>('');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const getCompanionCoords = (coords: any): { lat: number; lng: number } | null => {
+    if (!coords) return null;
+    const lat = coords.latitude ?? coords._lat ?? coords.lat;
+    const lng = coords.longitude ?? coords._long ?? coords._lng ?? coords.lng;
+    if (typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng };
+    }
+    return null;
+  };
+
+  const initialCompanionCoords = getCompanionCoords(companion.coordinates);
+
   const [meetingCoords, setMeetingCoords] = useState<{ latitude: number; longitude: number } | undefined>(
-    companion.coordinates ? { latitude: companion.coordinates.latitude, longitude: companion.coordinates.longitude } : undefined
+    initialCompanionCoords ? { latitude: initialCompanionCoords.lat, longitude: initialCompanionCoords.lng } : undefined
   );
 
   const [clientName, setClientName] = useState(currentUser?.name || '');
@@ -231,7 +243,7 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                        <MapPin className="w-4 h-4 text-[#2563EB]" /> Set Meeting Location
                      </label>
                      <MeetingLocationSelector
-                       initialPosition={companion.coordinates ? { lat: companion.coordinates.latitude, lng: companion.coordinates.longitude } : MAP_CENTER}
+                       initialPosition={initialCompanionCoords ?? MAP_CENTER}
                        onLocationSelected={(address, coords) => {
                          setLocation(address);
                          setMeetingCoords(coords);

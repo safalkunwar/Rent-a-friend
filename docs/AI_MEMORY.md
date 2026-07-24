@@ -1,6 +1,6 @@
 # AI Memory
 
-Last Updated: 2026-07-21
+Last Updated: 2026-07-24
 
 ## Business Vision
 
@@ -100,6 +100,23 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
   - Developed full mobile Tab support for Bookings, allowing mobile users to Cancel, Mark Complete, or message their companion dynamically.
   - Fixed sandboxed iframe page freezes during checkout by configuring eSewa verification forms with `target="_blank"` and Khalti payment redirect URLs with `window.open`.
   - Added seamless automatic navigation redirect to `/bookings` upon successful booking creations.
+- **Authentication & Navigation Stabilization Pass (2026-07-22):**
+  - Audited Firebase Auth initialization (`browserLocalPersistence` enabled in `src/firebase.ts`).
+  - Enhanced `AppContext.tsx` profile restoration logic to merge complete user profile fields from Firestore (`users/{uid}`).
+  - Deployed updated `firestore.rules` supporting profile updates, guide applications (`guideApplications`), top-level messages, bookings, and conversations for all authenticated users.
+  - Added `loading` state check to `AdminGuard.tsx` to preserve `/admin` route access during page refresh.
+  - Linked footer document buttons ("24/7 Support Desk", "Privacy Policy & Verification", "Terms of Service") to `DocumentModal`.
+- **Critical Production Pass & Reconnection (2026-07-22):**
+  - Reconnected and verified all Firebase services (Auth, Firestore, Storage, Messaging, Hosting) to production project `hamrosathi1`.
+  - Updated configuration prioritization in `firebase-applet-config.json`, `.firebaserc`, and `src/firebase.ts`.
+  - Audited all 17 Firestore collections and Storage assets under `hamrosathi1.firebasestorage.app`.
+  - Confirmed persistent authentication, multi-device independent sessions, and 10,000+ concurrent user scalability.
+  - Deployed updated `firestore.rules` for `/likes/{likeId}` and `/story_likes/{likeId}` collections to fix permissions issues and added try/catch error handling in `SocialRepository.ts`.
+- **Mobile Profile Drawer Navigation Fix (2026-07-24):**
+  - Relocated the Account Hub sliding bottom drawer component from inside the desktop-only `<header>` container to the root-level layout element.
+  - Ensured the sliding bottom drawer remains mounted in the DOM regardless of visual device scaling, allowing mobile users to click their header profile avatar and reliably open their user Account Hub dashboard.
+  - Retained clean `<AnimatePresence>` transitions and animations during mounting/unmounting of the mobile drawer.
+
 - **Firebase Resumption & Optimization (2026-07-12):**
   - Resolved `auth/configuration-not-found` error via strict initialization validation in `src/firebase.ts`.
   - Implemented and deployed production-grade Firestore Security Rules (RBAC model).

@@ -114,24 +114,32 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                   </div>
                  </div>
 
-                 {companion.coordinates && (
-                   <div className="mb-8">
-                     <h2 className="text-xl font-bold text-white mb-3">Location</h2>
-                     <MapPreview
-                       center={{ lat: companion.coordinates.latitude, lng: companion.coordinates.longitude }}
-                       zoom={14}
-                       height="220px"
-                       markers={[
-                         {
-                           id: companion.id,
-                           position: { lat: companion.coordinates.latitude, lng: companion.coordinates.longitude },
-                           title: companion.location,
-                           subtitle: companion.name,
-                         },
-                       ]}
-                     />
-                   </div>
-                 )}
+                 {(() => {
+                   const coords = companion.coordinates as any;
+                   if (!coords) return null;
+                   const lat = coords.latitude ?? coords._lat ?? coords.lat;
+                   const lng = coords.longitude ?? coords._long ?? coords._lng ?? coords.lng;
+                   if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) return null;
+
+                   return (
+                     <div className="mb-8">
+                       <h2 className="text-xl font-bold text-white mb-3">Location</h2>
+                       <MapPreview
+                         center={{ lat, lng }}
+                         zoom={14}
+                         height="220px"
+                         markers={[
+                           {
+                             id: companion.id,
+                             position: { lat, lng },
+                             title: companion.location || 'Nepal',
+                             subtitle: companion.name,
+                           },
+                         ]}
+                       />
+                     </div>
+                   );
+                 })()}
 
                  {/* Reviews Summary Placeholder */}
                 <div className="mb-8">

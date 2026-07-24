@@ -101,7 +101,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (profile && !cancelled) {
             const mergedUser: User = { 
               ...user, 
-              role: profile.role || 'customer', 
+              ...profile,
+              id: user.id,
+              email: profile.email || user.email,
+              name: profile.name || user.name,
+              avatar: profile.avatar || user.avatar,
+              role: profile.role || (authUser.claims?.admin ? 'admin' : authUser.claims?.role === 'companion' ? 'companion' : 'customer'), 
               favorites: profile.favorites || [] 
             };
             setCurrentUser(mergedUser);
@@ -162,10 +167,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     if (!currentUser) return;
     const unsubBookings = firestore.subscribe<Booking>('bookings', { where: [{ field: 'userId', operator: '==', value: currentUser.id }] }, (items) => {
-      setBookings(items);
+      const seen = new Set<string>();
+      const unique = items.filter(b => {
+        if (!b?.id || seen.has(b.id)) return false;
+        seen.add(b.id);
+        return true;
+      });
+      setBookings(unique);
     });
     const unsubNotifications = firestore.subscribe<Notification>('notifications', { where: [{ field: 'userId', operator: '==', value: currentUser.id }] }, (items) => {
-      const sorted = [...items].sort((a, b) => {
+      const seen = new Set<string>();
+      const unique = items.filter(n => {
+        if (!n?.id || seen.has(n.id)) return false;
+        seen.add(n.id);
+        return true;
+      });
+      const sorted = [...unique].sort((a, b) => {
         const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
         const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
         return timeB - timeA;
@@ -193,11 +210,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     if (!isOnline) {
       await offlineStorage.cacheItem('pendingBookings', { ...booking, _pending: true });
-      setBookings(prev => [...prev, { ...booking, _pending: true }]);
+      setBookings(prev => {
+        const filtered = prev.filter(b => b.id !== booking.id);
+        return [...filtered, { ...booking, _pending: true }];
+      });
       return;
     }
 
-    setBookings(prev => [...prev, booking]);
+    setBookings(prev => {
+      const filtered = prev.filter(b => b.id !== booking.id);
+      return [...filtered, booking];
+    });
     const ref = await firestore.setDocument(`bookings/${booking.id}`, {
       ...booking,
       createdAt: new Date().toISOString(),
@@ -213,7 +236,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       isRead: false,
       timestamp: new Date().toISOString(),
     };
-    setNotifications(prev => [notification, ...prev]);
+    setNotifications(prev => {
+      const filtered = prev.filter(n => n.id !== notification.id);
+      return [notification, ...filtered];
+    });
     await firestore.setDocument(`notifications/${notification.id}`, notification as any);
   }, [currentUser]);
 

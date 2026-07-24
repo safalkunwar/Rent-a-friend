@@ -5,6 +5,17 @@ import { offlineStorage } from '../services/storage';
 import { db } from '../firebase';
 import { COMPANIONS, STORIES, ACTIVITIES, EVENTS } from '../data';
 
+// Helper to guarantee list entries are unique by their ID
+const deduplicateById = <T extends { id: string }>(arr: T[]): T[] => {
+  const seen = new Set<string>();
+  return arr.filter(item => {
+    if (!item || !item.id) return false;
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+};
+
 export const useCompanions = () => {
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -13,12 +24,12 @@ export const useCompanions = () => {
     const loadFromCache = async () => {
       const cached = await offlineStorage.getCachedCollection<Companion>('companions');
       if (cached.length > 0) {
-        setCompanions(cached);
+        setCompanions(deduplicateById(cached));
         setLoading(false);
       } else if (!db) {
         // Fallback to static data if no Firebase and cache is empty
         await offlineStorage.cacheCollection('companions', COMPANIONS);
-        setCompanions(COMPANIONS);
+        setCompanions(deduplicateById(COMPANIONS));
         setLoading(false);
       }
     };
@@ -28,14 +39,15 @@ export const useCompanions = () => {
     if (db) {
       const unsubscribe = firestore.subscribe<Companion>('companions', {}, async (items) => {
         if (items.length > 0) {
-          setCompanions(items);
-          await offlineStorage.cacheCollection('companions', items);
+          const uniqueItems = deduplicateById(items);
+          setCompanions(uniqueItems);
+          await offlineStorage.cacheCollection('companions', uniqueItems);
         } else {
           // If Firestore is empty but we have zero cached items, seed the cache with our static data
           const cached = await offlineStorage.getCachedCollection<Companion>('companions');
           if (cached.length === 0) {
             await offlineStorage.cacheCollection('companions', COMPANIONS);
-            setCompanions(COMPANIONS);
+            setCompanions(deduplicateById(COMPANIONS));
           }
         }
         setLoading(false);
@@ -55,12 +67,12 @@ export const useStories = () => {
     const loadFromCache = async () => {
       const cached = await offlineStorage.getCachedCollection<ExperienceStory>('stories');
       if (cached.length > 0) {
-        setStories(cached);
+        setStories(deduplicateById(cached));
         setLoading(false);
       } else if (!db) {
         // Fallback to static data if no Firebase and cache is empty
         await offlineStorage.cacheCollection('stories', STORIES);
-        setStories(STORIES);
+        setStories(deduplicateById(STORIES));
         setLoading(false);
       }
     };
@@ -70,13 +82,14 @@ export const useStories = () => {
     if (db) {
       const unsubscribe = firestore.subscribe<ExperienceStory>('stories', {}, async (items) => {
         if (items.length > 0) {
-          setStories(items);
-          await offlineStorage.cacheCollection('stories', items);
+          const uniqueItems = deduplicateById(items);
+          setStories(uniqueItems);
+          await offlineStorage.cacheCollection('stories', uniqueItems);
         } else {
           const cached = await offlineStorage.getCachedCollection<ExperienceStory>('stories');
           if (cached.length === 0) {
             await offlineStorage.cacheCollection('stories', STORIES);
-            setStories(STORIES);
+            setStories(deduplicateById(STORIES));
           }
         }
         setLoading(false);
@@ -96,12 +109,12 @@ export const useActivities = () => {
     const loadFromCache = async () => {
       const cached = await offlineStorage.getCachedCollection<Activity>('activities');
       if (cached.length > 0) {
-        setActivities(cached);
+        setActivities(deduplicateById(cached));
         setLoading(false);
       } else if (!db) {
         // Fallback to static data if no Firebase and cache is empty
         await offlineStorage.cacheCollection('activities', ACTIVITIES);
-        setActivities(ACTIVITIES);
+        setActivities(deduplicateById(ACTIVITIES));
         setLoading(false);
       }
     };
@@ -111,13 +124,14 @@ export const useActivities = () => {
     if (db) {
       const unsubscribe = firestore.subscribe<Activity>('activities', {}, async (items) => {
         if (items.length > 0) {
-          setActivities(items);
-          await offlineStorage.cacheCollection('activities', items);
+          const uniqueItems = deduplicateById(items);
+          setActivities(uniqueItems);
+          await offlineStorage.cacheCollection('activities', uniqueItems);
         } else {
           const cached = await offlineStorage.getCachedCollection<Activity>('activities');
           if (cached.length === 0) {
             await offlineStorage.cacheCollection('activities', ACTIVITIES);
-            setActivities(ACTIVITIES);
+            setActivities(deduplicateById(ACTIVITIES));
           }
         }
         setLoading(false);
@@ -137,12 +151,12 @@ export const useEvents = () => {
     const loadFromCache = async () => {
       const cached = await offlineStorage.getCachedCollection<Event>('events');
       if (cached.length > 0) {
-        setEvents(cached);
+        setEvents(deduplicateById(cached));
         setLoading(false);
       } else if (!db) {
         // Fallback to static data if no Firebase and cache is empty
         await offlineStorage.cacheCollection('events', EVENTS);
-        setEvents(EVENTS);
+        setEvents(deduplicateById(EVENTS));
         setLoading(false);
       }
     };
@@ -152,13 +166,14 @@ export const useEvents = () => {
     if (db) {
       const unsubscribe = firestore.subscribe<Event>('events', {}, async (items) => {
         if (items.length > 0) {
-          setEvents(items);
-          await offlineStorage.cacheCollection('events', items);
+          const uniqueItems = deduplicateById(items);
+          setEvents(uniqueItems);
+          await offlineStorage.cacheCollection('events', uniqueItems);
         } else {
           const cached = await offlineStorage.getCachedCollection<Event>('events');
           if (cached.length === 0) {
             await offlineStorage.cacheCollection('events', EVENTS);
-            setEvents(EVENTS);
+            setEvents(deduplicateById(EVENTS));
           }
         }
         setLoading(false);
@@ -185,11 +200,11 @@ export const usePartners = () => {
     const loadFromCache = async () => {
       const cached = await offlineStorage.getCachedCollection<Partner>('partners');
       if (cached.length > 0) {
-        setPartners(cached);
+        setPartners(deduplicateById(cached));
         setLoading(false);
       } else if (!db) {
         await offlineStorage.cacheCollection('partners', fallbackPartners);
-        setPartners(fallbackPartners);
+        setPartners(deduplicateById(fallbackPartners));
         setLoading(false);
       }
     };
@@ -199,13 +214,14 @@ export const usePartners = () => {
     if (db) {
       const unsubscribe = firestore.subscribe<Partner>('partners', {}, async (items) => {
         if (items.length > 0) {
-          setPartners(items);
-          await offlineStorage.cacheCollection('partners', items);
+          const uniqueItems = deduplicateById(items);
+          setPartners(uniqueItems);
+          await offlineStorage.cacheCollection('partners', uniqueItems);
         } else {
           const cached = await offlineStorage.getCachedCollection<Partner>('partners');
           if (cached.length === 0) {
             await offlineStorage.cacheCollection('partners', fallbackPartners);
-            setPartners(fallbackPartners);
+            setPartners(deduplicateById(fallbackPartners));
           }
         }
         setLoading(false);
@@ -246,11 +262,11 @@ export const useCommunityPosts = () => {
     const loadFromCache = async () => {
       const cached = await offlineStorage.getCachedCollection<CommunityPost>('community_posts');
       if (cached.length > 0) {
-        setPosts(cached);
+        setPosts(deduplicateById(cached));
         setLoading(false);
       } else if (!db) {
         await offlineStorage.cacheCollection('community_posts', fallbackPosts);
-        setPosts(fallbackPosts);
+        setPosts(deduplicateById(fallbackPosts));
         setLoading(false);
       }
     };
@@ -258,15 +274,20 @@ export const useCommunityPosts = () => {
     loadFromCache();
 
     if (db) {
-      const unsubscribe = firestore.subscribe<CommunityPost>('community_posts', {}, async (items) => {
+      const unsubscribe = firestore.subscribe<CommunityPost>('community_posts', {
+        where: [{ field: 'status', operator: '==', value: 'published' }],
+        orderByField: 'createdAt',
+        orderDirection: 'desc'
+      }, async (items) => {
         if (items.length > 0) {
-          setPosts(items);
-          await offlineStorage.cacheCollection('community_posts', items);
+          const uniqueItems = deduplicateById(items);
+          setPosts(uniqueItems);
+          await offlineStorage.cacheCollection('community_posts', uniqueItems);
         } else {
           const cached = await offlineStorage.getCachedCollection<CommunityPost>('community_posts');
           if (cached.length === 0) {
             await offlineStorage.cacheCollection('community_posts', fallbackPosts);
-            setPosts(fallbackPosts);
+            setPosts(deduplicateById(fallbackPosts));
           }
         }
         setLoading(false);
@@ -277,4 +298,3 @@ export const useCommunityPosts = () => {
 
   return { posts, loading };
 };
-

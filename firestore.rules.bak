@@ -221,26 +221,7 @@ service cloud.firestore {
     match /story_likes/{likeId} {
       allow read: if true;
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
-      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
-    }
-
-    // Stories Collection: /stories/{storyId}
-    match /stories/{storyId} {
-      // Anyone can view stories
-      allow read: if true;
-
-      // Users can create their own stories
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
-
-      // Users can edit their own stories, and any authenticated user can increment/decrement likes
-      allow update: if isAuthenticated() && (
-        isAdmin() ||
-        (request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'imageUrl', 'updatedAt'])) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likesCount', 'updatedAt'])
-      );
-
-      // Users can delete their own stories
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow delete: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
     }
 
     // Events Collection: /events/{eventId}

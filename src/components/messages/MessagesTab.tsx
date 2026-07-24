@@ -192,9 +192,9 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
     return localMessages[selectedConvo] || [];
   }, [selectedConvo, localMessages]);
 
-  const handleSend = async () => {
-    if (!inputText.trim() || !currentUser || !selectedConvo) return;
-    const text = inputText.trim();
+  const handleSend = async (customText?: string) => {
+    const textToSend = (customText || inputText).trim();
+    if (!textToSend || !currentUser || !selectedConvo) return;
 
     const otherId = selectedConvo.split('_').find(id => id !== currentUser.id) || '';
 
@@ -206,39 +206,84 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
     );
 
     if (!hasConfirmedBooking) {
-      const sentCount = messages.filter(m => m.senderId === currentUser.id).length;
+      const sentCount = messages.filter(m => m.senderId === currentUser.id && m.status !== 'failed').length;
       if (sentCount >= 2) {
         showToast('Pre-booking messages are limited to 2 inquiries. Please request a booking to unlock full chat.', 'info');
         return;
       }
     }
 
-    setInputText('');
+    if (!customText) {
+      setInputText('');
+    }
 
     const msgId = `msg-${Date.now()}`;
-    await firestore.setDocument(`messages/${msgId}`, {
+    const optimisticMsg = {
       id: msgId,
       conversationId: selectedConvo,
       senderId: currentUser.id,
-      text,
+      text: textToSend,
       timestamp: new Date().toISOString(),
       isRead: false,
+      status: 'sending' as const,
+    };
+
+    // Optimistic state update - show message instantly in conversation
+    setLocalMessages(prev => {
+      const existing = prev[selectedConvo] || [];
+      // Replace failed message if retrying, or append
+      const filtered = existing.filter(m => m.id !== msgId);
+      return {
+        ...prev,
+        [selectedConvo]: [...filtered, optimisticMsg]
+      };
     });
 
-    await firestore.setDocument(`conversations/${selectedConvo}`, {
-      id: selectedConvo,
-      participantIds: [currentUser.id, otherId],
-      lastMessage: {
+    try {
+      await firestore.setDocument(`messages/${msgId}`, {
         id: msgId,
         conversationId: selectedConvo,
         senderId: currentUser.id,
-        text,
-        timestamp: new Date().toISOString(),
+        text: textToSend,
+        timestamp: optimisticMsg.timestamp,
         isRead: false,
-      },
-      unreadCount: 0,
-      updatedAt: new Date().toISOString(),
-    }, true);
+      });
+
+      await firestore.setDocument(`conversations/${selectedConvo}`, {
+        id: selectedConvo,
+        participantIds: [currentUser.id, otherId],
+        lastMessage: {
+          id: msgId,
+          conversationId: selectedConvo,
+          senderId: currentUser.id,
+          text: textToSend,
+          timestamp: optimisticMsg.timestamp,
+          isRead: false,
+        },
+        unreadCount: 0,
+        updatedAt: new Date().toISOString(),
+      }, true);
+
+      // Update optimistic status to sent
+      setLocalMessages(prev => {
+        const list = prev[selectedConvo] || [];
+        return {
+          ...prev,
+          [selectedConvo]: list.map(m => m.id === msgId ? { ...m, status: 'sent' } : m)
+        };
+      });
+    } catch (err) {
+      console.error("[SATHI Messages] Send message error:", err);
+      showToast('Failed to send message. Click retry on the message.', 'error');
+      // Mark optimistic message as failed
+      setLocalMessages(prev => {
+        const list = prev[selectedConvo] || [];
+        return {
+          ...prev,
+          [selectedConvo]: list.map(m => m.id === msgId ? { ...m, status: 'failed' } : m)
+        };
+      });
+    }
   };
 
   const currentChat = conversations.find(c => c.id === selectedConvo);
@@ -459,7 +504,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                 className="flex-1 bg-[#1E2124] text-white border border-[#2A2D31] rounded-full px-4 py-2.5 text-xs focus:outline-none focus:border-[#C8A25E]"
               />
               <button
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 disabled={!inputText.trim()}
                 className="w-10 h-10 bg-[#C8A25E] text-[#0F1113] rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#B69150] transition-colors shrink-0"
               >

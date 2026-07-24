@@ -9,6 +9,21 @@ interface MeetingLocationSelectorProps {
   height?: string;
 }
 
+// Helper to sanitize lat/lng
+const sanitizeCoords = (obj: any): { lat: number; lng: number } => {
+  if (!obj) return { lat: 27.7172, lng: 85.3240 };
+  const rawLat = obj.lat ?? obj.latitude ?? obj._lat;
+  const rawLng = obj.lng ?? obj.longitude ?? obj._long ?? obj._lng;
+
+  const lat = typeof rawLat === 'string' ? parseFloat(rawLat) : Number(rawLat);
+  const lng = typeof rawLng === 'string' ? parseFloat(rawLng) : Number(rawLng);
+
+  return {
+    lat: typeof lat === 'number' && !isNaN(lat) ? lat : 27.7172,
+    lng: typeof lng === 'number' && !isNaN(lng) ? lng : 85.3240,
+  };
+};
+
 export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = ({
   initialPosition = { lat: 27.7172, lng: 85.3240 }, // Kathmandu Default
   onLocationSelected,
@@ -19,10 +34,12 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
   const markerRef = useRef<L.Marker | null>(null);
   const { showToast } = useToast();
 
+  const safeInitial = sanitizeCoords(initialPosition);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [address, setAddress] = useState('');
-  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>(initialPosition);
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>(safeInitial);
   const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>('dark');
   
   // Autocomplete / Suggestions State
@@ -112,80 +129,101 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Initialize Map
+  // Initialize Map safely
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    const map = L.map(mapContainerRef.current, {
-      center: [selectedCoords.lat, selectedCoords.lng],
-      zoom: 15,
-      zoomControl: false,
-      attributionControl: false,
-    });
+    // Reset leaflet ID on container if previously attached
+    if ((mapContainerRef.current as any)._leaflet_id) {
+      (mapContainerRef.current as any)._leaflet_id = null;
+    }
 
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
-    mapInstanceRef.current = map;
+    const { lat, lng } = sanitizeCoords(selectedCoords);
 
-    // Create marker
-    const markerIcon = L.divIcon({
-      html: `
-        <div class="relative flex items-center justify-center w-8 h-8 group">
-          <div class="absolute w-8 h-8 rounded-full bg-[#2563EB]/20 animate-ping"></div>
-          <div class="absolute w-5 h-5 rounded-full bg-[#2563EB] border-2 border-white shadow-lg flex items-center justify-center transition-transform scale-110">
-            <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+    try {
+      const map = L.map(mapContainerRef.current, {
+        center: [lat, lng],
+        zoom: 15,
+        zoomControl: false,
+        attributionControl: false,
+      });
+
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+      mapInstanceRef.current = map;
+
+      // Create marker
+      const markerIcon = L.divIcon({
+        html: `
+          <div class="relative flex items-center justify-center w-8 h-8 group">
+            <div class="absolute w-8 h-8 rounded-full bg-[#2563EB]/20 animate-ping"></div>
+            <div class="absolute w-5 h-5 rounded-full bg-[#2563EB] border-2 border-white shadow-lg flex items-center justify-center transition-transform scale-110">
+              <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+            </div>
           </div>
-        </div>
-      `,
-      className: 'custom-meeting-marker',
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-    });
+        `,
+        className: 'custom-meeting-marker',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
 
-    const marker = L.marker([selectedCoords.lat, selectedCoords.lng], {
-      icon: markerIcon,
-      draggable: true,
-    }).addTo(map);
+      const marker = L.marker([lat, lng], {
+        icon: markerIcon,
+        draggable: true,
+      }).addTo(map);
 
-    markerRef.current = marker;
+      markerRef.current = marker;
 
-    // Drag events
-    marker.on('dragend', () => {
-      if (isLocked) {
-        // Snap back if locked
-        marker.setLatLng([selectedCoords.lat, selectedCoords.lng]);
-        showToast('Please unlock the location to change meeting point.', 'error');
-        return;
-      }
-      const position = marker.getLatLng();
-      setSelectedCoords({ lat: position.lat, lng: position.lng });
-      reverseGeocode(position.lat, position.lng);
-    });
+      // Drag events
+      marker.on('dragend', () => {
+        if (isLocked) {
+          // Snap back if locked
+          marker.setLatLng([lat, lng]);
+          showToast('Please unlock the location to change meeting point.', 'error');
+          return;
+        }
+        const position = marker.getLatLng();
+        const pos = sanitizeCoords(position);
+        setSelectedCoords(pos);
+        reverseGeocode(pos.lat, pos.lng);
+      });
 
-    // Double-click to place marker
-    map.on('dblclick', (e: L.LeafletMouseEvent) => {
-      if (isLocked) {
-        showToast('Please unlock the location to change meeting point.', 'error');
-        return;
-      }
-      const { lat, lng } = e.latlng;
-      marker.setLatLng([lat, lng]);
-      setSelectedCoords({ lat, lng });
+      // Double-click to place marker
+      map.on('dblclick', (e: L.LeafletMouseEvent) => {
+        if (isLocked) {
+          showToast('Please unlock the location to change meeting point.', 'error');
+          return;
+        }
+        const pos = sanitizeCoords(e.latlng);
+        marker.setLatLng([pos.lat, pos.lng]);
+        setSelectedCoords(pos);
+        reverseGeocode(pos.lat, pos.lng);
+      });
+
+      // Fix quick rendering issues
+      setTimeout(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      }, 250);
+
+      // Run initial reverse geocode
       reverseGeocode(lat, lng);
-    });
-
-    // Fix quick rendering issues
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 250);
-
-    // Run initial reverse geocode
-    reverseGeocode(selectedCoords.lat, selectedCoords.lng);
+    } catch (err) {
+      console.warn('[MeetingLocationSelector] Leaflet map init error:', err);
+    }
 
     return () => {
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          // ignore
+        }
         mapInstanceRef.current = null;
+      }
+      if (mapContainerRef.current) {
+        (mapContainerRef.current as any)._leaflet_id = null;
       }
     };
   }, []);

@@ -17,6 +17,21 @@ interface MapPreviewProps {
   className?: string;
 }
 
+// Helper to extract valid numeric lat/lng from various object formats
+const sanitizeCoords = (obj: any): { lat: number; lng: number } => {
+  if (!obj) return { lat: 27.7172, lng: 85.3240 };
+  const rawLat = obj.lat ?? obj.latitude ?? obj._lat;
+  const rawLng = obj.lng ?? obj.longitude ?? obj._long ?? obj._lng;
+
+  const lat = typeof rawLat === 'string' ? parseFloat(rawLat) : Number(rawLat);
+  const lng = typeof rawLng === 'string' ? parseFloat(rawLng) : Number(rawLng);
+
+  return {
+    lat: typeof lat === 'number' && !isNaN(lat) ? lat : 27.7172,
+    lng: typeof lng === 'number' && !isNaN(lng) ? lng : 85.3240,
+  };
+};
+
 export const MapPreview: React.FC<MapPreviewProps> = ({
   center = { lat: 27.7172, lng: 85.3240 }, // Kathmandu Default
   zoom = 13,
@@ -29,6 +44,8 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersGroupRef = useRef<L.LayerGroup | null>(null);
   const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>('dark');
+
+  const safeCenter = sanitizeCoords(center);
 
   // Detect theme changes on HTML element
   useEffect(() => {
@@ -44,33 +61,50 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  // Initialize Map Instance
+  // Initialize Map Instance safely
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    const map = L.map(mapContainerRef.current, {
-      center: [center.lat, center.lng],
-      zoom: zoom,
-      zoomControl: false,
-      attributionControl: false,
-    });
+    // Reset leaflet ID on container if previously attached
+    if ((mapContainerRef.current as any)._leaflet_id) {
+      (mapContainerRef.current as any)._leaflet_id = null;
+    }
 
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    try {
+      const map = L.map(mapContainerRef.current, {
+        center: [safeCenter.lat, safeCenter.lng],
+        zoom: zoom,
+        zoomControl: false,
+        attributionControl: false,
+      });
 
-    const markersGroup = L.layerGroup().addTo(map);
-    mapInstanceRef.current = map;
-    markersGroupRef.current = markersGroup;
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Fix rendering issues on quick tab transitions
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 250);
+      const markersGroup = L.layerGroup().addTo(map);
+      mapInstanceRef.current = map;
+      markersGroupRef.current = markersGroup;
+
+      setTimeout(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      }, 250);
+    } catch (err) {
+      console.warn('[MapPreview] Leaflet initialization error caught:', err);
+    }
 
     return () => {
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          // ignore cleanup error
+        }
         mapInstanceRef.current = null;
+      }
+      if (mapContainerRef.current) {
+        (mapContainerRef.current as any)._leaflet_id = null;
       }
     };
   }, []);
@@ -99,9 +133,10 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
   // Handle map centering updates
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !center) return;
-    map.setView([center.lat, center.lng], zoom, { animate: true, duration: 1 });
-  }, [center.lat, center.lng, zoom]);
+    if (!map) return;
+    const { lat, lng } = sanitizeCoords(center);
+    map.setView([lat, lng], zoom, { animate: true, duration: 1 });
+  }, [center?.lat, center?.lng, zoom]);
 
   // Populate interactive custom marker layers
   useEffect(() => {
@@ -112,6 +147,9 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
     markersGroup.clearLayers();
 
     markers.forEach(marker => {
+      if (!marker || !marker.position) return;
+      const { lat, lng } = sanitizeCoords(marker.position);
+
       let pinColor = '#C8A25E'; // Default Gold SATHI Theme
       if (marker.type === 'activity') pinColor = '#3B82F6'; // Adventure Blue
       if (marker.type === 'event') pinColor = '#EF4444'; // Festive Red
@@ -132,7 +170,7 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
         iconAnchor: [16, 16],
       });
 
-      const leafletMarker = L.marker([marker.position.lat, marker.position.lng], { icon: markerIcon });
+      const leafletMarker = L.marker([lat, lng], { icon: markerIcon });
       
       const popupThemeText = currentTheme === 'light' ? '#1D1B18' : '#FFFFFF';
       const popupThemeBg = currentTheme === 'light' ? '#FFFFFF' : '#17191C';
@@ -153,7 +191,7 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
             font-size: 13px; 
             color: ${popupThemeText}; 
             margin: 0 0 2px 0 !important;
-          ">${marker.title}</p>
+          ">${marker.title || 'Spot'}</p>
           ${marker.subtitle ? `<p style="font-size: 11px; color: #8E9299; margin: 0 !important;">${marker.subtitle}</p>` : ''}
         </div>
       `;
@@ -190,9 +228,9 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
       {markers.length > 0 && (
         <div className="absolute inset-x-0 bottom-4 z-[400] flex justify-center px-4 pointer-events-none">
           <div className="flex flex-wrap justify-center gap-1.5 max-w-full">
-            {markers.slice(0, 4).map(marker => (
+            {markers.slice(0, 4).map((marker, i) => (
               <button
-                key={marker.id}
+                key={`${marker.type || 'marker'}-${marker.id || i}`}
                 onClick={() => {
                   onMarkerClick?.(marker.id);
                   const map = mapInstanceRef.current;
