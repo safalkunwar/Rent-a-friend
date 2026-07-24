@@ -89,6 +89,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   // Custom dashboard / UI states
   const [selectedCity, setSelectedCity] = useState<string>('All');
   const [showSavedOnly, setShowSavedOnly] = useState<boolean>(false);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('All');
+  const [maxHourlyRate, setMaxHourlyRate] = useState<number>(3000);
+  const [minRatingFilter, setMinRatingFilter] = useState<number>(0);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState<boolean>(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState<boolean>(false);
@@ -132,6 +136,28 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     }, 6000);
     return () => clearInterval(slideTimer);
   }, []);
+
+  const handleBrowseCompanions = () => {
+    if (window.innerWidth < 640) {
+      setMobileTab('search');
+      setDiscoveryTab('companions');
+    } else {
+      setActiveTab('explore');
+      setDiscoveryTab('companions');
+      navigate('/companions');
+    }
+  };
+
+  const handleBrowseActivities = () => {
+    if (window.innerWidth < 640) {
+      setMobileTab('search');
+      setDiscoveryTab('activities');
+    } else {
+      setActiveTab('explore');
+      setDiscoveryTab('activities');
+      navigate('/companions');
+    }
+  };
   
   const companions = fetchedCompanions;
   const stories = fetchedStories;
@@ -180,6 +206,13 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     showToast("Redirecting to secure Khalti Gateway for wallet top up...", "info");
   };
 
+  const activeFilterCount = (selectedCity !== 'All' ? 1 : 0) +
+    (selectedCategory !== 'All' ? 1 : 0) +
+    (selectedLanguage !== 'All' ? 1 : 0) +
+    (maxHourlyRate < 3000 ? 1 : 0) +
+    (minRatingFilter > 0 ? 1 : 0) +
+    (sortBy !== 'recommended' ? 1 : 0);
+
   const filteredCompanions = companions.filter(c => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q ||
@@ -192,17 +225,25 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     const matchesCategory = 
       selectedCategory === 'All' || 
       c.interests.includes(selectedCategory) || 
-      c.bio.includes(selectedCategory);
+      c.bio.toLowerCase().includes(selectedCategory.toLowerCase());
     
     const matchesCity = 
       selectedCity === 'All' || 
       c.location.toLowerCase() === selectedCity.toLowerCase();
+
+    const matchesLanguage =
+      selectedLanguage === 'All' ||
+      c.languages.some(l => l.toLowerCase() === selectedLanguage.toLowerCase());
+
+    const matchesMaxRate = (c.hourlyRate || 0) <= maxHourlyRate;
+
+    const matchesMinRating = (c.rating || 0) >= minRatingFilter;
     
     const matchesSaved = 
       !showSavedOnly || 
       (favorites && favorites.includes(c.id));
     
-    return matchesSearch && matchesCategory && matchesCity && matchesSaved;
+    return matchesSearch && matchesCategory && matchesCity && matchesLanguage && matchesMaxRate && matchesMinRating && matchesSaved;
   }).sort((a, b) => {
     if (sortBy === 'priceAsc') return a.hourlyRate - b.hourlyRate;
     if (sortBy === 'priceDesc') return b.hourlyRate - a.hourlyRate;
@@ -457,26 +498,39 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             </div>
           </div>
 
-          {/* Search bar inside header (Responsive) */}
-          <div className="hidden sm:block flex-1 max-w-xl relative">
-            <Search className="w-4 h-4 text-[#8E9299] absolute left-4 top-1/2 transform -translate-y-1/2" />
-            <input 
-              type="text" 
-              placeholder="Search companions, local skills, activities, or chiya spots..." 
-              className="w-full bg-[#1E2124]/50 border border-[#2A2D31]/40 rounded-full h-10 pl-11 pr-10 text-xs text-white placeholder-[#8E9299] focus:outline-none focus:border-[#C8A25E] focus:bg-[#17191C] transition-all shadow-inner focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113]"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <button 
-              onClick={() => {
-                setSelectedCategory('All');
-                setSearchQuery('');
-                showToast("Filters reset", "info");
-              }}
-              className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-[10px] uppercase font-bold text-[#C8A25E] hover:underline"
-              title="Clear search"
+          {/* Search bar inside header (Responsive with compact Filters button) */}
+          <div className="hidden sm:flex items-center gap-2 flex-1 max-w-xl">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-[#8E9299] absolute left-4 top-1/2 transform -translate-y-1/2" />
+              <input 
+                type="text" 
+                placeholder="Search companions, local skills, activities, or chiya spots..." 
+                className="w-full bg-[#1E2124]/50 border border-[#2A2D31]/40 rounded-full h-10 pl-11 pr-16 text-xs text-white placeholder-[#8E9299] focus:outline-none focus:border-[#C8A25E] focus:bg-[#17191C] transition-all shadow-inner focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113]"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-[10px] uppercase font-bold text-[#8E9299] hover:text-white"
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className="relative flex items-center gap-1.5 h-10 px-3.5 bg-[#1E2124]/80 hover:bg-[#1E2124] border border-[#2A2D31]/60 hover:border-[#C8A25E] rounded-full text-xs font-bold text-white transition-all shadow-sm shrink-0"
+              title="Open filters drawer"
             >
-              Reset
+              <SlidersHorizontal className="w-3.5 h-3.5 text-[#C8A25E]" />
+              <span className="hidden md:inline">Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-[#C8A25E] text-[#0F1113] text-[9px] font-extrabold flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
           </div>
 
@@ -587,7 +641,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className="hidden lg:block absolute right-0 top-11 mt-2 w-64 bg-[#17191C] border border-[#2A2D31] rounded-2xl shadow-2xl py-2 z-50 overflow-hidden text-left"
+                      className="absolute right-0 top-11 mt-2 w-64 bg-[#17191C] border border-[#2A2D31] rounded-2xl shadow-2xl py-2 z-50 overflow-hidden text-left"
                     >
                       <div className="px-4 py-2.5 border-b border-[#2A2D31]/60">
                         <span className="text-xs font-bold text-white block truncate">{currentUser?.name || "Guest User"}</span>
@@ -924,7 +978,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         ))}
                       </div>
                     ) : (
-                      stories.map((story) => {
+                      stories.map((story, idx) => {
                         const getEmoji = (caption: string) => {
                           if (caption.toLowerCase().includes('momo') || caption.toLowerCase().includes('food')) return '🍜';
                           if (caption.toLowerCase().includes('sunset') || caption.toLowerCase().includes('swayambhu')) return '🌅';
@@ -933,7 +987,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         };
                         return (
                           <div 
-                            key={story.id} 
+                            key={`${story.id}-${idx}`} 
                             onClick={() => setViewingStory(story)}
                             className="shrink-0 w-20 flex flex-col items-center gap-2 cursor-pointer group snap-start"
                           >
@@ -950,9 +1004,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                                   Live
                                 </span>
                               )}
-                              <span className="absolute -top-1 -right-1 bg-black/80 backdrop-blur-md w-5 h-5 rounded-full flex items-center justify-center text-xs border border-white/10 shadow-sm">
-                                {getEmoji(story.caption)}
-                              </span>
                             </div>
                             <span className="text-[10px] font-bold text-[#8E9299] truncate w-full text-center">
                               {story.userName}
@@ -965,48 +1016,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 </section>
 
 
-                {/* 3. COMPANION CATEGORY / FILTER SELECTION */}
-                <section className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-[#8E9299]">Browse Experience Categories</h3>
-                      <p className="text-sm text-white font-medium mt-0.5">Match interests with trusted specialized companions</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2.5 overflow-x-auto hide-scrollbar pb-2 -mx-4 px-4 md:mx-0 md:px-0">
-                    {['All', 'Coffee Buddy', 'Travel Companion', 'Language Exchange', 'Food Explorer', 'Museum Guide', 'Hiking Partner', 'Shopping Buddy', 'Study Partner', 'Nightlife', 'Photography Walk'].map((cat) => {
-                      const emojis: Record<string, string> = {
-                        'All': '✨',
-                        'Coffee Buddy': '☕',
-                        'Travel Companion': '✈️',
-                        'Language Exchange': '🗣️',
-                        'Food Explorer': '🍜',
-                        'Museum Guide': '🏛️',
-                        'Hiking Partner': '🥾',
-                        'Shopping Buddy': '🛍️',
-                        'Study Partner': '📚',
-                        'Nightlife': '🌙',
-                        'Photography Walk': '📷'
-                      };
-                      return (
-                        <button 
-                          key={cat} 
-                          onClick={() => {
-                            setSelectedCategory(cat);
-                            setShowSavedOnly(false);
-                            showToast(`Filtered by ${cat}`, 'success');
-                          }}
-                          className={`shrink-0 px-4 py-2.5 rounded-full text-xs font-bold transition-all border shadow-sm flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-[#C8A25E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1113] focus:outline-none ${selectedCategory === cat ? 'bg-[#C8A25E] text-[#0F1113] border-[#C8A25E] scale-105' : 'bg-[#1E2124]/80 text-[#8E9299] border-[#2A2D31]/50 hover:border-[#C8A25E] hover:text-white'}`}
-                        >
-                          <span className="text-xs">{emojis[cat] || '✨'}</span>
-                          {cat}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-
                 {/* 4. COMPANION MARKETPLACE FEED (VISUAL CENTERPIECE) */}
                 <section id="marketplace-section" className="space-y-6">
                   <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#2A2D31]/40 pb-4">
@@ -1017,31 +1026,38 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <p className="text-xs text-[#8E9299] mt-1">Book safely. Hourly rates listed in NPR. Zero commission or matching fee.</p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      {/* Search Sorting selector */}
-                      <select 
-                        value={sortBy} 
-                        onChange={(e) => setSortBy(e.target.value as any)}
-                        className="bg-[#1E2124] border border-[#2A2D31]/60 text-white text-xs rounded-xl px-3 py-2 outline-none focus:border-[#C8A25E] transition-all cursor-pointer"
-                        aria-label="Sort companions list"
-                      >
-                        <option value="recommended">Recommended</option>
-                        <option value="rating">Highest Rated</option>
-                        <option value="priceAsc">Price: Low to High</option>
-                        <option value="priceDesc">Price: High to Low</option>
-                      </select>
-
+                    <div className="flex items-center gap-2">
                       <button 
-                        onClick={() => {
-                          setSelectedCategory('All');
-                          setSelectedCity('All');
-                          setShowSavedOnly(false);
-                          setSearchQuery('');
-                        }} 
-                        className="text-xs font-bold text-[#C8A25E] hover:underline"
+                        onClick={() => setIsFilterDrawerOpen(true)}
+                        className="flex items-center gap-2 px-3.5 py-2 bg-[#1E2124] hover:bg-[#2A2D31] border border-[#2A2D31] hover:border-[#C8A25E] rounded-xl text-xs font-bold text-white transition-all shadow-sm"
                       >
-                        Clear Filters
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-[#C8A25E]" />
+                        <span>Filters</span>
+                        {activeFilterCount > 0 && (
+                          <span className="w-4 h-4 rounded-full bg-[#C8A25E] text-[#0F1113] text-[9px] font-extrabold flex items-center justify-center">
+                            {activeFilterCount}
+                          </span>
+                        )}
                       </button>
+
+                      {activeFilterCount > 0 && (
+                        <button 
+                          onClick={() => {
+                            setSelectedCategory('All');
+                            setSelectedCity('All');
+                            setSelectedLanguage('All');
+                            setMaxHourlyRate(3000);
+                            setMinRatingFilter(0);
+                            setShowSavedOnly(false);
+                            setSearchQuery('');
+                            setSortBy('recommended');
+                            showToast("All filters cleared", "info");
+                          }} 
+                          className="text-xs font-bold text-[#C8A25E] hover:underline px-2 py-1"
+                        >
+                          Clear
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -1526,7 +1542,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {partners.slice(0, 8).map((partner, i) => (
-                      <div key={partner.id || i} className="bg-[#1E2124]/40 border border-[#2A2D31]/50 p-4 rounded-xl text-center space-y-1.5 hover:border-[#C8A25E]/30 transition-all">
+                      <div key={`${partner.id || 'p'}-${i}`} className="bg-[#1E2124]/40 border border-[#2A2D31]/50 p-4 rounded-xl text-center space-y-1.5 hover:border-[#C8A25E]/30 transition-all">
                         <div className="w-10 h-10 bg-[#C8A25E]/15 rounded-full flex items-center justify-center mx-auto text-[#C8A25E] font-bold">
                           {partner.name.substring(0, 2)}
                         </div>
@@ -1590,10 +1606,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     <div className="space-y-3">
                       <h4 className="text-xs font-bold uppercase tracking-wider text-white">Security & Help</h4>
                       <ul className="space-y-1.5 text-xs text-[#8E9299]">
-                        <li><a href="#" onClick={(e) => { e.preventDefault(); showToast("Opening Help Desk...", "info"); }} className="hover:text-white transition-colors">24/7 Support Desk</a></li>
-                        <li><a href="#" onClick={(e) => { e.preventDefault(); showToast("Identity Verification rules page loaded", "info"); }} className="hover:text-white transition-colors">Identity Verification</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveDocType('help'); }} className="hover:text-white transition-colors">24/7 Support Desk</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveDocType('privacy'); }} className="hover:text-white transition-colors">Privacy Policy & Verification</a></li>
                         <li><a href="#" onClick={(e) => { e.preventDefault(); setShowSOS(true); }} className="hover:text-white transition-colors">Emergency Protocol</a></li>
-                        <li><a href="#" onClick={(e) => { e.preventDefault(); showToast("Terms of service document", "info"); }} className="hover:text-white transition-colors">Terms of Service</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveDocType('terms'); }} className="hover:text-white transition-colors">Terms of Service</a></li>
                       </ul>
                     </div>
                     <div className="space-y-3">
@@ -1688,7 +1704,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
             {activeTab === 'messages' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <MessagesTab onOpenAuth={setAuthMode} initialCompanionId={activeChatCompanionId} />
+                <MessagesTab 
+                  onOpenAuth={setAuthMode} 
+                  initialCompanionId={activeChatCompanionId} 
+                  onBrowseCompanions={handleBrowseCompanions}
+                  onBrowseActivities={handleBrowseActivities}
+                />
               </motion.div>
             )}
 
@@ -1998,7 +2019,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 {/* Dynamic Stories based on companions */}
                 {fetchedStories.map((st, i) => (
                   <div 
-                    key={st.id || i} 
+                    key={`${st.id}-${i}`} 
                     onClick={() => setViewingStory(st)}
                     className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start"
                   >
@@ -2180,7 +2201,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   const currentLikesCount = post.likesCount || post.likes || 0;
                   
                   return (
-                    <div key={post.id || idx} className="bg-[#17191C] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col text-left">
+                    <div key={`${post.id || 'st'}-${idx}`} className="bg-[#17191C] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col text-left">
                       {/* Top profile header */}
                       <div className="p-3 flex justify-between items-center">
                         <div className="flex items-center gap-2.5">
@@ -2272,7 +2293,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
                 {activities.slice(0, 6).map((exp, i) => (
                   <div 
-                    key={exp.id || i} 
+                    key={`${exp.id || 'exp'}-${i}`} 
                     className="shrink-0 w-56 bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col snap-start cursor-pointer hover:border-[#C8A25E]/30 transition-all"
                     onClick={() => showToast(`Opening ${exp.title} details...`, 'info')}
                   >
@@ -2318,7 +2339,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     : 8;
 
                   return (
-                    <div key={ev.id || idx} className="bg-[#17191C] border border-white/5 p-3.5 rounded-2xl flex items-center justify-between gap-4">
+                    <div key={`${ev.id || 'ev'}-${idx}`} className="bg-[#17191C] border border-white/5 p-3.5 rounded-2xl flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 text-left">
                         <div className="shrink-0 w-11 h-11 rounded-xl bg-[#1E2124] flex flex-col items-center justify-center border border-white/10">
                           <span className="text-[#C8A25E] text-[8px] font-black leading-none uppercase">{monthStr}</span>
@@ -3084,7 +3105,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           <div className="p-4 space-y-4">
             <h2 className="text-xl font-extrabold text-white">My Messages</h2>
             <div className="bg-[#17191C] border border-white/5 rounded-2xl p-2 min-h-[400px]">
-              <MessagesTab onOpenAuth={setAuthMode} initialCompanionId={activeChatCompanionId} />
+              <MessagesTab 
+                onOpenAuth={setAuthMode} 
+                initialCompanionId={activeChatCompanionId} 
+                onBrowseCompanions={handleBrowseCompanions}
+                onBrowseActivities={handleBrowseActivities}
+              />
             </div>
           </div>
         )}
@@ -3094,103 +3120,58 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           <div className="p-4 space-y-6 pb-20 select-none">
             <h2 className="text-xl font-extrabold text-white text-left">Universal Discovery</h2>
             
-            {/* Elegant Search Input */}
-            <div className="relative flex items-center">
-              <Search className="w-4 h-4 text-[#C8A25E] absolute left-3.5" />
-              <input 
-                type="text" 
-                placeholder="Search companions, activities, and events..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-11 pl-10 pr-10 bg-[#1E2124]/60 backdrop-blur-md rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-[#C8A25E] transition-all"
-              />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 text-xs font-bold text-[#8E9299] hover:text-white"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            {/* City Quick Filters */}
-            <div className="space-y-2 text-left">
-              <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] block">Select City</span>
-              <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-                {['All', 'Kathmandu', 'Pokhara', 'Patan', 'Bhaktapur', 'Chitwan'].map((city) => (
+            {/* Compact Search Header with Filters button */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-[#C8A25E] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text" 
+                  placeholder="Search companions, activities, and events..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-11 pl-10 pr-9 bg-[#1E2124]/60 backdrop-blur-md rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-[#C8A25E] transition-all"
+                />
+                {searchQuery && (
                   <button 
-                    key={city}
-                    onClick={() => handleCitySelect(city)}
-                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold shrink-0 transition-all ${selectedCity === city ? 'bg-[#C8A25E] text-[#0F1113]' : 'bg-[#17191C] text-[#8E9299] border border-white/5'}`}
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#8E9299] hover:text-white"
                   >
-                    {city}
+                    ✕
                   </button>
-                ))}
+                )}
               </div>
+
+              <button
+                onClick={() => setIsFilterDrawerOpen(true)}
+                className="h-11 px-3.5 bg-[#1E2124] border border-[#2A2D31] hover:border-[#C8A25E] rounded-xl flex items-center gap-1.5 text-xs font-bold text-white transition-all shrink-0 relative"
+              >
+                <SlidersHorizontal className="w-4 h-4 text-[#C8A25E]" />
+                <span>Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-[#C8A25E] text-[#0F1113] text-[9px] font-extrabold flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Unified Entity Category Selector Tabs */}
-            <div className="space-y-2 text-left">
-              <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] block">Discovery Type</span>
-              <div className="flex gap-1 bg-[#17191C] p-1 rounded-xl border border-white/5">
-                {[
-                  { id: 'all', label: 'All' },
-                  { id: 'companions', label: `Buddies (${filteredCompanions.length})` },
-                  { id: 'activities', label: `Activities (${filteredActivities.length})` },
-                  { id: 'events', label: `Events (${filteredEvents.length})` }
-                ].map(sub => (
-                  <button
-                    key={sub.id}
-                    onClick={() => setDiscoveryTab(sub.id as any)}
-                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${discoveryTab === sub.id ? 'bg-[#C8A25E] text-[#0F1113]' : 'text-[#8E9299] hover:text-white'}`}
-                  >
-                    {sub.label}
-                  </button>
-                ))}
-              </div>
+            <div className="flex gap-1 bg-[#17191C] p-1 rounded-xl border border-white/5">
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'companions', label: `Buddies (${filteredCompanions.length})` },
+                { id: 'activities', label: `Activities (${filteredActivities.length})` },
+                { id: 'events', label: `Events (${filteredEvents.length})` }
+              ].map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setDiscoveryTab(sub.id as any)}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${discoveryTab === sub.id ? 'bg-[#C8A25E] text-[#0F1113]' : 'text-[#8E9299] hover:text-white'}`}
+                >
+                  {sub.label}
+                </button>
+              ))}
             </div>
-
-            {/* Companion Category Chips (only show for all or companions tab) */}
-            {(discoveryTab === 'all' || discoveryTab === 'companions') && (
-              <div className="space-y-2 text-left">
-                <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] block">Interests & Categories</span>
-                <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-                  {['All', 'Hiking', 'Coffee', 'Photography', 'Culture', 'Trekking', 'Food'].map((cat) => (
-                    <button 
-                      key={cat}
-                      onClick={() => { setSelectedCategory(cat); showToast(`Viewing ${cat} buddies`, 'info'); }}
-                      className={`px-3 py-1.5 rounded-full text-[10px] font-bold shrink-0 transition-all ${selectedCategory === cat ? 'bg-[#C8A25E] text-[#0F1113]' : 'bg-[#17191C] text-[#8E9299] border border-white/5'}`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Sort Dropdown for companions */}
-            {(discoveryTab === 'companions') && (
-              <div className="space-y-2 text-left">
-                <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] block">Sort Companions By</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { value: 'recommended', label: 'Recommended' },
-                    { value: 'rating', label: 'Top Rated' },
-                    { value: 'priceAsc', label: 'Price: Low to High' },
-                    { value: 'priceDesc', label: 'Price: High to Low' }
-                  ].map((opt) => (
-                    <button 
-                      key={opt.value}
-                      onClick={() => { setSortBy(opt.value as any); showToast(`Sorting set to ${opt.label}`, 'info'); }}
-                      className={`p-2 rounded-xl text-[10px] font-bold border transition-all text-left truncate ${sortBy === opt.value ? 'bg-[#C8A25E]/10 border-[#C8A25E] text-[#C8A25E]' : 'bg-[#17191C] border-white/5 text-[#8E9299]'}`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Combined Results Container */}
             <div className="space-y-6 pt-2 select-none">
@@ -3490,9 +3471,32 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               <p className="text-white text-base font-semibold drop-shadow">{viewingStory.caption}</p>
               
               <div className="flex gap-1">
-                {stories.map((s) => (
-                  <div key={s.id} className={`h-1 rounded-full flex-1 transition-all ${s.id === viewingStory.id ? 'bg-[#C8A25E] w-6' : 'bg-white/20'}`} />
-                ))}
+                {stories.map((s, idx) => {
+                  const sIdx = stories.findIndex(x => x.id === s.id);
+                  const activeIdx = stories.findIndex(x => x.id === viewingStory.id);
+                  return (
+                    <div key={`${s.id}-${idx}`} className="h-1 rounded-full flex-1 bg-white/20 overflow-hidden relative">
+                      {s.id === viewingStory.id && (
+                        <motion.div 
+                          initial={{ width: '0%' }}
+                          animate={{ width: '100%' }}
+                          transition={{ duration: 5, ease: 'linear' }}
+                          className="absolute inset-y-0 left-0 bg-[#C8A25E]"
+                          onAnimationComplete={() => {
+                            if (activeIdx < stories.length - 1) {
+                              setViewingStory(stories[activeIdx + 1]);
+                            } else {
+                              setViewingStory(null);
+                            }
+                          }}
+                        />
+                      )}
+                      {sIdx < activeIdx && (
+                        <div className="absolute inset-0 bg-[#C8A25E]" />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -3633,6 +3637,195 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           }}
         />
       )}
+
+      {/* ==================== FILTER DRAWER / BOTTOM SHEET ==================== */}
+      <AnimatePresence>
+        {isFilterDrawerOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsFilterDrawerOpen(false)}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 cursor-pointer"
+            />
+
+            {/* Drawer Container */}
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              className="fixed bottom-0 left-0 right-0 max-h-[90vh] md:top-0 md:bottom-0 md:left-auto md:right-0 md:w-[420px] md:max-h-full bg-[#17191C] border-t md:border-t-0 md:border-l border-[#2A2D31] rounded-t-3xl md:rounded-t-none md:rounded-l-3xl shadow-2xl z-50 flex flex-col overflow-hidden"
+            >
+              {/* Drawer Header */}
+              <div className="p-5 border-b border-[#2A2D31]/60 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#C8A25E]/10 border border-[#C8A25E]/20 flex items-center justify-center">
+                    <SlidersHorizontal className="w-4 h-4 text-[#C8A25E]" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Filter & Refine</h3>
+                    <p className="text-[10px] text-[#8E9299]">Tailor local companion matches</p>
+                  </div>
+                  {activeFilterCount > 0 && (
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#C8A25E] text-[#0F1113]">
+                      {activeFilterCount} active
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsFilterDrawerOpen(false)}
+                  className="p-2 text-[#8E9299] hover:text-white rounded-full bg-[#1E2124] hover:bg-[#2A2D31] transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Drawer Body - Scrollable */}
+              <div className="p-5 space-y-6 overflow-y-auto flex-1 divide-y divide-[#2A2D31]/40 text-left">
+                
+                {/* 1. City Filter */}
+                <div className="space-y-3 pt-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#C8A25E] block">Location / City</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['All', 'Kathmandu', 'Pokhara', 'Patan', 'Bhaktapur', 'Chitwan', 'Nagarkot'].map(city => (
+                      <button
+                        key={city}
+                        onClick={() => setSelectedCity(city)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${selectedCity === city ? 'bg-[#C8A25E] text-[#0F1113] border-[#C8A25E] font-bold' : 'bg-[#1E2124] text-[#8E9299] border-[#2A2D31] hover:border-white/20'}`}
+                      >
+                        {city}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Category Filter */}
+                <div className="space-y-3 pt-5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#C8A25E] block">Category / Specialization</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['All', 'Coffee Buddy', 'Travel Companion', 'Language Exchange', 'Food Explorer', 'Museum Guide', 'Hiking Partner', 'Shopping Buddy', 'Study Partner', 'Nightlife', 'Photography Walk'].map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${selectedCategory === cat ? 'bg-[#C8A25E] text-[#0F1113] border-[#C8A25E] font-bold' : 'bg-[#1E2124] text-[#8E9299] border-[#2A2D31] hover:border-white/20'}`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Spoken Language */}
+                <div className="space-y-3 pt-5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#C8A25E] block">Spoken Language</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['All', 'English', 'Nepali', 'Hindi', 'Japanese', 'French'].map(lang => (
+                      <button
+                        key={lang}
+                        onClick={() => setSelectedLanguage(lang)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${selectedLanguage === lang ? 'bg-[#C8A25E] text-[#0F1113] border-[#C8A25E] font-bold' : 'bg-[#1E2124] text-[#8E9299] border-[#2A2D31] hover:border-white/20'}`}
+                      >
+                        {lang}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. Max Hourly Rate */}
+                <div className="space-y-3 pt-5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold uppercase tracking-wider text-[#C8A25E]">Max Hourly Rate</label>
+                    <span className="text-xs font-extrabold text-white">NPR {maxHourlyRate.toLocaleString()}/hr</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={800}
+                    max={3000}
+                    step={100}
+                    value={maxHourlyRate}
+                    onChange={(e) => setMaxHourlyRate(Number(e.target.value))}
+                    className="w-full accent-[#C8A25E] cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-[#8E9299]">
+                    <span>NPR 800/hr</span>
+                    <span>NPR 3,000/hr</span>
+                  </div>
+                </div>
+
+                {/* 5. Minimum Rating */}
+                <div className="space-y-3 pt-5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#C8A25E] block">Minimum Rating</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { label: 'All', value: 0 },
+                      { label: '★ 4.0+', value: 4.0 },
+                      { label: '★ 4.5+', value: 4.5 },
+                      { label: '★ 4.8+', value: 4.8 }
+                    ].map(r => (
+                      <button
+                        key={r.label}
+                        onClick={() => setMinRatingFilter(r.value)}
+                        className={`py-2 rounded-xl text-xs font-semibold border transition-all ${minRatingFilter === r.value ? 'bg-[#C8A25E] text-[#0F1113] border-[#C8A25E] font-bold' : 'bg-[#1E2124] text-[#8E9299] border-[#2A2D31] hover:border-white/20'}`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 6. Sort By */}
+                <div className="space-y-3 pt-5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#C8A25E] block">Sort Matches By</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: 'Recommended', value: 'recommended' },
+                      { label: 'Top Rated', value: 'rating' },
+                      { label: 'Price: Low to High', value: 'priceAsc' },
+                      { label: 'Price: High to Low', value: 'priceDesc' }
+                    ].map(s => (
+                      <button
+                        key={s.value}
+                        onClick={() => setSortBy(s.value as any)}
+                        className={`p-2.5 rounded-xl text-xs font-semibold border text-left transition-all ${sortBy === s.value ? 'bg-[#C8A25E]/10 border-[#C8A25E] text-[#C8A25E] font-bold' : 'bg-[#1E2124] text-[#8E9299] border-[#2A2D31] hover:border-white/20'}`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Drawer Footer Actions */}
+              <div className="p-4 bg-[#1E2124] border-t border-[#2A2D31] flex items-center gap-3 shrink-0">
+                <button
+                  onClick={() => {
+                    setSelectedCity('All');
+                    setSelectedCategory('All');
+                    setSelectedLanguage('All');
+                    setMaxHourlyRate(3000);
+                    setMinRatingFilter(0);
+                    setSortBy('recommended');
+                    showToast('Filters reset', 'info');
+                  }}
+                  className="flex-1 py-3 bg-transparent border border-[#2A2D31] hover:border-white/20 text-white rounded-xl text-xs font-bold transition-all"
+                >
+                  Reset All
+                </button>
+                <button
+                  onClick={() => setIsFilterDrawerOpen(false)}
+                  className="flex-1 py-3 bg-[#C8A25E] hover:bg-[#B69150] text-[#0F1113] rounded-xl text-xs font-extrabold transition-all shadow-md"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
     </div>
   );
