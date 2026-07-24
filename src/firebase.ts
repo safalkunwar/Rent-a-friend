@@ -14,7 +14,7 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || appletConfig.appId || '1:932995524964:web:bae2033ae87165adbb3271',
 };
 
-const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || appletConfig.firestoreDatabaseId || undefined;
+const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || undefined;
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
