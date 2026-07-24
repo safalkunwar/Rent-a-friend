@@ -20,17 +20,20 @@ export class SocialRepository extends BaseRepository {
   // ==================== COMMUNITY POSTS ====================
 
   async getPosts(category?: string, limitCount = 10): Promise<CommunityPost[]> {
-    const whereCond = category ? [{ field: 'category', operator: '==', value: category }] : undefined;
-    return this.executeWithRetry(
+    const posts = await this.executeWithRetry(
       () => firestore.getDocuments<CommunityPost>('community_posts', {
-        where: whereCond as any,
+        where: [{ field: 'status', operator: '==', value: 'published' }],
         orderByField: 'createdAt',
         orderDirection: 'desc',
-        limitCount
+        limitCount: category ? undefined : limitCount
       }),
       OperationType.LIST,
       'community_posts'
     );
+    if (category) {
+      return posts.filter(p => p.category?.toLowerCase() === category.toLowerCase()).slice(0, limitCount);
+    }
+    return posts;
   }
 
   async createPost(post: Omit<CommunityPost, 'id'>): Promise<string> {
@@ -140,13 +143,19 @@ export class SocialRepository extends BaseRepository {
   }
 
   async checkUserLikedPost(userId: string, postId: string): Promise<boolean> {
-    const likeId = `${userId}_${postId}`;
-    const docSnap = await this.executeWithRetry(
-      () => firestore.getDocument<any>(`likes/${likeId}`),
-      OperationType.GET,
-      `likes/${likeId}`
-    );
-    return !!docSnap;
+    if (!userId || !postId) return false;
+    try {
+      const likeId = `${userId}_${postId}`;
+      const docSnap = await this.executeWithRetry(
+        () => firestore.getDocument<any>(`likes/${likeId}`),
+        OperationType.GET,
+        `likes/${likeId}`
+      );
+      return !!docSnap;
+    } catch (err) {
+      console.warn(`[SocialRepository] Error checking liked state for post ${postId}:`, err);
+      return false;
+    }
   }
 
   // ==================== COMMENTS ====================
@@ -350,13 +359,19 @@ export class SocialRepository extends BaseRepository {
   }
 
   async checkUserLikedStory(userId: string, storyId: string): Promise<boolean> {
-    const likeId = `${userId}_${storyId}`;
-    const docSnap = await this.executeWithRetry(
-      () => firestore.getDocument<any>(`story_likes/${likeId}`),
-      OperationType.GET,
-      `story_likes/${likeId}`
-    );
-    return !!docSnap;
+    if (!userId || !storyId) return false;
+    try {
+      const likeId = `${userId}_${storyId}`;
+      const docSnap = await this.executeWithRetry(
+        () => firestore.getDocument<any>(`story_likes/${likeId}`),
+        OperationType.GET,
+        `story_likes/${likeId}`
+      );
+      return !!docSnap;
+    } catch (err) {
+      console.warn(`[SocialRepository] Error checking liked state for story ${storyId}:`, err);
+      return false;
+    }
   }
 }
 
