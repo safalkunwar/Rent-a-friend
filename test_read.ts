@@ -19,7 +19,7 @@ const db = getFirestore(app, appletConfig.firestoreDatabaseId || undefined);
 
 async function testRead() {
   console.log('Testing queries on community_posts...');
-  
+   
   try {
     const q1 = query(collection(db, 'community_posts'), where('status', '==', 'published'));
     const s1 = await getDocs(q1);
