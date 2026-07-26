@@ -3,6 +3,7 @@ import { getFirestore, collection, getDocs, query, where } from 'firebase/firest
 import fs from 'fs';
 import path from 'path';
 
+
 const appletConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf8'));
 
 const firebaseConfig = {
