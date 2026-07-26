@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.12.0 - 2026-07-26
+
+### Fixed
+- **Booking Flow Modal Responsiveness**: Applied `max-h-[90vh] md:max-h-[85vh]` and `flex flex-col` structural attributes to the main `BookingFlowModal` card wrapper. Relocated step content into an `overflow-y-auto flex-1 hide-scrollbar` inner container. This dynamically constrains the modal height within any mobile viewport size, allowing users to scroll the details form and reliably view and tap the "Review Booking" submit button.
+
 ## v2.11.0 - 2026-07-24
 
 ### Fixed

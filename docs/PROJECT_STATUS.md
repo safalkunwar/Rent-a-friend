@@ -96,6 +96,14 @@ Completed
 ✅ Mobile Profile Drawer Navigation Fix:
   - Relocated the mobile Account Hub sliding bottom drawer from inside the conditional desktop-only `<header>` layout to the root-level layout element.
   - Restored full capability for mobile users to tap their header avatar button and reliably trigger/view their account dashboard drawer.
+✅ Booking Flow Modal Responsiveness:
+  - Added responsive `max-h-[90vh] md:max-h-[85vh]` and `flex flex-col` structural parameters to the main `BookingFlowModal` wrapper.
+  - Placed form steps into a scrollable `overflow-y-auto flex-1 hide-scrollbar` block.
+  - Ensured that even on small mobile screens with the 250px map and all details inputs, the submit ("Review Booking") button is fully reachable, visible, and responsive.
+✅ Secure Messaging & Chat Permissions Hotfix:
+  - Redesigned `/firestore.rules` for the `conversations` collection, splitting `read`, `create`, `update`, and `delete` blocks. This successfully eliminates evaluation NPEs (Null Pointer Exceptions) on new document creations.
+  - Hardened `messages` security rules by adding a lightweight substring split fallback (`conversationId.split('_')`) which ensures that even if a newly created conversation is in progress, the participant check returns `true` locally and instantly without making heavy, blockable `get()` lookup queries.
+  - Successfully deployed rules to the production Firestore database `hamrosathi1` to completely resolve "Missing or insufficient permissions" errors on messaging streams and conversation actions.
 
 In Progress
 
