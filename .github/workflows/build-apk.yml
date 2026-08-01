@@ -12,6 +12,9 @@ jobs:
     name: Compile Android APK
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
       - name: Checkout Source Code
@@ -31,7 +34,9 @@ jobs:
           cache: 'npm'
 
       - name: Accept Android SDK Licenses
-        run: yes | sdkmanager --licenses
+        run: |
+          yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --update || true
 
       - name: Install Web Dependencies
         run: npm ci
