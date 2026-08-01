@@ -1,0 +1,101 @@
+# SATHI Scalability Validation & Large-Scale Growth Architecture
+**Document Version:** 1.0.0  
+**Audit Date:** 2026-07-19  
+**Target Concurrency:** 10,000+ Active Concurrent Users  
+**Registered User Capacity:** 100,000+ Users  
+
+---
+
+## 1. Firestore Connection & Listener Capacity
+
+### 1.1 Maximum Concurrent Listeners
+- **Firestore Limits:** Google Cloud Firestore supports up to 1,000,000 concurrent connections per database instance. Our target of 10,000 concurrent listeners represents **1%** of the maximum platform ceiling.
+- **Client Connection Overhead:** Each active React tab initialized with `useFirestoreData` or context-level real-time listeners (e.g., messages, notifications) holds a single, persistent WebSockets connection.
+- **Multiplexing Strategy:** Real-time listeners on chat threads (`chats/{chatId}/messages`) are only established when the user is actively viewing the chat screen. Upon unmounting, the unsubscribe callback is strictly executed to prevent idle connection and memory leaks.
+
+### 1.2 Snapshot Performance & Query Efficiency
+To avoid fetching excessive document sets:
+1. **Cursor Pagination:** For companions list, reviews, and community feed, we enforce cursor-based pagination via Firestore `startAfter` and `limit(N)` queries instead of loading full collections.
+2. **Indexing:** All compound queries (e.g., finding companions filtering by both `status == 'active'` and sorting by `hourlyRate` or `rating`) are mapped with compound indexes in `firestore.indexes.json` to achieve $O(1)$ query complexity.
+
+---
+
+## 2. Firestore Hot Documents & Document Write Rates
+
+### 2.1 The "Hot Document" Limit (The 1 Request/Sec Limit)
+- **Constraint:** Firestore restricts single-document write rates to **1 write per second** under sustained loads.
+- **Risk Profiles identified in SATHI:**
+  - **Companion Profile Rating/Review Counts:** High-frequency reviews of a single celebrity companion.
+  - **Community Post Likes:** Hundreds of users clicking "Like" on a viral community post at the same millisecond.
+  - **System Orchestration Configs:** Global parameters edited simultaneously by multiple admin operations.
+
+### 2.2 Mitigation Strategy
+
+#### A. Distributed Counter Pattern (Sharding)
+For high-traffic metrics like community post likes and companion rating totals:
+- Instead of updating a single global counter (`likesCount` inside `/community_posts/{postId}`), likes are written to a top-level flat collection `/likes/{userId}_{postId}`.
+- Daily or weekly cron jobs (or client-side lazy-evaluation) aggregate these likes, or counters are distributed across 10 distinct shards:
+  - Shard schema: `/community_posts/{postId}/shards/{shardId}` where `shardId` is randomly chosen between `0` and `9`.
+  - Aggregation reads calculate the sum of shards.
+
+#### B. Batching & In-Memory Debouncing
+- When liking/unliking stories in rapid succession, UI actions are debounced locally (250ms) before executing the transaction block `socialRepository.likeStory` in `SocialRepository.ts`.
+
+---
+
+## 3. Potential Bottlenecks & Fan-Out Analysis
+
+### 3.1 Broadcast Fan-Out (Message Delivery)
+- **Problem:** When an experience partner publishes a public event, sending a real-time notification to all 100,000 registered users simultaneously can saturate write limits and trigger client-side read surges.
+- **Mitigation:**
+  - **Topic-Based Messaging:** Leverage Firebase Cloud Messaging (FCM) topics (e.g., `events_kathmandu`) rather than individual database writes per user. This delegates fan-out distribution to Google’s high-throughput notification infrastructure.
+  - **Lazy Notifications:** Users retrieve general announcements via dynamic, paginated queries on a lightweight `/notifications` collection sorted by `createdAt` with a strict limit of 20 items.
+
+### 3.2 Chat & Presence Surges
+- **Problem:** Real-time presence updates (e.g., "Online" indicators blinking on companion lists) can cause constant writes.
+- **Mitigation:**
+  - Standard Firestore is bypassed for rapid typing indicator triggers. SATHI uses lightweight client-side debounce states or Realtime Database (RTDB) presence tracking (which has a lower latency and cheaper write cost model) when scales exceed 10k users.
+
+---
+
+## 4. Cloud Functions Throughput & Concurrency Controls
+
+### 4.1 Cold Starts & CPU Allocation
+- **Concurrency Settings:** Cloud Functions are configured with minimum instances `minInstances: 1` on critical pathways (e.g., payment webhooks) to eliminate cold-start latency.
+- **Memory & CPU:** Intensive operations like image resizing and security auditing are allocated 1GB RAM and 1 vCPU.
+
+### 4.2 Idempotency and Transaction Safety
+- All payment wallet adjustments (`/bookings/{bookingId}/payments`) must enforce strict transactional guarantees using `runTransaction()` inside `functions/src/index.ts` to prevent double-spending or race conditions.
+- **Unique Action Tokens:** Idempotency keys generated by the client prevent duplicate submissions on flaky networks.
+
+---
+
+## 5. Storage, Bandwidth, and CDN Strategy
+
+### 5.1 Asset Optimization & CDN
+- **Bucket Configuration:** Firebase Cloud Storage buckets are mounted with standard Cache-Control headers (`public, max-age=31536000`) for all static resources, companion profile galleries, and story graphics.
+- **Unsplash Referrals:** For pre-loaded photography, SATHI utilizes Unsplash source image optimization parameters (`auto=format&fit=crop&w=800&q=80`) to request tailored resolutions, offloading compute and distribution from SATHI storage bandwidth.
+
+---
+
+## 6. Offline Data Cache & Recovery Architecture
+
+### 6.1 IndexedDB Offline Persistence
+- **State Activation:** Firestore Offline Persistence is activated inside `src/firebase.ts`. When an active traveler goes into a high-altitude dead-zone (e.g., Annapurna Base Camp), all reads are fulfilled from local cache first.
+- **Write Queuing:** Writes performed offline are queued locally and synchronized immediately upon network restoration. Conflict resolution implements a "Last Write Wins" (LWW) policy based on the local system's UTC clock or server-mediated security timestamps.
+
+---
+
+## 7. Cost Projection & Operational Budget Modeling
+
+| Active Users | Monthly Firestore Reads | Monthly Firestore Writes | Bandwidth (Egress) | Estimated Monthly Cost (USD) |
+|---|---|---|---|---|
+| **100** | 120,000 | 18,000 | 5 GB | $0.00 (Fully within Firebase Free Tier) |
+| **1,000** | 1,200,000 | 180,000 | 50 GB | $5.50 |
+| **10,000** | 12,000,000 | 1,800,000 | 500 GB | $58.00 |
+| **50,000** | 60,000,000 | 9,000,000 | 2.5 TB | $292.00 |
+| **100,000** | 120,000,000 | 18,000,000 | 5.0 TB | $585.00 |
+
+### 7.1 Cost Optimization Protocol
+- **Composite Query Filtering:** Keep client-side sorting minimal. Perform complex queries server-side via index-backed searches.
+- **Cache-Control:** Ensure the service worker cache is highly optimized so the initial app bundle (Vite SPA) is loaded locally on subsequent visits.
