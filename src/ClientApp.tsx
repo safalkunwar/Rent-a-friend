@@ -19,12 +19,13 @@ import { DocumentModal } from './components/modals/DocumentModal';
 import { MapPreview } from './components/maps/MapPreview';
 import { Companion, ExperienceStory } from './types';
 import { socialRepository } from './repositories/SocialRepository';
+import { CreateStoryModal } from './components/modals/CreateStoryModal';
 import { 
   MapPin, Star, ShieldCheck, Languages, Search, Play, Clock, 
   Home, Compass, Users, Calendar, MessageSquare, BookOpen, Heart, 
   Wallet, Smile, ArrowRight, CheckCircle, Info, Menu, X, Bell, 
-  ChevronDown, Award, Sparkles, AlertTriangle, Coins, Briefcase, ChevronRight, HelpCircle, UserCircle, SlidersHorizontal,
-  Lock, Settings, LogOut, Sun, Moon
+  ChevronDown, Award, Sparkles, AlertTriangle, Coins, Briefcase, ChevronRight, ChevronLeft, HelpCircle, UserCircle, SlidersHorizontal,
+  Lock, Settings, LogOut, Sun, Moon, Trash2
 } from 'lucide-react';
 import * as motion from 'motion/react-client';
 import { useAppContext } from './context/AppContext';
@@ -32,6 +33,7 @@ import { useToast } from './components/ui/Toast';
 import { useCompanions, useStories, useActivities, useEvents, usePartners, useCommunityPosts } from './hooks/useFirestoreData';
 import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
+import { saveStoredPreferences } from './services/preferences';
 
 interface ClientAppProps {
   initialTab?: 'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings';
@@ -40,7 +42,7 @@ interface ClientAppProps {
 export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { bookings, currentUser, updateBookingStatus, favorites, toggleFavorite, notifications, markNotificationRead, logout } = useAppContext();
+  const { bookings, currentUser, updateBookingStatus, favorites, toggleFavorite, notifications, markNotificationRead, logout, openAuthModal } = useAppContext();
   const { showToast } = useToast();
 
   // Sync state with URL path
@@ -78,6 +80,23 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingStory, setViewingStory] = useState<ExperienceStory | null>(null);
+  const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
+  const [storyLiked, setStoryLiked] = useState<Record<string, boolean>>({});
+  const [storyLikesCount, setStoryLikesCount] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (viewingStory) {
+      setStoryLikesCount(prev => ({
+        ...prev,
+        [viewingStory.id]: viewingStory.likesCount || viewingStory.likes || 0
+      }));
+      if (currentUser) {
+        socialRepository.checkUserLikedStory(currentUser.id, viewingStory.id).then(liked => {
+          setStoryLiked(prev => ({ ...prev, [viewingStory.id]: liked }));
+        });
+      }
+    }
+  }, [viewingStory, currentUser]);
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'guide' | null>(null);
   const [isGuide, setIsGuide] = useState(false);
   const [showGuideSetup, setShowGuideSetup] = useState(true);
@@ -128,6 +147,21 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       previousMobileTabRef.current = nextTab;
       return () => clearTimeout(timer);
     }
+  }, [mobileTab]);
+
+  // Freeze background scrolling when messages tab is active on mobile
+  useEffect(() => {
+    if (mobileTab === 'messages') {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100vh';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    };
   }, [mobileTab]);
   const [discoveryTab, setDiscoveryTab] = useState<'all' | 'companions' | 'activities' | 'events'>('all');
   const [activeChatCompanionId, setActiveChatCompanionId] = useState<string | null>(null);
@@ -711,6 +745,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         </button>
                         <button onClick={() => {
                           const isCurrentlyLight = document.documentElement.classList.toggle('theme-light');
+                          saveStoredPreferences({ theme: isCurrentlyLight ? 'light' : 'dark' });
                           showToast(isCurrentlyLight ? 'SATHI Premium Light Theme Active' : 'SATHI Cosmic Dark Theme Active', 'success');
                           setShowProfileDropdown(false);
                         }} className="w-full text-left px-4 py-2 text-xs text-[#E0E0E0] hover:bg-[#1E2124] hover:text-white flex items-center gap-2.5 transition-colors">
@@ -819,7 +854,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory">
                     {/* Share story card */}
                     <div 
-                      onClick={() => showToast('Moment upload coming soon!', 'info')} 
+                      onClick={() => setShowCreateStoryModal(true)} 
                       className="shrink-0 w-20 flex flex-col items-center gap-2 cursor-pointer group snap-start"
                     >
                       <div className="w-16 h-16 rounded-full p-[2.5px] bg-[#1E2124] border border-[#2A2D31]/60 relative hover:scale-105 transition-all">
@@ -1015,71 +1050,72 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                                 </div>
 
                                 <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory pt-1">
-                                  {catsList.map(comp => {
-                                    const isFav = favorites && favorites.includes(comp.id);
-                                    return (
-                                      <div 
-                                        key={comp.id}
-                                        onClick={() => handleViewCompanion(comp)}
-                                        className="shrink-0 w-72 sm:w-80 aspect-[3/4.2] group relative rounded-[32px] overflow-hidden border border-[#2A2D31]/40 bg-[#17191C] hover:border-[#C8A25E]/40 hover:shadow-2xl hover:shadow-[#C8A25E]/5 transition-all duration-500 cursor-pointer snap-start focus-visible:ring-2 focus-visible:ring-[#C8A25E]"
-                                      >
-                                        {/* Card Image */}
-                                        <SafeImage 
-                                          src={comp.imageUrl} 
-                                          alt={comp.name} 
-                                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" 
-                                          fallbackType="thumbnail"
-                                          loading="lazy"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-black/10 group-hover:via-black/35 transition-all duration-300 z-10" />
-                                        
-                                        {/* Top left category tag & Top right save button */}
-                                        <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-20">
-                                          <span className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-bold text-[#C8A25E] border border-white/10 uppercase tracking-widest">
-                                            {comp.interests[0] || 'Local Companion'}
-                                          </span>
-                                          <button 
-                                            onClick={(e) => { e.stopPropagation(); toggleFavorite(comp.id); }}
-                                            className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center border border-white/10 text-white hover:text-red-500 hover:scale-110 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E]"
-                                            aria-label="Save companion"
-                                          >
-                                            <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
-                                          </button>
-                                        </div>
+                                  {catsList.map((comp, compIdx) => {
+                                     const isFav = favorites && favorites.includes(comp.id);
+                                     return (
+                                       <div 
+                                         key={`${cat}-${comp.id}-${compIdx}`}
+                                         onClick={() => handleViewCompanion(comp)}
+                                         className="shrink-0 w-72 sm:w-80 group relative flex flex-col rounded-[24px] overflow-hidden border border-border-token-light bg-card hover:border-primary-action/40 hover:shadow-xl transition-all duration-300 cursor-pointer snap-start focus-visible:ring-2 focus-visible:ring-primary-action"
+                                       >
+                                         {/* Card Image Container */}
+                                         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-[24px]">
+                                           <SafeImage 
+                                             src={comp.imageUrl} 
+                                             alt={comp.name} 
+                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                             fallbackType="thumbnail" 
+                                             loading="lazy" 
+                                           />
+                                           
+                                           {/* Top left category tag & Top right save button */}
+                                           <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10">
+                                             <span className="bg-background/80 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-bold text-primary-action border border-border-token-light uppercase tracking-widest">
+                                               {comp.interests[0] || 'Local Companion'}
+                                             </span>
+                                             <button 
+                                               onClick={(e) => { e.stopPropagation(); toggleFavorite(comp.id); }}
+                                               className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-md flex items-center justify-center border border-border-token-light text-text-primary hover:text-red-500 hover:scale-110 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-primary-action"
+                                               aria-label="Save companion"
+                                             >
+                                               <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
+                                             </button>
+                                           </div>
+                                         </div>
 
-                                        {/* Bottom absolute details overlay */}
-                                        <div className="absolute bottom-5 left-5 right-5 z-20 space-y-3 text-left">
-                                          <div className="space-y-1">
-                                            <div className="flex items-center gap-1.5 text-white font-black text-xl drop-shadow-md">
-                                              {comp.name}, {comp.age}
-                                              {comp.isVerified && <ShieldCheck className="w-5 h-5 text-[#C8A25E]" />}
-                                            </div>
-                                            <p className="text-[#8E9299] text-xs flex items-center gap-1 font-medium">
-                                              <MapPin className="w-3.5 h-3.5 text-[#C8A25E]" /> {comp.location}, Nepal
-                                            </p>
-                                          </div>
+                                         {/* Bottom Details (Clean background, NO dark overlays!) */}
+                                         <div className="p-4 flex-1 flex flex-col justify-between space-y-3 bg-card rounded-b-[24px]">
+                                           <div className="space-y-1">
+                                             <div className="flex items-center gap-1.5 text-text-primary font-bold text-base">
+                                               {comp.name}, {comp.age}
+                                               {comp.isVerified && <ShieldCheck className="w-4 h-4 text-verified shrink-0" />}
+                                             </div>
+                                             <p className="text-text-secondary text-xs flex items-center gap-1">
+                                               <MapPin className="w-3.5 h-3.5 text-text-secondary" /> {comp.location}, Nepal
+                                             </p>
+                                           </div>
 
-                                          <div className="flex items-center justify-between pt-1 border-t border-white/10">
-                                            <div className="space-y-0.5">
-                                              <div className="flex items-center gap-1 text-[#C8A25E] text-xs font-bold">
-                                                <Star className="w-3.5 h-3.5 fill-current" /> {comp.rating}
-                                                <span className="text-white/50 font-light text-[10px]">({comp.reviewsCount || 120})</span>
-                                              </div>
-                                              <span className="text-[10px] text-white/60 block">From <span className="font-bold text-[#C8A25E]">NPR {comp.hourlyRate}</span>/hr</span>
-                                            </div>
+                                           <div className="flex items-center justify-between pt-2 border-t border-border-token-light">
+                                             <div className="space-y-0.5">
+                                               <div className="flex items-center gap-1 text-xs font-bold text-rating">
+                                                 <Star className="w-3.5 h-3.5 fill-current text-rating" /> {comp.rating}
+                                                 <span className="text-text-secondary font-normal text-[10px]">({comp.reviewsCount || 120})</span>
+                                               </div>
+                                               <span className="text-[10px] text-text-secondary block">From <span className="font-bold text-text-primary">NPR {comp.hourlyRate}</span>/hr</span>
+                                             </div>
 
-                                            <button 
-                                              onClick={(e) => { e.stopPropagation(); handleViewCompanion(comp); }}
-                                              className="px-4 py-2 bg-[#C8A25E] hover:bg-[#B69150] text-[#0F1113] rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md"
-                                            >
-                                              Book
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
+                                             <button 
+                                               onClick={(e) => { e.stopPropagation(); handleViewCompanion(comp); }}
+                                               className="px-4 py-1.5 bg-primary-action hover:bg-primary-action-hover text-background rounded-xl text-xs font-bold transition-all active:scale-95 shadow-xs"
+                                             >
+                                               Book
+                                             </button>
+                                           </div>
+                                         </div>
+                                       </div>
+                                     );
                                   })}
-                                </div>
+                               </div>
                               </div>
                             );
                           })}
@@ -1089,62 +1125,63 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   ) : (
                     /* High-fidelity Companion grid */
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {filteredCompanions.map((comp) => {
+                      {filteredCompanions.map((comp, compIdx) => {
                         const isFav = favorites && favorites.includes(comp.id);
                         return (
                           <div 
-                            key={comp.id}
+                            key={`${comp.id || 'comp'}-${compIdx}`}
                             onClick={() => handleViewCompanion(comp)}
-                            className="group relative aspect-[3/4.2] rounded-[32px] overflow-hidden border border-[#2A2D31]/40 bg-[#17191C] hover:border-[#C8A25E]/40 hover:shadow-2xl hover:shadow-[#C8A25E]/5 transition-all duration-500 cursor-pointer snap-start focus-visible:ring-2 focus-visible:ring-[#C8A25E]"
+                            className="group relative flex flex-col rounded-[24px] overflow-hidden border border-border-token-light bg-card hover:border-primary-action/40 hover:shadow-xl transition-all duration-300 cursor-pointer snap-start focus-visible:ring-2 focus-visible:ring-primary-action"
                           >
-                            {/* Card Image */}
-                            <SafeImage 
-                              src={comp.imageUrl} 
-                              alt={comp.name} 
-                              className="absolute inset-0 w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" 
-                              fallbackType="thumbnail"
-                              loading="lazy"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-black/10 group-hover:via-black/35 transition-all duration-300 z-10" />
-                            
-                            {/* Top left category tag & Top right save button */}
-                            <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-20">
-                              <span className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-bold text-[#C8A25E] border border-white/10 uppercase tracking-widest">
-                                {comp.interests[0] || 'Local Companion'}
-                              </span>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); toggleFavorite(comp.id); }}
-                                className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center border border-white/10 text-white hover:text-red-500 hover:scale-110 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-[#C8A25E]"
-                                aria-label="Save companion"
-                              >
-                                <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
-                              </button>
+                            {/* Card Image Container */}
+                            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-[24px]">
+                              <SafeImage 
+                                src={comp.imageUrl} 
+                                alt={comp.name} 
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                fallbackType="thumbnail"
+                                loading="lazy"
+                              />
+                              
+                              {/* Top left category tag & Top right save button */}
+                              <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10">
+                                <span className="bg-background/80 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-bold text-primary-action border border-border-token-light uppercase tracking-widest">
+                                  {comp.interests[0] || 'Local Companion'}
+                                </span>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); toggleFavorite(comp.id); }}
+                                  className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-md flex items-center justify-center border border-border-token-light text-text-primary hover:text-red-500 hover:scale-110 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-primary-action"
+                                  aria-label="Save companion"
+                                >
+                                  <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
+                                </button>
+                              </div>
                             </div>
 
-                            {/* Bottom absolute details overlay */}
-                            <div className="absolute bottom-5 left-5 right-5 z-20 space-y-3 text-left">
+                            {/* Bottom Details (Clean background, NO dark overlays!) */}
+                            <div className="p-4 flex-1 flex flex-col justify-between space-y-3 bg-card rounded-b-[24px]">
                               <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-white font-black text-xl drop-shadow-md">
+                                <div className="flex items-center gap-1.5 text-text-primary font-bold text-base">
                                   {comp.name}, {comp.age}
-                                  {comp.isVerified && <ShieldCheck className="w-5 h-5 text-[#C8A25E]" />}
+                                  {comp.isVerified && <ShieldCheck className="w-4 h-4 text-verified shrink-0" />}
                                 </div>
-                                <p className="text-[#8E9299] text-xs flex items-center gap-1 font-medium">
-                                  <MapPin className="w-3.5 h-3.5 text-[#C8A25E]" /> {comp.location}, Nepal
+                                <p className="text-text-secondary text-xs flex items-center gap-1">
+                                  <MapPin className="w-3.5 h-3.5 text-text-secondary" /> {comp.location}, Nepal
                                 </p>
                               </div>
 
-                              <div className="flex items-center justify-between pt-1 border-t border-white/10">
+                              <div className="flex items-center justify-between pt-2 border-t border-border-token-light">
                                 <div className="space-y-0.5">
-                                  <div className="flex items-center gap-1 text-[#C8A25E] text-xs font-bold">
-                                    <Star className="w-3.5 h-3.5 fill-current" /> {comp.rating}
-                                    <span className="text-white/50 font-light text-[10px]">({comp.reviewsCount || 120})</span>
+                                  <div className="flex items-center gap-1 text-xs font-bold text-rating">
+                                    <Star className="w-3.5 h-3.5 fill-current text-rating" /> {comp.rating}
+                                    <span className="text-text-secondary font-normal text-[10px]">({comp.reviewsCount || 120})</span>
                                   </div>
-                                  <span className="text-[10px] text-white/60 block">From <span className="font-bold text-[#C8A25E]">NPR {comp.hourlyRate}</span>/hr</span>
+                                  <span className="text-[10px] text-text-secondary block">From <span className="font-bold text-text-primary">NPR {comp.hourlyRate}</span>/hr</span>
                                 </div>
 
                                 <button 
                                   onClick={(e) => { e.stopPropagation(); handleViewCompanion(comp); }}
-                                  className="px-4 py-2 bg-[#C8A25E] hover:bg-[#B69150] text-[#0F1113] rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md"
+                                  className="px-4 py-1.5 bg-primary-action hover:bg-primary-action-hover text-background rounded-xl text-xs font-bold transition-all active:scale-95 shadow-xs"
                                 >
                                   Book
                                 </button>
@@ -1279,9 +1316,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         const tag = tags[index % tags.length];
                         return (
                           <div 
-                            key={act.id} 
+                            key={`${act.id || 'act'}-${index}`} 
                             onClick={() => { setSelectedCategory((act as any).category || 'All'); showToast(`Filtered by ${act.title}`, 'success'); }} 
-                            className="group relative aspect-[4/3] rounded-[32px] overflow-hidden border border-[#2A2D31]/40 bg-[#17191C] hover:border-[#C8A25E]/40 hover:shadow-2xl hover:shadow-[#C8A25E]/5 transition-all duration-500 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#C8A25E]"
+                            className="group relative aspect-[4/3] rounded-[32px] overflow-hidden border border-border-token-light bg-card hover:border-primary-action/40 hover:shadow-2xl transition-all duration-500 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary-action"
                           >
                             <img 
                               src={act.imageUrl || act.image} 
@@ -1289,23 +1326,23 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                               className="absolute inset-0 w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" 
                               loading="lazy" 
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent z-10" />
+                            <div className="absolute inset-0 bg-overlay-gradient z-10" />
                             
                             {/* Top tag */}
-                            <span className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[8px] font-black tracking-widest text-[#C8A25E] border border-white/10 uppercase z-20">
+                            <span className="absolute top-4 left-4 bg-overlay-tag-bg backdrop-blur-md px-2.5 py-1 rounded-full text-[8px] font-black tracking-widest text-primary-action border border-overlay-tag-border uppercase z-20">
                               {tag}
                             </span>
 
                             {/* Overlaid Bottom Details */}
                             <div className="absolute bottom-5 left-5 right-5 z-20 space-y-2 text-left">
-                              <h4 className="text-lg font-extrabold text-white leading-tight group-hover:text-[#C8A25E] transition-colors drop-shadow-md">
+                              <h4 className="text-lg font-extrabold text-overlay-text-primary leading-tight group-hover:text-primary-action transition-colors drop-shadow-md">
                                 {act.title}
                               </h4>
-                              <div className="flex items-center justify-between pt-1.5 border-t border-white/10 text-[10px] text-white/70">
+                              <div className="flex items-center justify-between pt-1.5 border-t border-overlay-tag-border text-[10px] text-overlay-text-secondary">
                                 <span className="flex items-center gap-1">
-                                  <Clock className="w-3.5 h-3.5 text-[#C8A25E]" /> {act.duration}
+                                  <Clock className="w-3.5 h-3.5 text-primary-action" /> {act.duration}
                                 </span>
-                                <span className="font-bold text-[#C8A25E]">
+                                <span className="font-bold text-primary-action">
                                   Avg. NPR {act.avgPrice}
                                 </span>
                               </div>
@@ -1511,11 +1548,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 </h2>
                 {bookings.filter(b => b.userId === currentUser?.id).length > 0 ? (
                   <div className="grid gap-4">
-                    {bookings.filter(b => b.userId === currentUser?.id).map(booking => {
+                    {bookings.filter(b => b.userId === currentUser?.id).map((booking, idx) => {
                       const companion = companions.find(c => c.id === booking.companionId);
                       const isCancellable = booking.status === 'pending' || booking.status === 'confirmed';
                       return (
-                        <div key={booking.id} className="bg-[#17191C] border border-[#2A2D31]/40 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div key={`${booking.id || 'booking'}-${idx}`} className="bg-[#17191C] border border-[#2A2D31]/40 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div>
                             <h3 className="font-bold text-white mb-1">Booking with {companion?.name || 'Companion'}</h3>
                             <p className="text-xs text-[#8E9299]">Scheduled: {booking.date} at {booking.time}</p>
@@ -1615,12 +1652,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <div className="h-16 bg-[#17191C] rounded-xl"></div>
                     </div>
                   ) : (
-                    events.slice(0, 2).map((event) => {
+                    events.slice(0, 2).map((event, idx) => {
                       const dateObj = new Date(event.date);
                       const month = dateObj.toLocaleString('en-US', { month: 'short' });
                       const day = dateObj.getDate();
                       return (
-                        <div key={event.id} className="bg-[#17191C] border border-[#2A2D31]/40 p-4 rounded-2xl flex gap-3.5 hover:border-[#C8A25E]/40 transition-colors text-left relative group">
+                        <div key={`${event.id || 'evt'}-${idx}`} className="bg-[#17191C] border border-[#2A2D31]/40 p-4 rounded-2xl flex gap-3.5 hover:border-[#C8A25E]/40 transition-colors text-left relative group">
                           <div className="shrink-0 w-12 h-12 rounded-xl bg-[#1E2124] border border-[#2A2D31]/60 flex flex-col items-center justify-center">
                             <span className="text-[#C8A25E] text-[9px] font-extrabold uppercase leading-none">{month}</span>
                             <span className="text-white font-black text-sm mt-0.5 leading-none">{day}</span>
@@ -1654,21 +1691,23 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               {/* Security trust panel & Social impact tracker */}
               <div className="space-y-6">
                 {/* Trust panel */}
-                <div className="bg-[#17191C]/80 border border-[#2A2D31]/40 rounded-2xl p-4 text-left space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#8E9299]">Why Choose SATHI?</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-surface border border-border-token-light rounded-3xl p-6 text-left space-y-5 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div className="flex items-center justify-between pb-3 border-b border-border-token-light">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary">Why Choose SATHI?</h4>
+                    <span className="text-[10px] text-primary-action font-semibold bg-primary-action/10 px-3 py-1 rounded-full">✔ Secure Platform</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-1">
                     {[
-                      { title: "KYC ID Verification", desc: "All companion identities strictly checked" },
-                      { title: "Escrow Secure Payments", desc: "Funds held safely in NPR currency" },
-                      { title: "Emergency Support Desk", desc: "SOS location checkins and helpline" },
-                      { title: "No Matching Fees", desc: "Explore companion profiles entirely free" }
+                      { title: "✔ KYC Verification", desc: "All companion identities strictly checked & verified." },
+                      { title: "✔ Secure Escrow", desc: "Funds held safely in secure escrow in NPR currency." },
+                      { title: "✔ SOS Support", desc: "24/7 SOS location check-ins and helpline backup." },
+                      { title: "✔ Free Discovery", desc: "Explore peer profiles and build connections entirely free." }
                     ].map((item, idx) => (
-                      <div key={idx} className="flex gap-2 items-start text-xs">
-                        <CheckCircle className="w-3.5 h-3.5 text-[#C8A25E] shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-bold text-white block text-[11px] leading-tight">{item.title}</span>
-                          <span className="text-[9px] text-[#8E9299] block mt-0.5 font-light">{item.desc}</span>
-                        </div>
+                      <div key={idx} className="space-y-1 text-xs group">
+                        <span className="font-bold text-text-primary block text-sm tracking-tight leading-normal">
+                          {item.title}
+                        </span>
+                        <span className="text-xs text-text-secondary block font-normal leading-relaxed">{item.desc}</span>
                       </div>
                     ))}
                   </div>
@@ -1715,12 +1754,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     <div className="h-16 bg-[#17191C] rounded-xl"></div>
                   </div>
                 ) : (
-                  events.slice(0, 3).map((event) => {
+                  events.slice(0, 3).map((event, idx) => {
                     const dateObj = new Date(event.date);
                     const month = dateObj.toLocaleString('en-US', { month: 'short' });
                     const day = dateObj.getDate();
                     return (
-                      <div key={event.id} className="bg-[#17191C] border border-[#2A2D31]/40 p-4 rounded-2xl flex gap-3.5 hover:border-[#C8A25E]/40 transition-colors text-left relative group">
+                      <div key={`${event.id || 'evt'}-${idx}`} className="bg-[#17191C] border border-[#2A2D31]/40 p-4 rounded-2xl flex gap-3.5 hover:border-[#C8A25E]/40 transition-colors text-left relative group">
                         {/* Event Date badge */}
                         <div className="shrink-0 w-12 h-12 rounded-xl bg-[#1E2124] border border-[#2A2D31]/60 flex flex-col items-center justify-center">
                           <span className="text-[#C8A25E] text-[9px] font-extrabold uppercase leading-none">{month}</span>
@@ -1770,22 +1809,23 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             </div>
 
             {/* 3. WHY CHOOSE SATHI FEATURE PANEL */}
-            <div className="bg-[#17191C]/80 border border-[#2A2D31]/40 rounded-2xl p-4 text-left space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#8E9299]">Why Choose SATHI?</h4>
-              
-              <div className="space-y-2.5">
+            <div className="bg-surface border border-border-token-light rounded-3xl p-5 text-left space-y-4 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex items-center justify-between pb-2 border-b border-border-token-light">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary">Why Choose SATHI?</h4>
+                <span className="text-[9px] text-primary-action font-semibold bg-primary-action/10 px-2.5 py-0.5 rounded-full">✔ Secure</span>
+              </div>
+              <div className="space-y-4">
                 {[
-                  { title: "KYC ID Verification", desc: "All companion identities strictly checked" },
-                  { title: "Escrow Secure Payments", desc: "Funds held safely in NPR currency" },
-                  { title: "Emergency Support Desk", desc: "SOS location checkins and helpline" },
-                  { title: "No Matching Fees", desc: "Explore companion profiles entirely free" }
+                  { title: "✔ KYC Verification", desc: "All companion identities checked & verified." },
+                  { title: "✔ Secure Escrow", desc: "Funds held safely in NPR currency." },
+                  { title: "✔ SOS Support", desc: "SOS check-ins and active helpline support." },
+                  { title: "✔ Free Discovery", desc: "Explore peer profiles and connect free." }
                 ].map((item, idx) => (
-                  <div key={idx} className="flex gap-2 items-start text-xs">
-                    <CheckCircle className="w-3.5 h-3.5 text-[#C8A25E] shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-white block text-[11px] leading-tight">{item.title}</span>
-                      <span className="text-[9px] text-[#8E9299] block mt-0.5 font-light">{item.desc}</span>
-                    </div>
+                  <div key={idx} className="space-y-1 text-xs group">
+                    <span className="font-bold text-text-primary block text-sm tracking-tight leading-normal">
+                      {item.title}
+                    </span>
+                    <span className="text-xs text-text-secondary block font-normal leading-relaxed">{item.desc}</span>
                   </div>
                 ))}
               </div>
@@ -1828,33 +1868,88 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       {/* ==================== MOBILE VIEWPORT (lg:hidden) ==================== */}
       <div className="lg:hidden flex flex-col flex-1 min-h-screen relative bg-[#0F1113] pb-24 text-left">
         
-        {/* Render Mobile Tab Home */}
-        {mobileTab === 'home' && (
-          <div className="space-y-6">
-            {/* Header with Search Bar */}
-            <div className="flex items-center justify-between gap-3 p-4 bg-[#0F1113] border-b border-white/5 h-[62px]">
-              <div className="flex items-center gap-1.5 shrink-0">
-                <div className="w-8 h-8 rounded-lg bg-[#C8A25E] flex items-center justify-center font-bold text-[#0F1113] text-base">S</div>
-                <span className="text-lg font-black tracking-tight text-white hidden sm:inline">SATHI</span>
-              </div>
-              
-              {/* Fully rounded Glassmorphism Search Bar */}
-              <div className="flex-1 relative flex items-center">
-                <Search className="w-4 h-4 text-[#C8A25E] absolute left-3" />
-                <input 
-                  type="text" 
-                  placeholder="Where are you going?" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-10 pl-9 pr-9 bg-[#1E2124]/60 backdrop-blur-md rounded-full border border-white/10 text-xs text-white focus:outline-none focus:border-[#C8A25E] transition-all"
-                />
-                <button 
-                  onClick={() => showToast('Search filters coming soon!', 'info')}
-                  className="absolute right-3 text-[#8E9299] hover:text-[#C8A25E] transition-colors"
-                >
-                  <SlidersHorizontal className="w-4 h-4" />
-                </button>
-              </div>
+        {/* Render Mobile Active Tab Overrides */}
+        {activeTab === 'dashboard' ? (
+          <div className="p-4 space-y-6 pb-20">
+            <div className="flex items-center justify-between p-3 bg-[#0F1113] border-b border-white/5 sticky top-0 z-20 backdrop-blur-md">
+              <button onClick={() => { setActiveTab('explore'); setMobileTab('home'); navigate('/'); }} className="flex items-center gap-1.5 text-xs font-bold text-[#C8A25E]">
+                <ChevronLeft className="w-4 h-4" /> Home
+              </button>
+              <span className="text-xs font-black text-white uppercase tracking-wider">My Dashboard</span>
+              <div className="w-12" />
+            </div>
+            <DashboardTab />
+          </div>
+        ) : activeTab === 'partner' ? (
+          <div className="p-4 space-y-6 pb-20">
+            <div className="flex items-center justify-between p-3 bg-[#0F1113] border-b border-white/5 sticky top-0 z-20 backdrop-blur-md">
+              <button onClick={() => { setActiveTab('explore'); setMobileTab('home'); navigate('/'); }} className="flex items-center gap-1.5 text-xs font-bold text-[#C8A25E]">
+                <ChevronLeft className="w-4 h-4" /> Home
+              </button>
+              <span className="text-xs font-black text-white uppercase tracking-wider">Companion Console</span>
+              <div className="w-12" />
+            </div>
+            <PartnerDashboard />
+          </div>
+        ) : activeTab === 'settings' ? (
+          <div className="p-4 space-y-6 pb-20">
+            <div className="flex items-center justify-between p-3 bg-[#0F1113] border-b border-white/5 sticky top-0 z-20 backdrop-blur-md">
+              <button onClick={() => { setActiveTab('explore'); setMobileTab('home'); navigate('/'); }} className="flex items-center gap-1.5 text-xs font-bold text-[#C8A25E]">
+                <ChevronLeft className="w-4 h-4" /> Home
+              </button>
+              <span className="text-xs font-black text-white uppercase tracking-wider">Settings</span>
+              <div className="w-12" />
+            </div>
+            <SettingsTab />
+          </div>
+        ) : activeTab === 'about' ? (
+          <div className="p-4 space-y-6 pb-20 text-left">
+            <div className="flex items-center justify-between p-3 bg-[#0F1113] border-b border-white/5 sticky top-0 z-20 backdrop-blur-md mb-2">
+              <button onClick={() => { setActiveTab('explore'); setMobileTab('home'); navigate('/'); }} className="flex items-center gap-1.5 text-xs font-bold text-[#C8A25E]">
+                <ChevronLeft className="w-4 h-4" /> Home
+              </button>
+              <span className="text-xs font-black text-white uppercase tracking-wider">About SATHI</span>
+              <div className="w-12" />
+            </div>
+            <h2 className="text-2xl font-light text-white mb-4 border-b border-[#2A2D31] pb-3">About <span className="font-bold">SATHI<span className="text-[#C8A25E]">.</span></span></h2>
+            <div className="bg-[#17191C] border border-[#2A2D31] p-6 rounded-3xl space-y-4 text-[#8E9299] leading-relaxed">
+              <p className="text-base text-white">
+                SATHI is Nepal's elite social marketplace connecting travelers with KYC-verified, trusted local guides for non-dating cultural exchange, outdoor hiking, and Lake Pokhara adventure.
+              </p>
+              <p className="font-light text-xs">
+                We ensure transparent hourly billing in NPR, zero hidden commission fees, complete safety backup checks, and localized experiences that make you feel at home in our glorious mountains.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Render Mobile Tab Home */}
+            {mobileTab === 'home' && (
+              <div className="space-y-6">
+                {/* Header with Search Bar */}
+                <div className="flex items-center justify-between gap-3 p-4 bg-[#0F1113] border-b border-white/5 h-[62px]">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-[#C8A25E] flex items-center justify-center font-bold text-[#0F1113] text-base">S</div>
+                    <span className="text-lg font-black tracking-tight text-white hidden sm:inline">SATHI</span>
+                  </div>
+                  
+                  {/* Fully rounded Glassmorphism Search Bar */}
+                  <div className="flex-1 relative flex items-center">
+                    <Search className="w-4 h-4 text-[#C8A25E] absolute left-3" />
+                    <input 
+                      type="text" 
+                      placeholder="Where are you going?" 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full h-10 pl-9 pr-9 bg-[#1E2124]/60 backdrop-blur-md rounded-full border border-white/10 text-xs text-white focus:outline-none focus:border-[#C8A25E] transition-all"
+                    />
+                    <button 
+                      onClick={() => setIsFilterDrawerOpen(true)}
+                      className="absolute right-3 text-[#8E9299] hover:text-[#C8A25E] transition-colors"
+                    >
+                      <SlidersHorizontal className="w-4 h-4" />
+                    </button>
+                  </div>
 
               <div className="flex items-center gap-2 shrink-0">
                 {/* User profile with golden border */}
@@ -1872,7 +1967,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
                 {/* Your Story */}
                 <div 
-                  onClick={() => showToast('Uploading companion story...', 'info')} 
+                  onClick={() => setShowCreateStoryModal(true)} 
                   className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start"
                 >
                   <div className="relative w-[68px] h-[68px] rounded-full border-2 border-dashed border-[#C8A25E]/60 flex items-center justify-center bg-[#17191C]">
@@ -1992,11 +2087,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         </div>
                         
                         <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
-                          {catsList.map((comp) => {
+                          {catsList.map((comp, compIdx) => {
                             const isFav = favorites && favorites.includes(comp.id);
                             return (
                               <div 
-                                key={comp.id} 
+                                key={`${cat}-${comp.id}-${compIdx}`} 
                                 onClick={() => handleViewCompanion(comp)}
                                 className="shrink-0 w-44 bg-[#17191C] rounded-[24px] border border-white/5 overflow-hidden shadow-xl flex flex-col snap-start cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-200 text-left"
                               >
@@ -2055,68 +2150,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
             {/* Community Feed */}
             <div className="px-4 py-1 space-y-4">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center mb-2">
                 <h3 className="text-xs font-black uppercase tracking-wider text-[#8E9299]">Community Feed</h3>
-                <span className="text-xs font-bold text-[#C8A25E] cursor-pointer" onClick={() => showToast('All community feeds synchronized!', 'success')}>See all</span>
               </div>
-              
-              <div className="space-y-4">
-                {fetchedStories.map((post, idx) => {
-                  const isLiked = momentLiked[post.id] || false;
-                  const currentLikesCount = post.likesCount || post.likes || 0;
-                  
-                  return (
-                    <div key={`${post.id || 'st'}-${idx}`} className="bg-[#17191C] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col text-left">
-                      {/* Top profile header */}
-                      <div className="p-3 flex justify-between items-center">
-                        <div className="flex items-center gap-2.5">
-                          <SafeImage src={post.userAvatar} className="w-8 h-8 rounded-full object-cover border border-[#C8A25E]" alt={post.userName} fallbackType="avatar" textForInitials={post.userName} />
-                          <div>
-                            <span className="text-xs font-bold text-white block leading-tight">{post.userName}</span>
-                            <span className="text-[9px] text-[#8E9299] flex items-center gap-0.5">
-                              <MapPin className="w-2.5 h-2.5 text-[#C8A25E]" /> with companion {post.companionName}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="text-[10px] bg-[#C8A25E]/10 text-[#C8A25E] font-extrabold px-2 py-0.5 rounded-full border border-[#C8A25E]/20">
-                          🌟 SATHI Co-Experience
-                        </span>
-                      </div>
-                      
-                      {/* Large Portrait Image */}
-                      <div className="relative aspect-[4/4.5] w-full bg-[#1E2124]">
-                        <SafeImage src={post.imageUrl} className="w-full h-full object-cover" alt="Adventure moment" fallbackType="thumbnail" />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent p-4 flex flex-col justify-end">
-                          <p className="text-xs text-white/95 leading-relaxed font-medium drop-shadow">{post.caption}</p>
-                        </div>
-                      </div>
-                      
-                      {/* Bottom action panel */}
-                      <div className="p-3 flex justify-between items-center border-t border-white/5">
-                        <div className="flex items-center gap-4">
-                          <button 
-                            onClick={() => handleToggleLikeMoment(post.id)}
-                            className="flex items-center gap-1.5 text-white active:scale-90 transition-transform"
-                          >
-                            <Heart className={`w-4 h-4 ${isLiked ? 'text-red-500 fill-current' : 'text-white/80 hover:text-red-500'}`} />
-                            {currentLikesCount > 0 && <span className="text-[11px] font-bold">{currentLikesCount}</span>}
-                          </button>
-                          <button 
-                            onClick={() => showToast('Comments are synchronized in peer-to-peer chat!', 'info')}
-                            className="flex items-center gap-1.5 text-white/80 hover:text-[#C8A25E] transition-colors"
-                          >
-                            <MessageSquare className="w-4 h-4" />
-                            {(post.comments || 0) > 0 && (
-                              <span className="text-[11px] font-bold">{post.comments}</span>
-                            )}
-                          </button>
-                        </div>
-                        <span className="text-[9px] text-[#5A5E66] font-bold">{post.timeAgo || '2h ago'}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <CommunityFeed />
             </div>
 
             {/* Activities Section */}
@@ -2762,10 +2799,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] px-1">My Bookings</h4>
                   {bookings.filter(b => b.userId === currentUser.id).length > 0 ? (
                     <div className="space-y-3">
-                      {bookings.filter(b => b.userId === currentUser.id).map(booking => {
+                      {bookings.filter(b => b.userId === currentUser.id).map((booking, idx) => {
                         const companion = companions.find(c => c.id === booking.companionId);
                         return (
-                          <div key={booking.id} className="bg-[#17191C] border border-white/5 rounded-2xl p-4 space-y-3.5">
+                          <div key={`${booking.id || 'b'}-${idx}`} className="bg-[#17191C] border border-white/5 rounded-2xl p-4 space-y-3.5">
                             <div className="flex items-center gap-3">
                               {companion && (
                                 <SafeImage src={companion.imageUrl} className="w-9 h-9 rounded-full object-cover border border-[#2A2D31]" alt={companion.name} fallbackType="avatar" textForInitials={companion.name} />
@@ -2801,8 +2838,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-[#8E9299] px-1">Saved Companions</h4>
                   {fetchedCompanions.filter(c => favorites.includes(c.id)).length > 0 ? (
                     <div className="grid grid-cols-2 gap-3">
-                      {fetchedCompanions.filter(c => favorites.includes(c.id)).map(comp => (
-                        <div key={comp.id} className="bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden flex flex-col relative">
+                      {fetchedCompanions.filter(c => favorites.includes(c.id)).map((comp, idx) => (
+                        <div key={`${comp.id || 'c'}-${idx}`} className="bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden flex flex-col relative">
                           <SafeImage src={comp.imageUrl} className="w-full h-24 object-cover" alt={comp.name} fallbackType="thumbnail" />
                           <button 
                             onClick={() => toggleFavorite(comp.id)}
@@ -2857,6 +2894,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <button 
                         onClick={() => {
                           const isCurrentlyLight = document.documentElement.classList.toggle('theme-light');
+                          saveStoredPreferences({ theme: isCurrentlyLight ? 'light' : 'dark' });
                           showToast(isCurrentlyLight ? 'SATHI Premium Light Theme Active' : 'SATHI Cosmic Dark Theme Active', 'success');
                         }}
                         className="w-10 h-6 rounded-full bg-[#1E2124] border border-white/10 p-0.5 flex items-center relative cursor-pointer"
@@ -2908,11 +2946,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             </h2>
             {bookings.filter(b => b.userId === currentUser?.id).length > 0 ? (
               <div className="space-y-3">
-                {bookings.filter(b => b.userId === currentUser?.id).map(booking => {
+                {bookings.filter(b => b.userId === currentUser?.id).map((booking, idx) => {
                   const companion = fetchedCompanions.find(c => c.id === booking.companionId);
                   const isCancellable = booking.status === 'pending' || booking.status === 'confirmed';
                   return (
-                    <div key={booking.id} className="bg-[#17191C] border border-white/5 rounded-2xl p-4 space-y-3">
+                    <div key={`${booking.id || 'b'}-${idx}`} className="bg-[#17191C] border border-white/5 rounded-2xl p-4 space-y-3">
                       <div className="flex items-center gap-3">
                         {companion && (
                           <SafeImage src={companion.imageUrl} className="w-9 h-9 rounded-full object-cover border border-[#2A2D31]" alt={companion.name} fallbackType="avatar" textForInitials={companion.name} />
@@ -2967,16 +3005,13 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
         {/* Render Mobile Tab Messages */}
         {mobileTab === 'messages' && (
-          <div className="p-4 space-y-4">
-            <h2 className="text-xl font-extrabold text-white">My Messages</h2>
-            <div className="bg-[#17191C] border border-white/5 rounded-2xl p-2 min-h-[400px]">
-              <MessagesTab 
-                onOpenAuth={setAuthMode} 
-                initialCompanionId={activeChatCompanionId} 
-                onBrowseCompanions={handleBrowseCompanions}
-                onBrowseActivities={handleBrowseActivities}
-              />
-            </div>
+          <div className="fixed inset-x-0 top-0 bottom-16 bg-[#0F1113] z-40 flex flex-col overflow-hidden">
+            <MessagesTab 
+              onOpenAuth={setAuthMode} 
+              initialCompanionId={activeChatCompanionId} 
+              onBrowseCompanions={handleBrowseCompanions}
+              onBrowseActivities={handleBrowseActivities}
+            />
           </div>
         )}
 
@@ -3064,11 +3099,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-3">
-                      {filteredCompanions.map((comp) => {
+                      {filteredCompanions.map((comp, compIdx) => {
                         const isFav = favorites && favorites.includes(comp.id);
                         return (
                           <div 
-                            key={comp.id}
+                            key={`${comp.id || 'comp'}-${compIdx}`}
                             onClick={() => handleViewCompanion(comp)}
                             className="bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden flex flex-col relative cursor-pointer hover:border-[#C8A25E]/30 active:scale-98 transition-all text-left group"
                           >
@@ -3133,9 +3168,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-3">
-                      {filteredActivities.map((act) => (
+                      {filteredActivities.map((act, actIdx) => (
                         <div 
-                          key={act.id}
+                          key={`${act.id || 'act'}-${actIdx}`}
                           onClick={() => { setSelectedCategory(act.category || 'All'); showToast(`Filtered by ${act.title}`, 'success'); }}
                           className="bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden flex items-center p-2 gap-3 cursor-pointer hover:border-[#C8A25E]/30 active:scale-98 transition-all text-left"
                         >
@@ -3181,9 +3216,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-3">
-                      {filteredEvents.map((evt) => (
+                      {filteredEvents.map((evt, evtIdx) => (
                         <div 
-                          key={evt.id}
+                          key={`${evt.id || 'evt'}-${evtIdx}`}
                           onClick={() => showToast(`Event: ${evt.title} • spots left: ${evt.spots}`, 'info')}
                           className="bg-[#17191C] border border-white/5 rounded-2xl overflow-hidden flex flex-col p-3 gap-3 cursor-pointer hover:border-[#C8A25E]/30 active:scale-98 transition-all text-left"
                         >
@@ -3237,9 +3272,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
             <div className="space-y-3 text-left">
               {notifications && notifications.length > 0 ? (
-                notifications.map((n) => (
+                notifications.map((n, idx) => (
                   <div 
-                    key={n.id} 
+                    key={`${n.id || 'notif'}-${idx}`} 
                     onClick={() => { markNotificationRead(n.id); }} 
                     className={`p-4 rounded-2xl border transition-colors cursor-pointer text-left ${!n.isRead ? 'bg-[#C8A25E]/5 border-[#C8A25E]/20' : 'bg-[#17191C] border-white/5'}`}
                   >
@@ -3266,6 +3301,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             </div>
           </div>
         )}
+        </>
+        )}
 
         {/* Fixed Bottom Tab Navigation Bar */}
         <div className="fixed bottom-0 left-0 right-0 h-16 bg-[#0F1113]/95 backdrop-blur-md border-t border-white/10 flex justify-between items-center px-6 z-50">
@@ -3285,11 +3322,18 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </div>
             ), label: 'Alerts' },
           ].map((item) => {
-            const isActive = mobileTab === item.tab;
+            const isActive = mobileTab === item.tab && activeTab !== 'dashboard' && activeTab !== 'partner' && activeTab !== 'settings' && activeTab !== 'about';
             return (
               <button 
                 key={item.tab}
                 onClick={() => { 
+                  if (item.tab === 'messages') {
+                    setActiveTab('messages');
+                  } else if (item.tab === 'bookings') {
+                    setActiveTab('bookings');
+                  } else {
+                    setActiveTab('explore');
+                  }
                   if (item.path) {
                     navigate(item.path);
                   }
@@ -3326,19 +3370,73 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 <SafeImage src={viewingStory.userAvatar} className="w-9 h-9 rounded-full border border-[#C8A25E] object-cover" alt={viewingStory.userName} fallbackType="avatar" textForInitials={viewingStory.userName} />
                 <div>
                   <span className="text-white font-bold text-xs block leading-tight">{viewingStory.userName}</span>
-                  <span className="text-[#8E9299] text-[9px]">with {viewingStory.companionName} • {viewingStory.timeAgo}</span>
+                  <span className="text-[#8E9299] text-[9px]">with {viewingStory.companionName || 'SATHI'} • {viewingStory.timeAgo || 'Recently'}</span>
                 </div>
               </div>
-              <button onClick={() => setViewingStory(null)} className="text-white bg-black/40 rounded-full w-7 h-7 flex items-center justify-center backdrop-blur-sm hover:bg-black/60">✕</button>
+              
+              <div className="flex items-center gap-2">
+                {currentUser && currentUser.id === viewingStory.userId && (
+                  <button 
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await socialRepository.deleteStory(viewingStory.id);
+                        showToast('Story deleted', 'success');
+                        setViewingStory(null);
+                      } catch (err) {
+                        showToast('Failed to delete story', 'error');
+                      }
+                    }} 
+                    className="text-white/80 hover:text-red-500 bg-black/40 rounded-full w-7 h-7 flex items-center justify-center backdrop-blur-sm"
+                    title="Delete Story"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button onClick={() => setViewingStory(null)} className="text-white bg-black/40 rounded-full w-7 h-7 flex items-center justify-center backdrop-blur-sm hover:bg-black/60">✕</button>
+              </div>
             </div>
 
             {/* Nav click zones */}
-            <div className="absolute inset-y-20 left-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = stories.findIndex(s => s.id === viewingStory.id); if (idx > 0) setViewingStory(stories[idx - 1]); }}></div>
-            <div className="absolute inset-y-20 right-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = stories.findIndex(s => s.id === viewingStory.id); if (idx < stories.length - 1) setViewingStory(stories[idx + 1]); else setViewingStory(null); }}></div>
+            <div className="absolute inset-y-20 left-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = fetchedStories.findIndex(s => s.id === viewingStory.id); if (idx > 0) setViewingStory(fetchedStories[idx - 1]); }}></div>
+            <div className="absolute inset-y-20 right-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = fetchedStories.findIndex(s => s.id === viewingStory.id); if (idx < fetchedStories.length - 1) setViewingStory(fetchedStories[idx + 1]); else setViewingStory(null); }}></div>
 
             {/* Bottom story details */}
             <div className="absolute bottom-6 inset-x-0 p-5 flex flex-col justify-end text-left space-y-3 z-10">
-              <p className="text-white text-base font-semibold drop-shadow">{viewingStory.caption}</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-white text-sm font-semibold drop-shadow flex-1">{viewingStory.caption}</p>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!currentUser) {
+                      showToast('Please sign in to like stories', 'info');
+                      openAuthModal();
+                      return;
+                    }
+                    const isLiked = storyLiked[viewingStory.id];
+                    setStoryLiked(prev => ({ ...prev, [viewingStory.id]: !isLiked }));
+                    setStoryLikesCount(prev => ({
+                      ...prev,
+                      [viewingStory.id]: Math.max(0, (prev[viewingStory.id] || 0) + (isLiked ? -1 : 1))
+                    }));
+                    try {
+                      if (isLiked) {
+                        await socialRepository.unlikeStory(currentUser.id, viewingStory.id);
+                      } else {
+                        await socialRepository.likeStory(currentUser.id, viewingStory.id);
+                      }
+                    } catch (err) {
+                      setStoryLiked(prev => ({ ...prev, [viewingStory.id]: isLiked }));
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/20 hover:scale-105 transition-transform"
+                >
+                  <Heart className={`w-4 h-4 ${storyLiked[viewingStory.id] ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                  {(storyLikesCount[viewingStory.id] || 0) > 0 && (
+                    <span className="text-xs font-bold">{storyLikesCount[viewingStory.id]}</span>
+                  )}
+                </button>
+              </div>
               
               <div className="flex gap-1">
                 {stories.map((s, idx) => {
@@ -3866,6 +3964,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           </div>
         )}
       </AnimatePresence>
+
+      {showCreateStoryModal && (
+        <CreateStoryModal onClose={() => setShowCreateStoryModal(false)} />
+      )}
 
     </div>
   );

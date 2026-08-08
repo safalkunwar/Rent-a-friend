@@ -3,7 +3,6 @@ import { getFirestore, collection, getDocs, query, where } from 'firebase/firest
 import fs from 'fs';
 import path from 'path';
 
-
 const appletConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf8'));
 
 const firebaseConfig = {
@@ -20,7 +19,7 @@ const db = getFirestore(app, appletConfig.firestoreDatabaseId || undefined);
 
 async function testRead() {
   console.log('Testing queries on community_posts...');
-   
+  
   try {
     const q1 = query(collection(db, 'community_posts'), where('status', '==', 'published'));
     const s1 = await getDocs(q1);

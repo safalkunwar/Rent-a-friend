@@ -59,8 +59,8 @@ export function AdminFeedback() {
         </div>
         <div className="p-4 space-y-4 flex-1 overflow-y-auto">
           {feedbackItems.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No feedback yet.</p>}
-          {feedbackItems.map(item => (
-            <div key={item.id} className="p-4 bg-[#1a1a1a] rounded-xl border border-[#222]">
+          {feedbackItems.map((item, idx) => (
+            <div key={`${item.id || 'fb'}-${idx}`} className="p-4 bg-[#1a1a1a] rounded-xl border border-[#222]">
                <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
                      <span className="font-medium text-sm text-white">{item.user}</span>
@@ -95,8 +95,8 @@ export function AdminFeedback() {
         </div>
         <div className="divide-y divide-[#222] overflow-y-auto">
           {notifications.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No notifications yet.</p>}
-          {notifications.map(notification => (
-            <div key={notification.id} className={`p-5 hover:bg-[#1a1a1a] transition-colors ${!notification.isRead ? 'bg-[#C8A25E]/5' : ''}`}>
+          {notifications.map((notification, idx) => (
+            <div key={`${notification.id || 'notif'}-${idx}`} className={`p-5 hover:bg-[#1a1a1a] transition-colors ${!notification.isRead ? 'bg-[#C8A25E]/5' : ''}`}>
                <div className="flex justify-between items-start mb-1">
                   <h4 className={`text-sm ${!notification.isRead ? 'font-bold text-white' : 'font-medium text-gray-300'}`}>{notification.title}</h4>
                   <span className="text-xs text-gray-500">{new Date(notification.timestamp).toLocaleString()}</span>

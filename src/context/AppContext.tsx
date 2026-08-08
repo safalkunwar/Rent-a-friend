@@ -41,6 +41,7 @@ interface AppState {
   deleteComment: (id: string, postId: string) => Promise<void>;
   uploadStory: (story: Omit<ExperienceStory, 'id'>) => Promise<string>;
   deleteStory: (id: string) => Promise<void>;
+  openAuthModal: () => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -166,16 +167,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     if (!currentUser) return;
-    const unsubBookings = firestore.subscribe<Booking>('bookings', { where: [{ field: 'userId', operator: '==', value: currentUser.id }] }, (items) => {
-      const seen = new Set<string>();
-      const unique = items.filter(b => {
-        if (!b?.id || seen.has(b.id)) return false;
-        seen.add(b.id);
-        return true;
-      });
-      setBookings(unique);
+
+    // Map to keep bookings merged by id
+    const bookingMap = new Map<string, Booking>();
+
+    const unsubUserBookings = firestore.subscribe<Booking>('bookings', { 
+      where: [{ field: 'userId', operator: '==', value: currentUser.id }],
+      limitCount: 30 
+    }, (items) => {
+      items.forEach(b => { if (b?.id) bookingMap.set(b.id, b); });
+      setBookings(Array.from(bookingMap.values()));
     });
-    const unsubNotifications = firestore.subscribe<Notification>('notifications', { where: [{ field: 'userId', operator: '==', value: currentUser.id }] }, (items) => {
+
+    const unsubCompanionBookings = firestore.subscribe<Booking>('bookings', { 
+      where: [{ field: 'companionId', operator: '==', value: currentUser.id }],
+      limitCount: 30 
+    }, (items) => {
+      items.forEach(b => { if (b?.id) bookingMap.set(b.id, b); });
+      setBookings(Array.from(bookingMap.values()));
+    });
+
+    const unsubNotifications = firestore.subscribe<Notification>('notifications', { 
+      where: [{ field: 'userId', operator: '==', value: currentUser.id }],
+      orderByField: 'timestamp',
+      orderDirection: 'desc',
+      limitCount: 20 
+    }, (items) => {
       const seen = new Set<string>();
       const unique = items.filter(n => {
         if (!n?.id || seen.has(n.id)) return false;
@@ -189,8 +206,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       });
       setNotifications(sorted);
     });
+
     return () => {
-      unsubBookings();
+      unsubUserBookings();
+      unsubCompanionBookings();
       unsubNotifications();
     };
   }, [currentUser]);
@@ -390,6 +409,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await socialRepository.deleteStory(id);
   }, []);
 
+  const openAuthModal = useCallback(() => {
+    // Custom event dispatch to trigger AuthModal globally if needed or handle via window event
+    window.dispatchEvent(new CustomEvent('sathi_open_auth_modal'));
+  }, []);
+
   return (
     <AppContext.Provider value={{
       currentUser,
@@ -414,6 +438,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       deleteComment,
       uploadStory,
       deleteStory,
+      openAuthModal,
     }}>
       {children}
     </AppContext.Provider>

@@ -1,99 +1,121 @@
-const DB_NAME = 'sathi-offline';
-const DB_VERSION = 2;
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage } from '../firebase';
 
-type StoreSchema = {
-  companions: { key: string; value: any };
-  stories: { key: string; value: any };
-  activities: { key: string; value: any };
-  events: { key: string; value: any };
-  favorites: { key: string; value: any };
-  pendingBookings: { key: string; value: any };
-  partners: { key: string; value: any };
-  community_posts: { key: string; value: any };
-};
+// ==================== FIREBASE STORAGE UTILS ====================
 
-type StoreName = keyof StoreSchema;
+export interface UploadOptions {
+  folder?: string;
+  maxSizeMB?: number;
+  allowedTypes?: string[];
+  onProgress?: (progress: number) => void;
+}
 
-const openDb = (): Promise<IDBDatabase> => {
+export const uploadImageToStorage = async (
+  file: File,
+  options: UploadOptions = {}
+): Promise<string> => {
+  if (!storage) {
+    throw new Error('Firebase Storage is not initialized.');
+  }
+
+  const {
+    folder = 'uploads',
+    maxSizeMB = 10,
+    allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'],
+    onProgress
+  } = options;
+
+  // Validate File Type
+  if (!allowedTypes.includes(file.type.toLowerCase())) {
+    throw new Error(`Invalid file type (${file.type}). Allowed types: JPG, PNG, WEBP.`);
+  }
+
+  // Validate File Size
+  const maxSizeBytes = maxSizeMB * 1024 * 1024;
+  if (file.size > maxSizeBytes) {
+    throw new Error(`File size exceeds maximum limit of ${maxSizeMB}MB.`);
+  }
+
+  // Generate unique filename
+  const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const filename = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${cleanName}`;
+  const storageRef = ref(storage, filename);
+
+  const uploadTask = uploadBytesResumable(storageRef, file);
+
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      (Object.keys({
-        companions: null,
-        stories: null,
-        activities: null,
-        events: null,
-        favorites: null,
-        pendingBookings: null,
-        partners: null,
-        community_posts: null,
-      }) as StoreName[]).forEach((store) => {
-        if (!db.objectStoreNames.contains(store)) {
-          db.createObjectStore(store, { keyPath: 'id' });
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        if (onProgress) {
+          onProgress(Math.round(progress));
         }
-      });
-    };
+      },
+      (error) => {
+        console.error('[StorageService] Upload error:', error);
+        reject(new Error(`Image upload failed: ${error.message}`));
+      },
+      async () => {
+        try {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadURL);
+        } catch (err: any) {
+          reject(new Error(`Failed to retrieve image download URL: ${err.message}`));
+        }
+      }
+    );
   });
 };
 
+// ==================== OFFLINE STORAGE UTILS ====================
+
+const PREFIX = 'sathi_offline_';
+
 export const offlineStorage = {
-  cacheCollection: async <T extends { id: string }>(store: StoreName, items: T[]): Promise<void> => {
-    const db = await openDb();
-    const tx = db.transaction(store, 'readwrite');
-    const objectStore = tx.objectStore(store);
-    items.forEach((item) => objectStore.put(item));
-    await new Promise<void>((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
+  async getCachedCollection<T>(collectionName: string): Promise<T[]> {
+    try {
+      const data = localStorage.getItem(`${PREFIX}col_${collectionName}`);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
   },
 
-  getCachedCollection: async <T extends { id: string }>(store: StoreName): Promise<T[]> => {
-    const db = await openDb();
-    const tx = db.transaction(store, 'readonly');
-    const objectStore = tx.objectStore(store);
-    const request = objectStore.getAll();
-    return new Promise((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result as T[]);
-      request.onerror = () => reject(request.error);
-    });
+  async cacheCollection<T>(collectionName: string, items: T[]): Promise<void> {
+    try {
+      localStorage.setItem(`${PREFIX}col_${collectionName}`, JSON.stringify(items));
+    } catch (e) {
+      console.warn('[OfflineStorage] Failed to cache collection:', e);
+    }
   },
 
-  cacheItem: async <T extends { id: string }>(store: StoreName, item: T): Promise<void> => {
-    const db = await openDb();
-    const tx = db.transaction(store, 'readwrite');
-    const objectStore = tx.objectStore(store);
-    objectStore.put(item);
-    await new Promise<void>((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
+  async cacheItem<T>(key: string, item: T): Promise<void> {
+    try {
+      localStorage.setItem(`${PREFIX}item_${key}`, JSON.stringify(item));
+    } catch (e) {
+      console.warn('[OfflineStorage] Failed to cache item:', e);
+    }
   },
 
-  getCachedItem: async <T extends { id: string }>(store: StoreName, id: string): Promise<T | null> => {
-    const db = await openDb();
-    const tx = db.transaction(store, 'readonly');
-    const objectStore = tx.objectStore(store);
-    const request = objectStore.get(id);
-    return new Promise((resolve, reject) => {
-      request.onsuccess = () => resolve((request.result as T) || null);
-      request.onerror = () => reject(request.error);
-    });
+  async getCachedItem<T>(key: string): Promise<T | null> {
+    try {
+      const data = localStorage.getItem(`${PREFIX}item_${key}`);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
   },
 
-  clearStore: async (store: StoreName): Promise<void> => {
-    const db = await openDb();
-    const tx = db.transaction(store, 'readwrite');
-    const objectStore = tx.objectStore(store);
-    objectStore.clear();
-    await new Promise<void>((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  },
+  async clearStore(): Promise<void> {
+    try {
+      Object.keys(localStorage).forEach((k) => {
+        if (k.startsWith(PREFIX)) {
+          localStorage.removeItem(k);
+        }
+      });
+    } catch (e) {
+      console.warn('[OfflineStorage] Failed to clear store:', e);
+    }
+  }
 };

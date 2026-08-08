@@ -45,8 +45,8 @@ export function AdminBookings() {
       </div>
       <div className="p-4 space-y-3 flex-1 overflow-y-auto">
         {filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No bookings found.</p>}
-        {filtered.map(booking => (
-          <div key={booking.id} className="p-4 bg-[#1a1a1a] rounded-xl border border-[#222] flex items-center justify-between hover:border-[#C8A25E]/50 transition-colors">
+        {filtered.map((booking, idx) => (
+          <div key={`${booking.id || 'b'}-${idx}`} className="p-4 bg-[#1a1a1a] rounded-xl border border-[#222] flex items-center justify-between hover:border-[#C8A25E]/50 transition-colors">
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <span className="text-xs font-mono text-gray-500">{booking.id}</span>

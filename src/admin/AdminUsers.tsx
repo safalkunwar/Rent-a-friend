@@ -74,8 +74,8 @@ export function AdminUsers() {
       </div>
       <div className="p-4 space-y-3 flex-1 overflow-y-auto">
         {filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No users found.</p>}
-        {filtered.map(user => (
-          <div key={user.id} className="p-4 bg-[#1a1a1a] rounded-xl border border-[#222] flex items-center justify-between hover:border-[#C8A25E]/50 transition-colors">
+        {filtered.map((user, idx) => (
+          <div key={`${user.id || 'u'}-${idx}`} className="p-4 bg-[#1a1a1a] rounded-xl border border-[#222] flex items-center justify-between hover:border-[#C8A25E]/50 transition-colors">
             <div className="flex items-center gap-4">
               <input
                 type="checkbox"

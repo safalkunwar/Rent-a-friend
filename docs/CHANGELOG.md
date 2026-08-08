@@ -1,5 +1,51 @@
 # Changelog
 
+## v5.0.0 - 2026-08-07
+
+### Added
+- **Production-Readiness Audit & Stability Refactoring**: Converted the application state layer to rely strictly and exclusively on the production Firebase backend `hamrosathi1`.
+  - Removed all fallback paths and seeding triggers that populated local IndexedDB cache or active components with hardcoded mock lists (`COMPANIONS`, `STORIES`, `ACTIVITIES`, `EVENTS`, fallback partners, and fallback posts) when Firestore was empty, ensuring 100% of the platform's information originates from secure, live database collections.
+  - Stabilized and verified all companion search, filtering, stories, activities, and bookings rendering paths to ensure that if collections contain zero entries, the application transitions to gorgeous, responsive empty states instead of crashing or serving outdated, mock placeholder items.
+- **Improved TypeScript Compiler Exclusions**:
+  - Excluded generated native iOS (`/ios`), native Android (`/android`), and production build output (`/dist`) directories inside `/tsconfig.json`. This avoids syntax parsing errors within generated native JavaScript asset bundles and significantly accelerates build and type-checking performance.
+
+## v4.0.0 - 2026-08-01
+
+### Added
+- **Progressive Web App (PWA) Integration**: Fully converted SATHI into an installable, standalone web application using `vite-plugin-pwa`:
+  - Created a robust `/vite.config.ts` configuration to generate `manifest.webmanifest`, register the service worker inline, and manage cache strategies.
+  - Implemented extensive precaching for all core assets (JavaScript, CSS, HTML, fonts, and icons).
+  - Raised Workbox file size limits to 4 MiB (`maximumFileSizeToCacheInBytes`) to support caching SATHI's rich client-side codebases.
+  - Configured intelligent runtime caching policies for Firebase Firestore APIs, Firebase Storage bucket images, Unsplash resources, and Picsum placeholders.
+  - Sourced and generated premium gold branding icons in the `/public` directory (`icon.jpg`, `icon-192.jpg`, `icon-512.jpg`, `apple-touch-icon.jpg`) to fulfill cross-device splash and touch screen criteria.
+  - Designed and mounted an interactive `<PWAInstallPrompt />` component at the application root:
+    - Automatically displays an elegant, golden-brand custom slide-up installation banner for compatible browsers.
+    - Implemented a custom, gorgeous modal workflow for iOS Safari users, providing a detailed, step-by-step interactive manual to trigger Safari's "Add to Home Screen" command.
+    - Added real-time network connectivity listeners watching `navigator.onLine`. Displays beautiful top-bar alerts when going offline ("You are Offline - Running SATHI in offline mode with cached experiences") and upon automatic restoration ("Connection Restored - Back online. Re-syncing SATHI local cache").
+- **Native Platform Configuration (Capacitor Engine)**: Prepared SATHI for compilation into native iOS (`.ipa`) and Android (`.apk`) apps using Capacitor:
+  - Installed `@capacitor/core`, `@capacitor/cli`, `@capacitor/android`, and `@capacitor/ios` dependencies.
+  - Created `/capacitor.config.ts` defining the unique native app schema (`com.sathi.app`), app name (`SATHI`), and binding the native wrapper strictly to our compiled production output folder (`dist`).
+  - Successfully ran initial compilation and generated native Android Gradle layouts (`/android`) and native iOS Xcode workspaces (`/ios`), supporting native builds without migrating to Flutter.
+
+## v3.0.0 - 2026-07-31
+
+### Added
+- **Complete Reusable Design System Components**: Architected and created high-fidelity, fully responsive, and typed components inside `/src/components/ui/`:
+  - `Typography`: Handles perfect text sizes, weights, and leading attributes for supreme readability.
+  - `Surface`: Flexible grid boxes handling core backdrop divisions.
+  - `Card`: Airbnb × iOS style cards with a modern 20px radius (`rounded-3xl`), soft borders, and smooth hover translations.
+  - `Button`: Apple × Linear styled interactive buttons with standard `primary`, `secondary`, `ghost`, `danger`, and `success` variants. Supports hover, press, active, and loading indicators.
+  - `Input`: Linear/Notion-inspired form elements with soft borders and focus rings.
+  - `Badge`: Segmented categories and verification markers with balanced colors.
+  - `Avatar`: Instagram-style user profiles with online indicators and fallbacks.
+  - `Modal`: spring-animated accessible dialog overlays (`AnimatePresence`).
+  - `Sheet`: Native sliding bottom sheets for mobile viewports and elegant right drawers for desktop.
+- **Design System Blueprint Audit**: Published the comprehensive UI/UX audit report at `/docs/DESIGN_SYSTEM_AUDIT.md`.
+
+### Changed / Improved
+- **Premium Light Mode Overhaul**: Fully refactored the light mode layout to represent modern consumer patterns. Eliminated old gold accents to prioritize clean, accessible neutral tones (90%), interactive Blue actions (8%), and precise Gold status designations (2%).
+- **Interactive States & Micro-animations**: Upgraded all buttons and cards with smooth `motion` hover, touch, and fade transitions to make SATHI feel like an extremely high-end, alive application.
+
 ## v2.12.0 - 2026-07-26
 
 ### Fixed

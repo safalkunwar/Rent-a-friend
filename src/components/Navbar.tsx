@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { User, LogIn, UserCircle, Briefcase, Settings, LogOut, Menu, X, Sun, Moon, LayoutDashboard, Search, Bell } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useToast } from './ui/Toast';
+import { saveStoredPreferences } from '../services/preferences';
 
 interface NavbarProps {
   activeTab: 'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner';
@@ -25,6 +26,13 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLight = document.documentElement.classList.contains('theme-light');
+      setTheme(isLight ? 'light' : 'dark');
+    }
+  }, []);
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
@@ -40,6 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
+    saveStoredPreferences({ theme: newTheme });
     if (newTheme === 'light') {
       document.documentElement.classList.add('theme-light');
     } else {
@@ -126,8 +135,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
                 </div>
                 <div className="max-h-64 overflow-y-auto">
                   {notifications.length === 0 && <p className="text-xs text-gray-500 text-center py-4">No notifications yet.</p>}
-                  {notifications.slice(0, 5).map(n => (
-                    <div key={n.id} className={`p-3 hover:bg-[#1E2124] transition-colors ${!n.isRead ? 'bg-[#C8A25E]/5' : ''}`}>
+                  {notifications.slice(0, 5).map((n, idx) => (
+                    <div key={`${n.id || 'notif'}-${idx}`} className={`p-3 hover:bg-[#1E2124] transition-colors ${!n.isRead ? 'bg-[#C8A25E]/5' : ''}`}>
                       <p className={`text-sm ${!n.isRead ? 'font-bold text-white' : 'font-medium text-gray-300'}`}>{n.title}</p>
                       <p className="text-xs text-gray-400">{n.message}</p>
                       <p className="text-[10px] text-gray-500 mt-1">{new Date(n.timestamp).toLocaleString()}</p>

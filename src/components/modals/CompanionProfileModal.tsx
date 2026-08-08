@@ -106,8 +106,8 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                 <div className="mb-6 md:mb-8">
                   <h2 className="text-lg md:text-xl font-bold text-white mb-2 md:mb-3">Interests & Activities</h2>
                   <div className="flex flex-wrap gap-2">
-                    {companion.interests.map(interest => (
-                      <span key={interest} className="px-3 py-1.5 md:px-4 md:py-2 bg-[#1E2124] border border-[#2A2D31] text-[#E0E0E0] rounded-xl text-xs md:text-sm font-medium">
+                    {companion.interests.map((interest, idx) => (
+                      <span key={`${interest}-${idx}`} className="px-3 py-1.5 md:px-4 md:py-2 bg-[#1E2124] border border-[#2A2D31] text-[#E0E0E0] rounded-xl text-xs md:text-sm font-medium">
                         {interest}
                       </span>
                     ))}
@@ -146,8 +146,8 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                   <h2 className="text-xl font-bold text-white mb-4">Recent Reviews</h2>
                   {companion.reviews && companion.reviews.length > 0 ? (
                     <div className="space-y-4">
-                      {companion.reviews.map(review => (
-                        <div key={review.id} className="bg-[#17191C] p-4 rounded-2xl border border-[#2A2D31]">
+                      {companion.reviews.map((review, idx) => (
+                        <div key={`${review.id || 'rev'}-${idx}`} className="bg-[#17191C] p-4 rounded-2xl border border-[#2A2D31]">
                           <div className="flex items-center gap-2 mb-2">
                              <div className="flex text-[#C8A25E]"><Star className="w-3.5 h-3.5 fill-current" /></div>
                              <span className="font-medium text-white text-sm">{review.authorName}</span>
@@ -186,8 +186,8 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                     </div>
                     {companion.availableDays && companion.availableDays.length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {companion.availableDays.map(day => (
-                          <span key={day} className="px-3 py-1 bg-[#C8A25E]/10 text-[#C8A25E] border border-[#C8A25E]/20 rounded-lg text-xs font-medium">{day}</span>
+                        {companion.availableDays.map((day, idx) => (
+                          <span key={`${day}-${idx}`} className="px-3 py-1 bg-[#C8A25E]/10 text-[#C8A25E] border border-[#C8A25E]/20 rounded-lg text-xs font-medium">{day}</span>
                         ))}
                       </div>
                     )}

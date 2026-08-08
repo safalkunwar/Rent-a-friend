@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageSquare, Share2, AlertTriangle, Bookmark, Send, Trash2, Edit3, Image as ImageIcon, Sparkles, Filter, X } from 'lucide-react';
+import { Heart, MessageSquare, Share2, AlertTriangle, Bookmark, Send, Trash2, Edit3, Image as ImageIcon, Sparkles, Filter, X, Upload, AlertCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { useCommunityPosts } from '../../hooks/useFirestoreData';
 import { socialRepository, Comment } from '../../repositories/SocialRepository';
 import { CommunityPost } from '../../types';
 import { SafeImage } from '../ui/SafeImage';
+import { uploadImageToStorage } from '../../services/storage';
+import { firestore } from '../../services/firestore';
 
 export const CommunityFeed: React.FC = () => {
-  const { currentUser, createPost, likePost, unlikePost, createComment, deleteComment, checkUserLikedPost } = useAppContext();
+  const { currentUser, createPost, likePost, unlikePost, createComment, deleteComment, checkUserLikedPost, openAuthModal } = useAppContext();
   const { posts, loading } = useCommunityPosts();
   const { showToast } = useToast();
 
@@ -19,7 +21,11 @@ export const CommunityFeed: React.FC = () => {
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostCategory, setNewPostCategory] = useState('Adventure');
-  const [newPostImage, setNewPostImage] = useState('');
+  const [newPostImageURL, setNewPostImageURL] = useState('');
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [postUploadError, setPostUploadError] = useState<string | null>(null);
   const [submittingPost, setSubmittingPost] = useState(false);
 
   // Likes & Comments States
@@ -48,9 +54,30 @@ export const CommunityFeed: React.FC = () => {
     setLikesCount(initialLikes);
   }, [posts, currentUser, checkUserLikedPost]);
 
+  // Real-time listener for open comments section
+  useEffect(() => {
+    if (!selectedPostForComments) return;
+    const postId = selectedPostForComments;
+    setLoadingComments(prev => ({ ...prev, [postId]: true }));
+
+    const unsubscribe = firestore.subscribe<Comment>('comments', {
+      where: [{ field: 'postId', operator: '==', value: postId }],
+      orderByField: 'createdAt',
+      orderDirection: 'asc'
+    }, (fetchedComments) => {
+      setComments(prev => ({ ...prev, [postId]: fetchedComments }));
+      setLoadingComments(prev => ({ ...prev, [postId]: false }));
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [selectedPostForComments]);
+
   const handleToggleLike = async (postId: string) => {
     if (!currentUser) {
       showToast('Please sign in to like community adventures!', 'info');
+      openAuthModal();
       return;
     }
 
@@ -60,7 +87,7 @@ export const CommunityFeed: React.FC = () => {
     setLikedPosts(prev => ({ ...prev, [postId]: !isLiked }));
     setLikesCount(prev => ({
       ...prev,
-      [postId]: (prev[postId] || 0) + (isLiked ? -1 : 1)
+      [postId]: Math.max(0, (prev[postId] || 0) + (isLiked ? -1 : 1))
     }));
 
     try {
@@ -74,18 +101,16 @@ export const CommunityFeed: React.FC = () => {
       setLikedPosts(prev => ({ ...prev, [postId]: isLiked }));
       setLikesCount(prev => ({
         ...prev,
-        [postId]: (prev[postId] || 0) + (isLiked ? 1 : -1)
+        [postId]: Math.max(0, (prev[postId] || 0) + (isLiked ? 1 : -1))
       }));
-      showToast('Error liking post. Try again.', 'error');
+      showToast('Error updating like. Try again.', 'error');
     }
   };
 
   const handleSavePost = (postId: string) => {
-    setSavedPosts(prev => {
-      const saved = !prev[postId];
-      showToast(saved ? 'Post saved to bookmarks!' : 'Removed from bookmarks', 'success');
-      return { ...prev, [postId]: saved };
-    });
+    const isSaved = !savedPosts[postId];
+    setSavedPosts(prev => ({ ...prev, [postId]: isSaved }));
+    showToast(isSaved ? 'Post saved to bookmarks!' : 'Removed from bookmarks', 'success');
   };
 
   const handleSharePost = (post: CommunityPost) => {
@@ -95,29 +120,81 @@ export const CommunityFeed: React.FC = () => {
   };
 
   const handleReportPost = (postId: string) => {
-    showToast('Thank you for keeping SATHI safe. Our safety moderators will review this post within 1 hour.', 'success');
+    showToast('Thank you for keeping SATHI safe. Our safety moderators will review this post.', 'success');
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!currentUser) return;
+    try {
+      await socialRepository.deletePost(postId);
+      showToast('Co-experience post deleted successfully', 'success');
+    } catch (err) {
+      showToast('Failed to delete post.', 'error');
+    }
+  };
+
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPostUploadError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      setPostUploadError('Please select a JPG, PNG, or WEBP image.');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setPostUploadError('Image size must be less than 10MB.');
+      return;
+    }
+
+    setSelectedImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleCreatePostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
+    if (!currentUser) {
+      openAuthModal();
+      return;
+    }
+
     if (!newPostTitle.trim() || !newPostContent.trim()) {
       showToast('Title and content are required.', 'error');
       return;
     }
 
     setSubmittingPost(true);
+    setPostUploadError(null);
+
     try {
-      const defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150';
+      let finalImageUrl = newPostImageURL.trim();
+
+      // Upload file to Firebase Storage if selected
+      if (selectedImageFile) {
+        finalImageUrl = await uploadImageToStorage(selectedImageFile, {
+          folder: 'posts',
+          maxSizeMB: 10,
+          onProgress: (p) => setUploadProgress(p)
+        });
+      }
+
+      const defaultAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=C8A25E&color=0F1113';
+
       await createPost({
         userId: currentUser.id,
         title: newPostTitle,
         content: newPostContent,
         category: newPostCategory,
-        imageUrl: newPostImage || 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=800&auto=format&fit=crop',
+        imageUrl: finalImageUrl || 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=800&auto=format&fit=crop',
         status: 'published',
         userAvatar: currentUser.avatar || defaultAvatar,
-        userName: currentUser.name || 'Traveler',
+        userName: currentUser.name || 'SATHI Traveler',
         likesCount: 0,
         commentsCount: 0,
         sharesCount: 0,
@@ -127,25 +204,18 @@ export const CommunityFeed: React.FC = () => {
 
       setNewPostTitle('');
       setNewPostContent('');
-      setNewPostImage('');
+      setNewPostImageURL('');
+      setSelectedImageFile(null);
+      setImagePreview(null);
       setShowCreateModal(false);
       showToast('Your co-experience story is published live!', 'success');
-    } catch (err) {
-      showToast('Error posting. Please check internet connection.', 'error');
+    } catch (err: any) {
+      console.error('[CommunityFeed] Error creating post:', err);
+      setPostUploadError(err.message || 'Error publishing post. Try again.');
+      showToast('Error publishing post.', 'error');
     } finally {
       setSubmittingPost(false);
-    }
-  };
-
-  const loadComments = async (postId: string) => {
-    setLoadingComments(prev => ({ ...prev, [postId]: true }));
-    try {
-      const fetchedComments = await socialRepository.getComments(postId);
-      setComments(prev => ({ ...prev, [postId]: fetchedComments }));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingComments(prev => ({ ...prev, [postId]: false }));
+      setUploadProgress(null);
     }
   };
 
@@ -154,36 +224,42 @@ export const CommunityFeed: React.FC = () => {
       setSelectedPostForComments(null);
     } else {
       setSelectedPostForComments(postId);
-      loadComments(postId);
     }
   };
 
   const handleCreateComment = async (postId: string) => {
+    if (!currentUser) {
+      showToast('Please sign in to comment.', 'info');
+      openAuthModal();
+      return;
+    }
+
     const text = newCommentText[postId]?.trim();
-    if (!text || !currentUser) return;
+    if (!text) return;
 
     try {
+      const defaultAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=C8A25E&color=0F1113';
+      
       await createComment({
         postId,
         userId: currentUser.id,
-        userName: currentUser.name || 'Anonymous',
-        userAvatar: currentUser.avatar || 'https://ui-avatars.com/api/?name=User&background=random',
+        userName: currentUser.name || 'SATHI Traveler',
+        userAvatar: currentUser.avatar || defaultAvatar,
         text
       });
 
       setNewCommentText(prev => ({ ...prev, [postId]: '' }));
       showToast('Comment posted successfully!', 'success');
-      loadComments(postId);
     } catch (err) {
       showToast('Failed to post comment.', 'error');
     }
   };
 
   const handleDeleteComment = async (commentId: string, postId: string) => {
+    if (!currentUser) return;
     try {
       await deleteComment(commentId, postId);
       showToast('Comment deleted', 'success');
-      loadComments(postId);
     } catch (err) {
       showToast('Failed to delete comment', 'error');
     }
@@ -214,14 +290,18 @@ export const CommunityFeed: React.FC = () => {
           ))}
         </div>
 
-        {currentUser && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 bg-[#C8A25E]/10 border border-[#C8A25E] text-[#C8A25E] hover:bg-[#C8A25E] hover:text-[#0F1113] px-4 py-2 rounded-xl text-xs font-black tracking-wide transition-all uppercase"
-          >
-            <Sparkles className="w-3.5 h-3.5" /> Share Co-Experience
-          </button>
-        )}
+        <button
+          onClick={() => {
+            if (!currentUser) {
+              openAuthModal();
+            } else {
+              setShowCreateModal(true);
+            }
+          }}
+          className="flex items-center gap-2 bg-[#C8A25E]/10 border border-[#C8A25E] text-[#C8A25E] hover:bg-[#C8A25E] hover:text-[#0F1113] px-4 py-2 rounded-xl text-xs font-black tracking-wide transition-all uppercase"
+        >
+          <Sparkles className="w-3.5 h-3.5" /> Share Co-Experience
+        </button>
       </div>
 
       {/* Grid List */}
@@ -230,21 +310,29 @@ export const CommunityFeed: React.FC = () => {
           <span className="inline-block animate-pulse">Syncing feed with real-time Firestore database...</span>
         </div>
       ) : filteredPosts.length === 0 ? (
-        <div className="py-12 text-center border border-[#2A2D31]/40 rounded-[32px] bg-[#17191C] px-6">
-          <p className="text-sm font-semibold text-white">No co-experiences found in {activeCategory}.</p>
-          <p className="text-xs text-[#8E9299] mt-1">Be the first to share an adventure!</p>
+        <div className="py-12 text-center border border-[#2A2D31]/40 rounded-[32px] bg-[#17191C] px-6 space-y-2">
+          <p className="text-sm font-semibold text-white">Be the first to share something with the SATHI community.</p>
+          <p className="text-xs text-[#8E9299]">Post your photos, stories, and recommendations in Nepal!</p>
+          <button
+            onClick={() => currentUser ? setShowCreateModal(true) : openAuthModal()}
+            className="mt-3 px-4 py-2 bg-[#C8A25E] text-[#0F1113] font-extrabold text-xs rounded-xl inline-flex items-center gap-2"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> Share First Adventure
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPosts.map((post) => {
+          {filteredPosts.map((post, idx) => {
             const isLiked = likedPosts[post.id] || false;
             const currentLikes = likesCount[post.id] || 0;
             const isSaved = savedPosts[post.id] || false;
             const showComments = selectedPostForComments === post.id;
+            const currentCommentsList = comments[post.id] || [];
+            const isAuthor = currentUser && currentUser.id === post.userId;
 
             return (
               <div 
-                key={post.id} 
+                key={`${post.id || 'post'}-${idx}`} 
                 className="rounded-[32px] overflow-hidden border border-[#2A2D31]/40 bg-[#17191C] hover:border-[#C8A25E]/30 transition-all duration-300 flex flex-col h-full shadow-lg"
               >
                 {/* Header info */}
@@ -264,7 +352,19 @@ export const CommunityFeed: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <span className="text-[9px] text-[#5A5E66] font-bold">Kathmandu</span>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] text-[#5A5E66] font-bold">{post.location || 'Nepal'}</span>
+                    {isAuthor && (
+                      <button
+                        onClick={() => handleDeletePost(post.id)}
+                        className="text-[#8E9299] hover:text-red-500 transition-colors p-1"
+                        title="Delete Post"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Main image */}
@@ -307,9 +407,9 @@ export const CommunityFeed: React.FC = () => {
                         }`}
                       >
                         <MessageSquare className="w-4 h-4" />
-                        {(comments[post.id]?.length || post.commentsCount || 0) > 0 && (
-                          <span>{comments[post.id]?.length || post.commentsCount || 0}</span>
-                        )}
+                        {post.commentsCount && post.commentsCount > 0 ? (
+                          <span>{post.commentsCount}</span>
+                        ) : null}
                       </button>
                     </div>
 
@@ -343,17 +443,17 @@ export const CommunityFeed: React.FC = () => {
                 {/* Real-time Comments Box */}
                 {showComments && (
                   <div className="bg-[#101214] border-t border-[#2A2D31]/40 p-3 text-left space-y-3">
-                    <div className="max-h-40 overflow-y-auto space-y-2.5 custom-scrollbar pr-1">
+                    <div className="max-h-48 overflow-y-auto space-y-2.5 custom-scrollbar pr-1">
                       {loadingComments[post.id] ? (
-                        <p className="text-[10px] text-[#8E9299] animate-pulse">Loading comments...</p>
-                      ) : !comments[post.id] || comments[post.id].length === 0 ? (
-                        <p className="text-[10px] text-[#5A5E66] italic">No comments yet. Write a friendly response!</p>
+                        <p className="text-[10px] text-[#8E9299] animate-pulse">Loading comments from Firestore...</p>
+                      ) : currentCommentsList.length === 0 ? (
+                        <p className="text-[10px] text-[#5A5E66] italic py-1">Be the first to comment.</p>
                       ) : (
-                        comments[post.id].map(comm => (
-                          <div key={comm.id} className="flex gap-2 items-start text-xs bg-[#17191C] p-2 rounded-xl">
+                        currentCommentsList.map((comm, idx) => (
+                          <div key={`${comm.id || 'comm'}-${idx}`} className="flex gap-2 items-start text-xs bg-[#17191C] p-2 rounded-xl">
                             <SafeImage src={comm.userAvatar} className="w-5 h-5 rounded-full object-cover mt-0.5" alt={comm.userName} fallbackType="avatar" textForInitials={comm.userName} />
                             <div className="flex-1">
-                              <div className="flex justify-between">
+                              <div className="flex justify-between items-center">
                                 <span className="font-extrabold text-white text-[10px]">{comm.userName}</span>
                                 {currentUser && currentUser.id === comm.userId && (
                                   <button onClick={() => handleDeleteComment(comm.id, post.id)} className="text-[#5A5E66] hover:text-red-500">
@@ -373,7 +473,7 @@ export const CommunityFeed: React.FC = () => {
                       <div className="flex gap-2 items-center">
                         <input
                           type="text"
-                          placeholder="Add comment..."
+                          placeholder="Write a comment..."
                           value={newCommentText[post.id] || ''}
                           onChange={(e) => setNewCommentText(prev => ({ ...prev, [post.id]: e.target.value }))}
                           onKeyDown={(e) => e.key === 'Enter' && handleCreateComment(post.id)}
@@ -381,13 +481,18 @@ export const CommunityFeed: React.FC = () => {
                         />
                         <button 
                           onClick={() => handleCreateComment(post.id)}
-                          className="w-7 h-7 rounded-full bg-[#C8A25E] flex items-center justify-center text-[#0F1113] active:scale-95 transition-transform"
+                          className="w-7 h-7 rounded-full bg-[#C8A25E] flex items-center justify-center text-[#0F1113] active:scale-95 transition-transform shrink-0"
                         >
                           <Send className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ) : (
-                      <p className="text-[9px] text-[#5A5E66]">Sign in to join the conversation.</p>
+                      <button
+                        onClick={openAuthModal}
+                        className="w-full text-left py-1 text-[10px] text-[#C8A25E] font-bold hover:underline"
+                      >
+                        Sign in to leave a comment
+                      </button>
                     )}
                   </div>
                 )}
@@ -403,7 +508,7 @@ export const CommunityFeed: React.FC = () => {
           <div className="bg-[#17191C] border border-[#2A2D31] rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
             <div className="p-5 border-b border-[#2A2D31] flex justify-between items-center bg-[#101214]">
               <h3 className="text-md font-extrabold text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#C8A25E]" /> Share SATHI Experience
+                <Sparkles className="w-4 h-4 text-[#C8A25E]" /> Share SATHI Co-Experience
               </h3>
               <button 
                 onClick={() => setShowCreateModal(false)}
@@ -414,6 +519,13 @@ export const CommunityFeed: React.FC = () => {
             </div>
 
             <form onSubmit={handleCreatePostSubmit} className="p-5 space-y-4 text-left">
+              {postUploadError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-2 text-xs text-red-400">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{postUploadError}</span>
+                </div>
+              )}
+
               <div>
                 <label className="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider block mb-1.5">Adventure Title</label>
                 <input
@@ -426,7 +538,7 @@ export const CommunityFeed: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider block mb-1.5">Category</label>
                   <select
@@ -443,23 +555,70 @@ export const CommunityFeed: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider block mb-1.5">Image URL (Optional)</label>
+                  <label className="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider block mb-1.5">Upload Image (Firebase Storage)</label>
+                  <label className="flex items-center gap-2 px-3 py-2 bg-[#1E2124] border border-[#2A2D31]/60 rounded-xl text-xs font-bold text-[#C8A25E] cursor-pointer hover:bg-[#25282c]">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span className="truncate">{selectedImageFile ? selectedImageFile.name : 'Select Photo File'}</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/jpg"
+                      onChange={handleImageFileSelect}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Image Preview or URL Option */}
+              {imagePreview ? (
+                <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-black/40 border border-[#2A2D31]">
+                  <img src={imagePreview} alt="Post preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedImageFile(null);
+                      setImagePreview(null);
+                    }}
+                    className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1 hover:bg-black"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider block mb-1.5">Or Image URL</label>
                   <input
                     type="url"
                     placeholder="https://images.unsplash.com/..."
-                    value={newPostImage}
-                    onChange={(e) => setNewPostImage(e.target.value)}
+                    value={newPostImageURL}
+                    onChange={(e) => setNewPostImageURL(e.target.value)}
                     className="w-full bg-[#1E2124] text-white border border-[#2A2D31]/60 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#C8A25E]"
                   />
                 </div>
-              </div>
+              )}
+
+              {/* Upload Progress */}
+              {uploadProgress !== null && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] text-[#8E9299] font-bold">
+                    <span>Uploading photo to Firebase Storage...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-[#1E2124] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#C8A25E] transition-all duration-200"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider block mb-1.5">What did you co-experience?</label>
                 <textarea
                   required
                   rows={4}
-                  placeholder="Tell your SATHI companion experience. Be descriptive and keep it authentic..."
+                  placeholder="Tell your SATHI companion experience in detail..."
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
                   className="w-full bg-[#1E2124] text-white border border-[#2A2D31]/60 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#C8A25E] resize-none"

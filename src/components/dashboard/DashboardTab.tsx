@@ -88,8 +88,8 @@ export const DashboardTab: React.FC = () => {
             <h2 className="text-2xl font-bold text-white mb-6">Recent Notifications</h2>
             {notifications.length > 0 ? (
               <div className="space-y-4">
-                {notifications.slice(0, 5).map(notification => (
-                  <div key={notification.id} className={`p-4 rounded-2xl border flex items-start gap-4 ${notification.isRead ? 'bg-[#17191C] border-[#2A2D31]' : 'bg-[#C8A25E]/5 border-[#C8A25E]/20'}`}>
+                {notifications.slice(0, 5).map((notification, idx) => (
+                  <div key={`${notification.id || 'notif'}-${idx}`} className={`p-4 rounded-2xl border flex items-start gap-4 ${notification.isRead ? 'bg-[#17191C] border-[#2A2D31]' : 'bg-[#C8A25E]/5 border-[#C8A25E]/20'}`}>
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${notification.isRead ? 'bg-[#1E2124] text-[#8E9299]' : 'bg-[#C8A25E]/10 text-[#C8A25E]'}`}>
                       <Bell className="w-5 h-5" />
                     </div>
@@ -115,10 +115,10 @@ export const DashboardTab: React.FC = () => {
             <h2 className="text-2xl font-bold text-white mb-6">Recent Bookings</h2>
             {myBookings.length > 0 ? (
               <div className="space-y-4">
-                {myBookings.slice(0, 3).map(booking => {
+                {myBookings.slice(0, 3).map((booking, idx) => {
                   const companion = favoriteCompanions.find(c => c.id === booking.companionId) || fetchedCompanions.find(c => c.id === booking.companionId);
                   return (
-                    <div key={booking.id} className="bg-[#17191C] border border-[#2A2D31] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div key={`${booking.id || 'b'}-${idx}`} className="bg-[#17191C] border border-[#2A2D31] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
                         {companion && (
                           <SafeImage src={companion.imageUrl} alt={companion.name} className="w-12 h-12 rounded-full object-cover border border-[#2A2D31]" fallbackType="avatar" textForInitials={companion.name} />

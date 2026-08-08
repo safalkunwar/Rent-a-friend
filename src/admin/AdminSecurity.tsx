@@ -58,8 +58,8 @@ export function AdminSecurity() {
         </div>
         <div className="p-4 space-y-4">
           {sosAlerts.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No SOS alerts.</p>}
-          {sosAlerts.map(alert => (
-            <div key={alert.id} className={`p-4 rounded-xl border ${alert.status === 'active' ? 'bg-red-500/10 border-red-500/30' : 'bg-[#1a1a1a] border-[#222]'}`}>
+          {sosAlerts.map((alert, idx) => (
+            <div key={`${alert.id || 'sos'}-${idx}`} className={`p-4 rounded-xl border ${alert.status === 'active' ? 'bg-red-500/10 border-red-500/30' : 'bg-[#1a1a1a] border-[#222]'}`}>
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-mono text-gray-500">{alert.id}</span>
@@ -102,8 +102,8 @@ export function AdminSecurity() {
         </div>
         <div className="divide-y divide-[#222]">
           {suspiciousActivities.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No suspicious activity logs.</p>}
-          {suspiciousActivities.map(item => (
-            <div key={item.id} className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 hover:bg-[#1a1a1a] transition-colors">
+          {suspiciousActivities.map((item, idx) => (
+            <div key={`${item.id || 'sec'}-${idx}`} className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 hover:bg-[#1a1a1a] transition-colors">
                <div>
                   <p className="text-sm font-medium text-white mb-1">{item.flag}</p>
                   <p className="text-xs text-gray-400">{item.target} • {item.date}</p>

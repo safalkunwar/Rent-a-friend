@@ -143,10 +143,20 @@ Target:
 3. Audit logging
 4. Fraud detection rules via Cloud Functions
 
-## Partner Ecosystem
+## Scalability & High-Concurrency Architecture (10,000 Concurrent Users Target)
 
-Planned:
-1. `partners` collection in Firestore
-2. Dashboards for hotel, restaurant, cafe, adventure partners
-3. Referral tracking and commission reports
-4. Offer/promotion management
+SATHI is engineered with a multi-layered production architecture designed to scale seamlessly to **10,000+ concurrent active users**:
+
+1. **Firestore Query Bounding & Indexing**:
+   - Every collection read and real-time listener enforces `limitCount` bounds (`20`–`30` items).
+   - Pre-compiled composite indexes (`firestore.indexes.json`) optimize filtering across `companions`, `community_posts`, `comments`, `conversations`, `messages`, `stories`, and `notifications`.
+2. **Transactional Slot Lock Protection (`BookingRepository`)**:
+   - High-concurrency booking reservations utilize atomic `runTransaction` execution with double-booking slot locks (`booking_locks/lock_{companionId}_{date}`).
+3. **Optimized Messaging Architecture**:
+   - Active listener isolation: Clients only listen to user-owned `conversations` and the currently open `selectedConvo` (bounded to 50 latest messages).
+4. **Per-User Reaction Docs**:
+   - Likes and reactions use isolated user reaction documents (`likes/${userId}_${postId}`) and atomic counter updates to avoid write lock bottlenecks on hot documents.
+5. **Local Offline & Caching Layer (`storage.ts`)**:
+   - Client-side IndexedDB / LocalStorage cache (`offlineStorage`) renders cached metadata instantly for low perceived latency while background queries delta sync.
+6. **Lazy Asset Serving**:
+   - Images use `SafeImage` with native `loading="lazy"` browser rendering to minimize mobile bandwidth egress.

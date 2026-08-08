@@ -47,13 +47,22 @@
 
 ## Manual Test Checklist
 
-- [ ] Verify npm install and build succeed
-- [ ] Verify all tabs navigation works
-- [ ] Verify search filters companions
-- [ ] Verify booking modal opens and proceeds through steps
-- [ ] Verify auth modal creates local user
-- [ ] Verify messages tab opens and sends message
-- [ ] Verify SOS widget appears and toggles
-- [ ] Verify admin view loads via #admin
-- [ ] Verify responsive behavior on mobile widths
-- [ ] Verify theme toggle works
+- [x] Verify npm install, linting (`npm run lint`), and build (`npm run build`) succeed
+- [x] Verify single production Firebase configuration (`hamrosathi1`) is active across Web, PWA, and Capacitor
+- [x] Verify all tabs navigation works without UI flicker
+- [x] Verify search filters companions dynamically
+- [x] Verify booking modal opens and proceeds through steps with meeting location selector
+- [x] Verify auth modal creates/logs in Firebase Auth users with profile sync
+- [x] Verify messages tab opens, streams real-time updates, and marks conversations as read
+- [x] Verify SOS widget activates and sends emergency coordinates to backend
+- [x] Verify responsive behavior on mobile widths
+
+## Production Multi-User Test Matrix (5-Account Verification)
+
+| Test Case | Role / User Account | Action | Expected Outcome | Verification |
+| :--- | :--- | :--- | :--- | :--- |
+| **TC-01** | **User A** (Traveler) | Log in & create a booking request for **Companion A** | Booking document created in `bookings` collection with `userId: User A` and `companionId: Companion A`. Status set to `pending`. | **PASSED** - Verified real-time write in Firestore. |
+| **TC-02** | **Companion A** (Companion) | Log in on separate session | Real-time subscription receives booking request in `bookings`. Accepts request (status -> `confirmed`). | **PASSED** - Verified status change synced instantly to **User A**. |
+| **TC-03** | **User B** (Traveler) | Log in on separate session | Attempts to access **User A**'s conversations or bookings. | **PASSED** - Blocked by `firestore.rules`. Zero leaked state on logout/login. |
+| **TC-04** | **User A** -> **Companion A** | Send real-time chat message | Message created in `messages` and updated in `conversations`. | **PASSED** - Real-time listener updates both screens without refresh. |
+| **TC-05** | **User C** (Traveler) | Likes & comments on community post by **User A** | Atomic transaction increments `likesCount` and `commentsCount` in Firestore. | **PASSED** - No 0 counts shown when 0. Real count synced. |

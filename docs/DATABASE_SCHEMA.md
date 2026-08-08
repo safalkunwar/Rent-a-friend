@@ -259,6 +259,25 @@ Fields:
 - storyId (string, ref stories.id)
 - createdAt (timestamp)
 
+## Collection: booking_locks
+
+Purpose: Transactional slot locks to prevent concurrent double-booking of companions
+
+Fields:
+- id (string, PK) - composite lock key `lock_{companionId}_{date}`
+- companionId (string, ref companions.id)
+- date (string) - ISO date
+- bookingId (string, ref bookings.id)
+- status (string) - pending | confirmed
+- updatedAt (timestamp)
+
+Security Rules:
+- Read: authenticated users
+- Write: authenticated users via atomic transactions
+
+Relationships:
+- 1:1 booking slot lock reservation
+
 ## Collection: comments
 
 Purpose: Comments on community posts

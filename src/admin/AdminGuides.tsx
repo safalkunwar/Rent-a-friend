@@ -78,8 +78,8 @@ export function AdminGuides() {
 
         <div className="divide-y divide-[#222]">
           {applications.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No pending applications.</p>}
-          {applications.filter(a => a.status === 'pending').map(app => (
-            <div key={app.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#222]/30 transition-colors">
+          {applications.filter(a => a.status === 'pending').map((app, idx) => (
+            <div key={`${app.id || 'app'}-${idx}`} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#222]/30 transition-colors">
               <div>
                 <p className="text-sm font-semibold">{app.name}</p>
                 <p className="text-xs text-gray-400 mt-1">{app.email} • {app.location}</p>
@@ -109,8 +109,8 @@ export function AdminGuides() {
           <h3 className="font-semibold text-sm">Active Guides ({guides.length})</h3>
         </div>
         <div className="divide-y divide-[#222]">
-          {guides.map(guide => (
-            <div key={guide.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#222]/30 transition-colors opacity-80">
+          {guides.map((guide, idx) => (
+            <div key={`${guide.id || 'guide'}-${idx}`} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#222]/30 transition-colors opacity-80">
               <div>
                 <p className="text-sm font-semibold flex items-center gap-2">{guide.name} {guide.isVerified && <ShieldAlert className="w-3 h-3 text-green-500" />}</p>
                 <p className="text-xs text-gray-400 mt-1">{guide.location} • {guide.isVerified ? 'Verified' : 'Unverified'}</p>

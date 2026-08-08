@@ -9,6 +9,7 @@ import { AdminGuard } from './components/guards/AdminGuard';
 import { LoadingScreen } from './components/LoadingScreen';
 import { NotificationProvider } from './components/notifications/NotificationProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 function AppRoutes() {
   const { loading } = useAppContext();
@@ -84,6 +85,7 @@ export default function App() {
         <AppProvider>
           <ToastProvider>
             <NotificationProvider>
+              <PWAInstallPrompt />
               <AppRoutes />
             </NotificationProvider>
           </ToastProvider>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SATHI</string>
+    <string name="title_activity_main">SATHI</string>
+    <string name="package_name">com.sathi.app</string>
+    <string name="custom_url_scheme">com.sathi.app</string>
+</resources>

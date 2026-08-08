@@ -79,6 +79,7 @@ export const SafeImage: React.FC<SafeImageProps> = ({
       <img
         src={src || undefined}
         alt={alt}
+        loading="lazy"
         onError={() => setError(true)}
         onLoad={() => setLoading(false)}
         referrerPolicy="no-referrer"

@@ -54,8 +54,8 @@ export function AdminContent() {
         </div>
         <div className="p-4 space-y-3 flex-1 overflow-y-auto">
           {filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No {tab} found.</p>}
-          {filtered.map(item => (
-            <div key={item.id} className="p-4 bg-[#1a1a1a] rounded-xl border border-[#222] flex items-center justify-between hover:border-[#C8A25E]/50 transition-colors">
+          {filtered.map((item, idx) => (
+            <div key={`${item.id || tab}-${idx}`} className="p-4 bg-[#1a1a1a] rounded-xl border border-[#222] flex items-center justify-between hover:border-[#C8A25E]/50 transition-colors">
               <div>
                 <p className="text-sm font-medium text-white">{item.title}</p>
                 <p className="text-xs text-gray-400">{tab === 'activities' ? `${(item as Activity).duration} • NPR ${(item as Activity).avgPrice}/hr` : `${item.date} • ${item.location}`}</p>

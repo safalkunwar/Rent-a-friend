@@ -117,6 +117,12 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Booking Locks Collection: /booking_locks/{lockId}
+    match /booking_locks/{lockId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated();
+    }
+
     // Reviews Collection: /reviews/{reviewId}
     match /reviews/{reviewId} {
       // Anyone can read reviews
@@ -135,16 +141,26 @@ service cloud.firestore {
     // Conversations Collection: /conversations/{conversationId}
     match /conversations/{conversationId} {
       // Only participants or admins can read
-      allow read: if isAuthenticated() && (isAdmin() || (resource != null && request.auth.uid in resource.data.participantIds));
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        request.auth.uid in conversationId.split('_') ||
+        (resource != null && request.auth.uid in resource.data.participantIds)
+      );
 
       // New conversation creation
       allow create: if isAuthenticated() && 
-                    request.auth.uid in request.resource.data.participantIds && 
-                    request.resource.data.participantIds.size() >= 2 && 
+                    (
+                      request.auth.uid in conversationId.split('_') ||
+                      (request.resource.data.keys().hasAll(['participantIds']) && request.auth.uid in request.resource.data.participantIds)
+                    ) && 
                     isValidData(request.resource.data);
 
       // Only participants or admins can update
-      allow update: if isAuthenticated() && (isAdmin() || (resource != null && request.auth.uid in resource.data.participantIds)) && isValidData(request.resource.data);
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        request.auth.uid in conversationId.split('_') ||
+        (resource != null && request.auth.uid in resource.data.participantIds)
+      ) && isValidData(request.resource.data);
 
       // Only admins can delete
       allow delete: if isAdmin();
@@ -181,7 +197,7 @@ service cloud.firestore {
     // Notifications Collection: /notifications/{notificationId}
     match /notifications/{notificationId} {
       allow read, update: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.userId || isAuthenticated()) && isValidData(request.resource.data);
       allow delete: if isAdmin();
     }
 
@@ -201,12 +217,16 @@ service cloud.firestore {
       // Authenticated users can create posts
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
 
-      // Authors can update their own posts
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && 
-                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'category', 'tags', 'imageUrl', 'updatedAt', 'status']);
+      // Authors can update their own posts, or any authenticated user can update counter fields
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        (request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'category', 'tags', 'imageUrl', 'updatedAt', 'status'])) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'sharesCount', 'updatedAt'])
+      );
 
-      // Admins can update and delete any post
-      allow update, delete: if isAdmin();
+      // Admins can update any post, and authors or admins can delete
+      allow update: if isAdmin();
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
     }
 
     // Comments Collection: /comments/{commentId}
@@ -228,7 +248,7 @@ service cloud.firestore {
     match /likes/{likeId} {
       allow read: if true;
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
-      allow delete: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
 
     // Story Likes Collection: /story_likes/{likeId}

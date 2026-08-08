@@ -22,6 +22,8 @@ export interface Review {
 
 export interface ExperienceStory {
   id: string;
+  userId?: string;
+  createdAt?: string;
   companionName: string;
   userName: string;
   userAvatar: string;

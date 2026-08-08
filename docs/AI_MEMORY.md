@@ -116,6 +116,14 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
   - Relocated the Account Hub sliding bottom drawer component from inside the desktop-only `<header>` container to the root-level layout element.
   - Ensured the sliding bottom drawer remains mounted in the DOM regardless of visual device scaling, allowing mobile users to click their header profile avatar and reliably open their user Account Hub dashboard.
   - Retained clean `<AnimatePresence>` transitions and animations during mounting/unmounting of the mobile drawer.
+- **Progressive Web App (PWA) & Capacitor Bridge Integration (2026-08-01):**
+  - Integrated `vite-plugin-pwa` for offline asset precaching and custom runtime caching policies (Firestore, image storage, Unsplash, and fallback placeholders).
+  - Built a custom `<PWAInstallPrompt />` with automated install banner triggers and step-by-step Apple/iOS installation guides.
+  - Configured `@capacitor/cli`, `@capacitor/core`, and initialized Gradle/Xcode bindings inside native `/android/` and `/ios/` bundles.
+- **Firebase Backend Stabilization & Empty-State Resilience (2026-08-07):**
+  - Transitioned the full frontend data-fetching hooks layer (`useCompanions`, `useStories`, `useActivities`, `useEvents`, `usePartners`, `useCommunityPosts`) to rely strictly on secure collections inside production database `hamrosathi1` with zero hardcoded seeding fallbacks or mock caches.
+  - Added graceful rendering protections so empty collections render beautiful visual placeholders instead of failing.
+  - Optimized compiling pipelines by excluding generated mobile paths (`/android`, `/ios`, `/dist`) in `tsconfig.json`.
 
 - **Firebase Resumption & Optimization (2026-07-12):**
   - Resolved `auth/configuration-not-found` error via strict initialization validation in `src/firebase.ts`.

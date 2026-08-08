@@ -41,7 +41,17 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
 
   // Subscribe to ALL conversations involving current user (real-time stream)
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setLocalConversations({});
+      setLocalMessages({});
+      setSelectedConvo(null);
+      setTravelerProfiles({});
+      return;
+    }
+
+    setLocalConversations({});
+    setLocalMessages({});
+    setSelectedConvo(null);
 
     const convoUnsub = firestore.subscribe<any>(
       'conversations',
@@ -58,7 +68,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
     return () => {
       convoUnsub();
     };
-  }, [currentUser]);
+  }, [currentUser?.id]);
 
   // Subscribe to messages of the SELECTED conversation only (Minimal Reads Optimization)
   useEffect(() => {
@@ -124,17 +134,28 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
   useEffect(() => {
     if (!currentUser || !selectedConvo) return;
     
+    // Only attempt to mark as read if the conversation actually exists in localConversations
+    const currentConvo = localConversations[selectedConvo];
+    if (!currentConvo) return;
+
+    // Skip if already 0
+    if ((currentConvo.unreadCount || 0) === 0) return;
+    
     const markAsRead = async () => {
       try {
+        const participantIds = selectedConvo.split('_');
         await firestore.setDocument(`conversations/${selectedConvo}`, {
-          unreadCount: 0
+          id: selectedConvo,
+          participantIds: participantIds.length >= 2 ? participantIds : [currentUser.id],
+          unreadCount: 0,
+          updatedAt: new Date().toISOString()
         }, true);
       } catch (err) {
         console.error("[SATHI Messages] Error marking conversation as read:", err);
       }
     };
     markAsRead();
-  }, [currentUser, selectedConvo]);
+  }, [currentUser, selectedConvo, localConversations]);
 
   // Automatically select conversation if initialCompanionId is provided
   useEffect(() => {
@@ -314,7 +335,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
   }, [fetchedCompanions, companionId, travelerProfiles]);
 
   return (
-    <div className="h-[calc(100vh-180px)] md:h-[650px] flex rounded-3xl overflow-hidden border border-[#2A2D31] bg-[#0F1113] transition-all duration-300">
+    <div className="h-full w-full md:h-[650px] flex md:rounded-3xl overflow-hidden md:border border-[#2A2D31] bg-[#0F1113] transition-all duration-300">
       {/* Sidebar */}
       <div className={`w-full md:w-80 flex-col border-r border-[#2A2D31] bg-[#17191C] ${selectedConvo ? 'hidden md:flex' : 'flex'}`} role="region" aria-label="Conversations">
         <div className="p-4 border-b border-[#2A2D31]">
@@ -425,7 +446,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
       {selectedConvo ? (
         <div className="flex-1 flex flex-col bg-[#0F1113]">
           {/* Header */}
-          <div className="h-16 border-b border-[#2A2D31] flex items-center justify-between px-6 bg-[#17191C]">
+          <div className="h-16 border-b border-[#2A2D31] flex items-center justify-between px-6 bg-[#17191C] shrink-0">
             <div className="flex items-center gap-3">
               <button onClick={() => setSelectedConvo(null)} className="md:hidden text-[#8E9299] hover:text-white mr-2 text-xl font-bold">
                 ←
@@ -490,7 +511,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
           </div>
 
           {/* Input */}
-          <div className="p-3 bg-[#17191C] border-t border-[#2A2D31]">
+          <div className="p-3 bg-[#17191C] border-t border-[#2A2D31] shrink-0">
             <div className="flex items-center gap-2">
               <button onClick={() => showToast('Image attachments coming soon', 'info')} className="text-[#8E9299] hover:text-[#C8A25E] transition p-2.5 bg-[#1E2124] rounded-full shrink-0">
                 <ImageIcon className="w-4 h-4" />
