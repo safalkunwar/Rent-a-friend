@@ -21,7 +21,8 @@ interface AppState {
   markNotificationRead: (id: string) => void;
   loading: boolean;
   logout: () => Promise<void>;
-  
+  signInAnonymously: () => Promise<void>;
+
   // Social Layer Operations
   updateUserProfile: (updates: Partial<User & { 
     phone?: string; 
@@ -48,12 +49,13 @@ const AppContext = createContext<AppState | undefined>(undefined);
 
 const mapAuthUserToUser = (authUser: AuthUser | null): User | null => {
   if (!authUser) return null;
+  const isAnonymous = authUser.claims?.anonymous === true;
   return {
     id: authUser.uid,
-    name: authUser.displayName || 'User',
-    email: authUser.email || '',
-    avatar: authUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.displayName || 'User')}&background=random`,
-    role: 'customer',
+    name: isAnonymous ? 'Anonymous Traveler' : (authUser.displayName || 'User'),
+    email: isAnonymous ? '' : (authUser.email || ''),
+    avatar: isAnonymous ? '' : (authUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.displayName || 'User')}&background=random`),
+    role: isAnonymous ? 'guest' : 'customer',
     favorites: [],
     claims: authUser.claims,
   };
@@ -79,65 +81,74 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const user = mapAuthUserToUser(authUser);
         console.log('[SATHI] AppProvider auth user:', user ? `uid=${user.id}` : 'null');
         if (user) {
-          let profile: User | null = null;
-          try {
-            profile = await firestore.getDocument<User>(`users/${user.id}`);
-            console.log('[SATHI] Firestore user profile loaded:', profile ? 'found' : 'not found');
-          } catch (docErr) {
-            console.warn('[SATHI] Failed to get user profile from Firestore, attempting local cache fallback:', docErr);
-          }
+          const isAnonymous = authUser.claims?.anonymous === true;
 
-          if (!profile) {
+          if (!isAnonymous) {
+            let profile: User | null = null;
             try {
-              const cachedProfileStr = localStorage.getItem(`sathi_user_profile_${user.id}`);
-              if (cachedProfileStr) {
-                profile = JSON.parse(cachedProfileStr);
-                console.log('[SATHI] Fallback user profile loaded from localStorage:', profile);
-              }
-            } catch (cacheErr) {
-              console.error('[SATHI] Failed to load user profile from localStorage:', cacheErr);
+              profile = await firestore.getDocument<User>(`users/${user.id}`);
+              console.log('[SATHI] Firestore user profile loaded:', profile ? 'found' : 'not found');
+            } catch (docErr) {
+              console.warn('[SATHI] Failed to get user profile from Firestore, attempting local cache fallback:', docErr);
             }
-          }
 
-          if (profile && !cancelled) {
-            const mergedUser: User = { 
-              ...user, 
-              ...profile,
-              id: user.id,
-              email: profile.email || user.email,
-              name: profile.name || user.name,
-              avatar: profile.avatar || user.avatar,
-              role: profile.role || (authUser.claims?.admin ? 'admin' : authUser.claims?.role === 'companion' ? 'companion' : 'customer'), 
-              favorites: profile.favorites || [] 
-            };
-            setCurrentUser(mergedUser);
-            setFavorites(profile.favorites || []);
-            try {
-              localStorage.setItem(`sathi_user_profile_${user.id}`, JSON.stringify(profile));
-            } catch (cacheWriteErr) {
-              console.warn('[SATHI] Failed to cache user profile in localStorage:', cacheWriteErr);
-            }
-          } else if (!cancelled) {
-            const defaultUser: User = { ...user, role: 'customer', favorites: [] };
-            try {
-              await firestore.setDocument(`users/${user.id}`, {
-                name: user.name,
-                email: user.email,
-                avatar: user.avatar,
-                role: 'customer',
-                favorites: [],
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              });
-            } catch (writeErr) {
-              console.warn('[SATHI] Could not save new user document to Firestore (offline?):', writeErr);
-            }
-            if (!cancelled) {
-              setCurrentUser(defaultUser);
-              setFavorites([]);
+            if (!profile) {
               try {
-                localStorage.setItem(`sathi_user_profile_${user.id}`, JSON.stringify(defaultUser));
-              } catch (e) {}
+                const cachedProfileStr = localStorage.getItem(`sathi_user_profile_${user.id}`);
+                if (cachedProfileStr) {
+                  profile = JSON.parse(cachedProfileStr);
+                  console.log('[SATHI] Fallback user profile loaded from localStorage:', profile);
+                }
+              } catch (cacheErr) {
+                console.error('[SATHI] Failed to load user profile from localStorage:', cacheErr);
+              }
+            }
+
+            if (profile && !cancelled) {
+              const mergedUser: User = {
+                ...user,
+                ...profile,
+                id: user.id,
+                email: profile.email || user.email,
+                name: profile.name || user.name,
+                avatar: profile.avatar || user.avatar,
+                role: profile.role || (authUser.claims?.admin ? 'admin' : authUser.claims?.role === 'companion' ? 'companion' : 'customer'),
+                favorites: profile.favorites || []
+              };
+              setCurrentUser(mergedUser);
+              setFavorites(profile.favorites || []);
+              try {
+                localStorage.setItem(`sathi_user_profile_${user.id}`, JSON.stringify(profile));
+              } catch (cacheWriteErr) {
+                console.warn('[SATHI] Failed to cache user profile in localStorage:', cacheWriteErr);
+              }
+            } else if (!cancelled) {
+              const defaultUser: User = { ...user, role: 'customer', favorites: [] };
+              try {
+                await firestore.setDocument(`users/${user.id}`, {
+                  name: user.name,
+                  email: user.email,
+                  avatar: user.avatar,
+                  role: 'customer',
+                  favorites: [],
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+              } catch (writeErr) {
+                console.warn('[SATHI] Could not save new user document to Firestore (offline?):', writeErr);
+              }
+              if (!cancelled) {
+                setCurrentUser(defaultUser);
+                setFavorites([]);
+                try {
+                  localStorage.setItem(`sathi_user_profile_${user.id}`, JSON.stringify(defaultUser));
+                } catch (e) {}
+              }
+            }
+          } else {
+            if (!cancelled) {
+              setCurrentUser(user);
+              setFavorites([]);
             }
           }
         } else {
@@ -351,6 +362,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setNotifications([]);
   }, []);
 
+  const signInAnonymously = useCallback(async () => {
+    try {
+      const authUser = await authService.signInAnonymously();
+      const user = mapAuthUserToUser(authUser);
+      if (user) {
+        setCurrentUser(user);
+        setFavorites([]);
+      }
+    } catch (err) {
+      console.error('[SATHI] Error signing in anonymously:', err);
+      throw err;
+    }
+  }, []);
+
   const updateUserProfile = useCallback(async (updates: Partial<User & { 
     phone?: string; 
     bio?: string;
@@ -428,6 +453,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       markNotificationRead,
       loading,
       logout,
+      signInAnonymously,
       updateUserProfile,
       becomeCompanion,
       createPost,

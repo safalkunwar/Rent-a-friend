@@ -8,6 +8,7 @@ import {
   sendPasswordResetEmail,
   updateProfile,
   getIdTokenResult,
+  signInAnonymously,
   type User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -41,6 +42,12 @@ export const authService = {
     if (!auth) throw new Error('Firebase Auth is not initialized');
     const provider = new GoogleAuthProvider();
     const cred = await signInWithPopup(auth, provider);
+    return authService.toAuthUser(cred.user);
+  },
+
+  signInAnonymously: async (): Promise<AuthUser> => {
+    if (!auth) throw new Error('Firebase Auth is not initialized');
+    const cred = await signInAnonymously(auth);
     return authService.toAuthUser(cred.user);
   },
 
@@ -97,6 +104,8 @@ export const authService = {
     displayName: user.displayName,
     photoURL: user.photoURL,
     emailVerified: user.emailVerified,
-    claims: {},
+    claims: {
+      ...(user.isAnonymous ? { anonymous: true } : {}),
+    },
   }),
 };

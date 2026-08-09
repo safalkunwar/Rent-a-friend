@@ -1297,7 +1297,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       </h2>
                       <p className="text-xs text-text-secondary mt-1">Book direct curated local adventures guided by trusted hosts.</p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => showToast('Activities directory synced!', 'success')}
                       className="text-xs font-bold text-primary-action hover:underline"
                     >
@@ -1315,30 +1315,30 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         const tags = ["TRENDING", "POPULAR", "TOP RATED", "NEW"];
                         const tag = tags[index % tags.length];
                         return (
-                          <div 
-                            key={`${act.id || 'act'}-${index}`} 
-                            onClick={() => { setSelectedCategory((act as any).category || 'All'); showToast(`Filtered by ${act.title}`, 'success'); }} 
-                            className="group relative aspect-[4/3] rounded-[32px] overflow-hidden border border-border-token-light bg-card hover:border-primary-action/40 hover:shadow-2xl transition-all duration-500 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary-action"
+                          <div
+                            key={`${act.id || 'act'}-${index}`}
+                            onClick={() => { setSelectedCategory((act as any).category || 'All'); showToast(`Filtered by ${act.title}`, 'success'); }}
+                            className="group relative aspect-[4/3] rounded-[32px] overflow-hidden border border-border-token-light bg-surface hover:border-primary-action/40 hover:shadow-lg transition-all duration-500 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary-action"
                           >
-                            <img 
-                              src={act.imageUrl || act.image} 
-                              alt={act.title} 
-                              className="absolute inset-0 w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" 
-                              loading="lazy" 
+                            <img
+                              src={act.imageUrl || act.image}
+                              alt={act.title}
+                              className="absolute inset-0 w-full h-full object-cover group-hover:scale-103 transition-transform duration-700"
+                              loading="lazy"
                             />
-                            <div className="absolute inset-0 bg-overlay-gradient z-10" />
-                            
+                            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent z-10" />
+
                             {/* Top tag */}
-                            <span className="absolute top-4 left-4 bg-overlay-tag-bg backdrop-blur-md px-2.5 py-1 rounded-full text-[8px] font-black tracking-widest text-primary-action border border-overlay-tag-border uppercase z-20">
+                            <span className="absolute top-4 left-4 bg-surface/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[8px] font-black tracking-widest text-primary-action border border-border-token/60 uppercase z-20">
                               {tag}
                             </span>
 
-                            {/* Overlaid Bottom Details */}
+                            {/* Bottom Details */}
                             <div className="absolute bottom-5 left-5 right-5 z-20 space-y-2 text-left">
-                              <h4 className="text-lg font-extrabold text-overlay-text-primary leading-tight group-hover:text-primary-action transition-colors drop-shadow-md">
+                              <h4 className="text-lg font-extrabold text-text-primary leading-tight group-hover:text-primary-action transition-colors drop-shadow-md">
                                 {act.title}
                               </h4>
-                              <div className="flex items-center justify-between pt-1.5 border-t border-overlay-tag-border text-[10px] text-overlay-text-secondary">
+                              <div className="flex items-center justify-between pt-1.5 border-t border-border-token/60 text-[10px] text-text-secondary">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3.5 h-3.5 text-primary-action" /> {act.duration}
                                 </span>
@@ -1444,8 +1444,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {partners.slice(0, 8).map((partner, i) => (
-                      <div key={`${partner.id || 'p'}-${i}`} className="bg-surface-elevated/40 border border-border-token/50 p-4 rounded-xl text-center space-y-1.5 hover:border-primary-action/30 transition-all">
-                        <div className="w-10 h-10 bg-primary-action/15 rounded-full flex items-center justify-center mx-auto text-primary-action font-bold">
+                      <div key={`${partner.id || 'p'}-${i}`} className="bg-surface border border-border-token/50 rounded-2xl p-5 text-center space-y-2 hover:border-primary-action/30 hover:shadow-md transition-all">
+                        <div className="w-12 h-12 bg-surface-elevated border border-border-token rounded-full flex items-center justify-center mx-auto text-primary-action font-black text-sm">
                           {partner.name.substring(0, 2)}
                         </div>
                         <h4 className="text-xs font-bold text-text-primary block truncate">{partner.name}</h4>

@@ -10,13 +10,13 @@ import { uploadImageToStorage } from '../../services/storage';
 import { firestore } from '../../services/firestore';
 
 export const CommunityFeed: React.FC = () => {
-  const { currentUser, createPost, likePost, unlikePost, createComment, deleteComment, checkUserLikedPost, openAuthModal } = useAppContext();
+  const { currentUser, createPost, likePost, unlikePost, createComment, deleteComment, checkUserLikedPost, openAuthModal, signInAnonymously } = useAppContext();
   const { posts, loading } = useCommunityPosts();
   const { showToast } = useToast();
 
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  
+
   // Create Post States
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
@@ -39,13 +39,19 @@ export const CommunityFeed: React.FC = () => {
 
   const categories = ['All', 'Adventure', 'Food', 'Culture', 'Shopping', 'Nightlife'];
 
+  const getCurrentUserId = () => currentUser?.id || 'guest';
+  const getCurrentUserName = () => currentUser?.name || 'Anonymous Traveler';
+  const getCurrentUserAvatar = () => currentUser?.avatar || '';
+  const isAnonymous = currentUser?.role === 'guest';
+
   // Sync likes and posts
   useEffect(() => {
     if (!posts) return;
     const initialLikes: Record<string, number> = {};
     posts.forEach(post => {
       initialLikes[post.id] = post.likesCount || 0;
-      if (currentUser) {
+      const userId = getCurrentUserId();
+      if (userId !== 'guest') {
         checkUserLikedPost(post.id).then(liked => {
           setLikedPosts(prev => ({ ...prev, [post.id]: liked }));
         });
@@ -82,7 +88,7 @@ export const CommunityFeed: React.FC = () => {
     }
 
     const isLiked = likedPosts[postId];
-    
+
     // Optimistic UI update
     setLikedPosts(prev => ({ ...prev, [postId]: !isLiked }));
     setLikesCount(prev => ({
@@ -194,7 +200,7 @@ export const CommunityFeed: React.FC = () => {
         imageUrl: finalImageUrl || 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=800&auto=format&fit=crop',
         status: 'published',
         userAvatar: currentUser.avatar || defaultAvatar,
-        userName: currentUser.name || 'SATHI Traveler',
+        userName: currentUser.name || 'Anonymous Traveler',
         likesCount: 0,
         commentsCount: 0,
         sharesCount: 0,
@@ -239,11 +245,11 @@ export const CommunityFeed: React.FC = () => {
 
     try {
       const defaultAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=C8A25E&color=0F1113';
-      
+
       await createComment({
         postId,
         userId: currentUser.id,
-        userName: currentUser.name || 'SATHI Traveler',
+        userName: currentUser.name || 'Anonymous Traveler',
         userAvatar: currentUser.avatar || defaultAvatar,
         text
       });
@@ -302,6 +308,21 @@ export const CommunityFeed: React.FC = () => {
         >
           <Sparkles className="w-3.5 h-3.5" /> Share Co-Experience
         </button>
+        {!currentUser && (
+          <button
+            onClick={async () => {
+              try {
+                await signInAnonymously();
+                showToast('Welcome! You can now share and interact as a guest.', 'success');
+              } catch (err) {
+                showToast('Failed to continue as guest. Please try again.', 'error');
+              }
+            }}
+            className="flex items-center gap-2 bg-surface-elevated border border-border-token text-text-secondary hover:text-text-primary px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all"
+          >
+            Continue as Guest
+          </button>
+        )}
       </div>
 
       {/* Grid List */}
@@ -311,13 +332,13 @@ export const CommunityFeed: React.FC = () => {
         </div>
       ) : filteredPosts.length === 0 ? (
         <div className="py-12 text-center border border-border-token/40 rounded-[32px] bg-surface px-6 space-y-2">
-          <p className="text-sm font-semibold text-text-primary">Be the first to share something with the SATHI community.</p>
-          <p className="text-xs text-text-secondary">Post your photos, stories, and recommendations in Nepal!</p>
+          <p className="text-sm font-semibold text-text-primary">No Community Moments yet</p>
+          <p className="text-xs text-text-secondary">Be the first to share your Nepal experience.</p>
           <button
             onClick={() => currentUser ? setShowCreateModal(true) : openAuthModal()}
             className="mt-3 px-4 py-2 bg-primary-action text-background font-extrabold text-xs rounded-xl inline-flex items-center gap-2"
           >
-            <Sparkles className="w-3.5 h-3.5" /> Share First Adventure
+            <Sparkles className="w-3.5 h-3.5" /> Share Your Adventure
           </button>
         </div>
       ) : (
@@ -387,57 +408,57 @@ export const CommunityFeed: React.FC = () => {
                     {post.content}
                   </p>
 
-                  {/* Actions Row */}
-                  <div className="pt-3 border-t border-border-token/40 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <button 
-                        onClick={() => handleToggleLike(post.id)}
-                        className={`flex items-center gap-1 text-[11px] font-black transition-all ${
-                          isLiked ? 'text-red-500 scale-105' : 'text-text-secondary hover:text-red-500'
-                        }`}
-                      >
-                        <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-                        {currentLikes > 0 && <span>{currentLikes}</span>}
-                      </button>
+                    {/* Actions Row */}
+                    <div className="pt-3 border-t border-border-token/40 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleToggleLike(post.id)}
+                          className={`flex items-center gap-1 text-[11px] font-black transition-all ${
+                            isLiked ? 'text-red-500 scale-105' : 'text-text-secondary hover:text-red-500'
+                          }`}
+                        >
+                          <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                          {currentLikes > 0 && <span>{currentLikes}</span>}
+                        </button>
 
-                      <button 
-                        onClick={() => toggleCommentsSection(post.id)}
-                        className={`flex items-center gap-1 text-[11px] font-black transition-all ${
-                          showComments ? 'text-primary-action' : 'text-text-secondary hover:text-text-primary'
-                        }`}
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        {post.commentsCount && post.commentsCount > 0 ? (
-                          <span>{post.commentsCount}</span>
-                        ) : null}
-                      </button>
+                        <button
+                          onClick={() => toggleCommentsSection(post.id)}
+                          className={`flex items-center gap-1 text-[11px] font-black transition-all ${
+                            showComments ? 'text-primary-action' : 'text-text-secondary hover:text-text-primary'
+                          }`}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          {post.commentsCount && post.commentsCount > 0 ? (
+                            <span>{post.commentsCount}</span>
+                          ) : null}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSavePost(post.id)}
+                          className={`text-text-secondary hover:text-text-primary transition-all ${
+                            isSaved ? 'text-primary-action' : ''
+                          }`}
+                        >
+                          <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
+                        </button>
+
+                        <button
+                          onClick={() => handleSharePost(post)}
+                          className="text-text-secondary hover:text-text-primary transition-all"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => handleReportPost(post.id)}
+                          className="text-text-secondary hover:text-red-500 transition-all"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => handleSavePost(post.id)}
-                        className={`text-text-secondary hover:text-text-primary transition-all ${
-                          isSaved ? 'text-primary-action' : ''
-                        }`}
-                      >
-                        <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
-                      </button>
-
-                      <button 
-                        onClick={() => handleSharePost(post)}
-                        className="text-text-secondary hover:text-text-primary transition-all"
-                      >
-                        <Share2 className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button 
-                        onClick={() => handleReportPost(post.id)}
-                        className="text-text-secondary hover:text-red-500 transition-all"
-                      >
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Real-time Comments Box */}
@@ -468,32 +489,32 @@ export const CommunityFeed: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Add Comment Input */}
-                    {currentUser ? (
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="text"
-                          placeholder="Write a comment..."
-                          value={newCommentText[post.id] || ''}
-                          onChange={(e) => setNewCommentText(prev => ({ ...prev, [post.id]: e.target.value }))}
-                          onKeyDown={(e) => e.key === 'Enter' && handleCreateComment(post.id)}
-                          className="flex-1 bg-surface-elevated text-text-primary border border-border-token/40 rounded-xl px-3 py-1.5 text-[10px] focus:outline-none focus:border-primary-action"
-                        />
-                        <button 
-                          onClick={() => handleCreateComment(post.id)}
-                          className="w-7 h-7 rounded-full bg-primary-action flex items-center justify-center text-background active:scale-95 transition-transform shrink-0"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={openAuthModal}
-                        className="w-full text-left py-1 text-[10px] text-primary-action font-bold hover:underline"
-                      >
-                        Sign in to leave a comment
-                      </button>
-                    )}
+                     {/* Add Comment Input */}
+                     {currentUser ? (
+                       <div className="flex gap-2 items-center">
+                         <input
+                           type="text"
+                           placeholder="Write a comment..."
+                           value={newCommentText[post.id] || ''}
+                           onChange={(e) => setNewCommentText(prev => ({ ...prev, [post.id]: e.target.value }))}
+                           onKeyDown={(e) => e.key === 'Enter' && handleCreateComment(post.id)}
+                           className="flex-1 bg-surface-elevated text-text-primary border border-border-token/40 rounded-xl px-3 py-1.5 text-[10px] focus:outline-none focus:border-primary-action"
+                         />
+                         <button
+                           onClick={() => handleCreateComment(post.id)}
+                           className="w-7 h-7 rounded-full bg-primary-action flex items-center justify-center text-background active:scale-95 transition-transform shrink-0"
+                         >
+                           <Send className="w-3.5 h-3.5" />
+                         </button>
+                       </div>
+                     ) : (
+                       <button
+                         onClick={openAuthModal}
+                         className="w-full text-left py-1 text-[10px] text-primary-action font-bold hover:underline"
+                       >
+                         Sign in to leave a comment
+                       </button>
+                     )}
                   </div>
                 )}
               </div>
