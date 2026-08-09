@@ -50,25 +50,25 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#111] border border-[#222] p-5 rounded-2xl">
+        <div className="bg-background border border-border-token p-5 rounded-2xl">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-[#222] rounded-lg">
-              <Users className="w-4 h-4 text-[#C8A25E]" />
+            <div className="p-2 bg-surface-elevated rounded-lg">
+              <Users className="w-4 h-4 text-primary-action" />
             </div>
             <span className="text-sm font-medium text-gray-400">Total Users</span>
           </div>
           <p className="text-3xl font-bold text-white ml-2">{stats.users}</p>
         </div>
-        <div className="bg-[#111] border border-[#222] p-5 rounded-2xl">
+        <div className="bg-background border border-border-token p-5 rounded-2xl">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-[#222] rounded-lg">
-              <UserCheck className="w-4 h-4 text-[#C8A25E]" />
+            <div className="p-2 bg-surface-elevated rounded-lg">
+              <UserCheck className="w-4 h-4 text-primary-action" />
             </div>
             <span className="text-sm font-medium text-gray-400">Active Guides</span>
           </div>
           <p className="text-3xl font-bold text-white ml-2">{stats.guides}</p>
         </div>
-        <div className="bg-[#111] border border-[#222] p-5 rounded-2xl">
+        <div className="bg-background border border-border-token p-5 rounded-2xl">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-yellow-900/10 rounded-lg">
               <ShieldAlert className="w-4 h-4 text-yellow-500" />
@@ -77,10 +77,10 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
           </div>
           <p className="text-3xl font-bold text-white ml-2">{stats.pending}</p>
         </div>
-        <div className="bg-[#111] border border-[#222] p-5 rounded-2xl">
+        <div className="bg-background border border-border-token p-5 rounded-2xl">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-[#222] rounded-lg">
-              <CalendarDays className="w-4 h-4 text-[#C8A25E]" />
+            <div className="p-2 bg-surface-elevated rounded-lg">
+              <CalendarDays className="w-4 h-4 text-primary-action" />
             </div>
             <span className="text-sm font-medium text-gray-400">Total Bookings</span>
           </div>
@@ -88,24 +88,24 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
         </div>
       </div>
 
-      <div className="bg-[#111] border border-[#222] rounded-2xl p-5 mb-8 mt-8">
+      <div className="bg-background border border-border-token rounded-2xl p-5 mb-8 mt-8">
         <h3 className="font-semibold text-sm mb-4 text-white">Quick Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button onClick={() => onNavigate?.('guides')} className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#222] rounded-xl hover:border-[#C8A25E]/50 transition-colors text-left">
-            <UserPlus className="w-5 h-5 text-[#C8A25E]" />
+          <button onClick={() => onNavigate?.('guides')} className="flex items-center gap-3 p-4 bg-surface border border-border-token rounded-xl hover:border-primary-action/50 transition-colors text-left">
+            <UserPlus className="w-5 h-5 text-primary-action" />
             <div>
               <p className="text-sm font-medium text-white">Review Guides</p>
               <p className="text-xs text-gray-400">{stats.pending} pending applications</p>
             </div>
           </button>
-          <button onClick={() => onNavigate?.('bookings')} className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#222] rounded-xl hover:border-[#C8A25E]/50 transition-colors text-left">
-            <CalendarDays className="w-5 h-5 text-[#C8A25E]" />
+          <button onClick={() => onNavigate?.('bookings')} className="flex items-center gap-3 p-4 bg-surface border border-border-token rounded-xl hover:border-primary-action/50 transition-colors text-left">
+            <CalendarDays className="w-5 h-5 text-primary-action" />
             <div>
               <p className="text-sm font-medium text-white">Manage Bookings</p>
               <p className="text-xs text-gray-400">{stats.bookings} total bookings</p>
             </div>
           </button>
-          <button onClick={() => onNavigate?.('security')} className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#222] rounded-xl hover:border-red-500/50 transition-colors text-left">
+          <button onClick={() => onNavigate?.('security')} className="flex items-center gap-3 p-4 bg-surface border border-border-token rounded-xl hover:border-red-500/50 transition-colors text-left">
             <AlertTriangle className="w-5 h-5 text-red-500" />
             <div>
               <p className="text-sm font-medium text-white">Security Center</p>
@@ -115,7 +115,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
         </div>
       </div>
 
-      <div className="bg-[#111] border border-[#222] rounded-2xl p-5">
+      <div className="bg-background border border-border-token rounded-2xl p-5">
         <h3 className="font-semibold text-sm mb-6 text-white">Platform Growth Overview</h3>
         <div className="h-64 w-full text-xs">
           {chartData.length > 0 ? (

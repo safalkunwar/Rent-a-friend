@@ -134,7 +134,7 @@ export const PWAInstallPrompt: React.FC = () => {
           >
             {isOnline ? (
               <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 shadow-xl rounded-2xl p-4 text-emerald-800">
-                <div className="p-2 bg-emerald-500 rounded-xl text-white">
+                <div className="p-2 bg-emerald-500 rounded-xl text-text-primary">
                   <Wifi className="w-5 h-5" />
                 </div>
                 <div className="flex-1 text-left">
@@ -150,7 +150,7 @@ export const PWAInstallPrompt: React.FC = () => {
               </div>
             ) : (
               <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 shadow-xl rounded-2xl p-4 text-amber-800">
-                <div className="p-2 bg-amber-500 rounded-xl text-white animate-pulse">
+                <div className="p-2 bg-amber-500 rounded-xl text-text-primary animate-pulse">
                   <WifiOff className="w-5 h-5" />
                 </div>
                 <div className="flex-1 text-left">
@@ -178,11 +178,11 @@ export const PWAInstallPrompt: React.FC = () => {
             exit={{ opacity: 0, y: 100 }}
             transition={{ type: 'spring', damping: 25, stiffness: 120 }}
             style={{ zIndex: 999 }}
-            className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[420px] bg-[#0F1113]/95 backdrop-blur-lg border border-[#C8A25E]/20 shadow-2xl rounded-3xl p-4"
+            className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[420px] bg-background/95 backdrop-blur-lg border border-primary-action/20 shadow-2xl rounded-3xl p-4"
           >
             <div className="flex items-start gap-4 text-left">
               {/* SATHI Icon inside banner */}
-              <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-[#1E2124] to-[#0F1113] border border-[#C8A25E]/30 flex-shrink-0 flex items-center justify-center shadow-inner">
+              <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-surface-elevated to-background border border-primary-action/30 flex-shrink-0 flex items-center justify-center shadow-inner">
                 <img 
                   src="/icon.jpg" 
                   alt="SATHI PWA" 
@@ -192,18 +192,18 @@ export const PWAInstallPrompt: React.FC = () => {
                     e.currentTarget.style.display = 'none';
                   }}
                 />
-                <div className="absolute -top-1 -right-1 p-0.5 bg-[#C8A25E] rounded-full">
-                  <Sparkles className="w-2.5 h-2.5 text-[#0F1113] fill-current" />
+                <div className="absolute -top-1 -right-1 p-0.5 bg-primary-action rounded-full">
+                  <Sparkles className="w-2.5 h-2.5 text-background fill-current" />
                 </div>
               </div>
 
               {/* Install pitch */}
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-1.5">
-                  <h4 className="text-sm font-extrabold text-white">SATHI for mobile</h4>
-                  <span className="text-[9px] bg-[#C8A25E]/10 text-[#C8A25E] font-black px-1.5 py-0.5 rounded-md border border-[#C8A25E]/20 uppercase tracking-wider">PWA</span>
+                  <h4 className="text-sm font-extrabold text-text-primary">SATHI for mobile</h4>
+                  <span className="text-[9px] bg-primary-action/10 text-primary-action font-black px-1.5 py-0.5 rounded-md border border-primary-action/20 uppercase tracking-wider">PWA</span>
                 </div>
-                <p className="text-xs text-[#8E9299] leading-tight">
+                <p className="text-xs text-text-secondary leading-tight">
                   {isIOS 
                     ? "Install SATHI directly on your iPhone for native fullscreen mode & fast offline access." 
                     : "Install SATHI on your device for smooth animations, offline search, and a standalone app feel."}
@@ -213,14 +213,14 @@ export const PWAInstallPrompt: React.FC = () => {
                 <div className="flex items-center gap-2.5 pt-2">
                   <button
                     onClick={handleInstallClick}
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-[#C8A25E] hover:bg-[#B69150] active:scale-98 text-[#0F1113] text-xs font-extrabold py-2 px-3 rounded-xl transition-all shadow-md shadow-[#C8A25E]/10"
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-primary-action hover:bg-primary-action-hover active:scale-98 text-background text-xs font-extrabold py-2 px-3 rounded-xl transition-all shadow-md shadow-primary-action/10"
                   >
                     <Download className="w-3.5 h-3.5 stroke-[2.5]" />
                     Install App
                   </button>
                   <button
                     onClick={handleDismiss}
-                    className="bg-white/5 hover:bg-white/10 text-white hover:text-white text-xs font-bold py-2 px-3 rounded-xl transition-all"
+                    className="bg-white/5 hover:bg-white/10 text-text-primary hover:text-text-primary text-xs font-bold py-2 px-3 rounded-xl transition-all"
                   >
                     Maybe Later
                   </button>
@@ -230,7 +230,7 @@ export const PWAInstallPrompt: React.FC = () => {
               {/* Close icon */}
               <button 
                 onClick={handleDismiss}
-                className="text-[#8E9299] hover:text-white transition-colors p-1 rounded-lg"
+                className="text-text-secondary hover:text-text-primary transition-colors p-1 rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -258,46 +258,46 @@ export const PWAInstallPrompt: React.FC = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
               transition={{ type: 'spring', damping: 25, stiffness: 180 }}
-              className="relative w-full max-w-sm bg-[#17191C] border border-[#C8A25E]/30 rounded-[32px] overflow-hidden shadow-2xl p-6 text-center text-white space-y-5"
+              className="relative w-full max-w-sm bg-surface border border-primary-action/30 rounded-[32px] overflow-hidden shadow-2xl p-6 text-center text-text-primary space-y-5"
             >
               {/* Header */}
               <div className="space-y-2">
-                <div className="mx-auto w-16 h-16 rounded-[22px] overflow-hidden bg-gradient-to-br from-[#1E2124] to-[#0F1113] border border-[#C8A25E]/40 flex items-center justify-center shadow-lg shadow-[#C8A25E]/5">
+                <div className="mx-auto w-16 h-16 rounded-[22px] overflow-hidden bg-gradient-to-br from-surface-elevated to-background border border-primary-action/40 flex items-center justify-center shadow-lg shadow-primary-action/5">
                   <img src="/icon.jpg" alt="SATHI" className="w-14 h-14 object-cover rounded-2xl" />
                 </div>
-                <h3 className="text-xl font-extrabold text-[#C8A25E]">Install SATHI on iOS</h3>
-                <p className="text-xs text-[#8E9299] leading-relaxed">
+                <h3 className="text-xl font-extrabold text-primary-action">Install SATHI on iOS</h3>
+                <p className="text-xs text-text-secondary leading-relaxed">
                   Safari on iPhone doesn't support automatic PWA triggers. Follow these 3 quick steps to add SATHI to your home screen:
                 </p>
               </div>
 
               {/* Steps list */}
-              <div className="bg-[#1E2124]/60 rounded-2xl p-4 text-left space-y-4 text-xs text-[#E2E8F0] border border-white/5">
+              <div className="bg-surface-elevated/60 rounded-2xl p-4 text-left space-y-4 text-xs text-text-primary border border-border-token-light">
                 <div className="flex items-start gap-3">
-                  <span className="w-5 h-5 rounded-full bg-[#C8A25E]/20 text-[#C8A25E] font-black flex items-center justify-center text-[10px] flex-shrink-0">1</span>
+                  <span className="w-5 h-5 rounded-full bg-primary-action/20 text-primary-action font-black flex items-center justify-center text-[10px] flex-shrink-0">1</span>
                   <div className="space-y-1">
                     <p className="font-bold">Tap the Share Button</p>
-                    <p className="text-[#8E9299] flex items-center gap-1">
-                      Look for the standard Share icon <Share className="w-3.5 h-3.5 text-[#C8A25E]" /> in the Safari toolbar (usually at the bottom of your screen).
+                    <p className="text-text-secondary flex items-center gap-1">
+                      Look for the standard Share icon <Share className="w-3.5 h-3.5 text-primary-action" /> in the Safari toolbar (usually at the bottom of your screen).
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 border-t border-white/5 pt-3">
-                  <span className="w-5 h-5 rounded-full bg-[#C8A25E]/20 text-[#C8A25E] font-black flex items-center justify-center text-[10px] flex-shrink-0">2</span>
+                <div className="flex items-start gap-3 border-t border-border-token-light pt-3">
+                  <span className="w-5 h-5 rounded-full bg-primary-action/20 text-primary-action font-black flex items-center justify-center text-[10px] flex-shrink-0">2</span>
                   <div className="space-y-1">
                     <p className="font-bold">Scroll down & Tap 'Add to Home Screen'</p>
-                    <p className="text-[#8E9299] flex items-center gap-1">
-                      Scroll past options like Copy or Print to find <PlusSquare className="w-3.5 h-3.5 text-[#C8A25E]" /> <strong>Add to Home Screen</strong>.
+                    <p className="text-text-secondary flex items-center gap-1">
+                      Scroll past options like Copy or Print to find <PlusSquare className="w-3.5 h-3.5 text-primary-action" /> <strong>Add to Home Screen</strong>.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 border-t border-white/5 pt-3">
-                  <span className="w-5 h-5 rounded-full bg-[#C8A25E]/20 text-[#C8A25E] font-black flex items-center justify-center text-[10px] flex-shrink-0">3</span>
+                <div className="flex items-start gap-3 border-t border-border-token-light pt-3">
+                  <span className="w-5 h-5 rounded-full bg-primary-action/20 text-primary-action font-black flex items-center justify-center text-[10px] flex-shrink-0">3</span>
                   <div className="space-y-1">
                     <p className="font-bold">Confirm Name & Install</p>
-                    <p className="text-[#8E9299]">
+                    <p className="text-text-secondary">
                       Tap <strong>Add</strong> in the top right corner. SATHI will instantly appear on your iOS homescreen like a native app!
                     </p>
                   </div>
@@ -311,7 +311,7 @@ export const PWAInstallPrompt: React.FC = () => {
                   setShowBanner(false);
                   localStorage.setItem('sathi-pwa-dismissed', 'true');
                 }}
-                className="w-full bg-[#C8A25E] hover:bg-[#B69150] text-[#0F1113] font-extrabold py-3.5 rounded-xl transition-all active:scale-98 shadow-lg shadow-[#C8A25E]/10"
+                className="w-full bg-primary-action hover:bg-primary-action-hover text-background font-extrabold py-3.5 rounded-xl transition-all active:scale-98 shadow-lg shadow-primary-action/10"
               >
                 Got It, Thanks!
               </button>
@@ -319,7 +319,7 @@ export const PWAInstallPrompt: React.FC = () => {
               {/* Close Button */}
               <button 
                 onClick={() => setShowIOSInstructions(false)}
-                className="absolute top-3 right-3 text-[#8E9299] hover:text-white transition-colors p-2"
+                className="absolute top-3 right-3 text-text-secondary hover:text-text-primary transition-colors p-2"
               >
                 <X className="w-5 h-5" />
               </button>

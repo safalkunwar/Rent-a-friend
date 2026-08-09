@@ -180,12 +180,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
   return (
     <>
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-        <div className="bg-[#17191C] border border-[#2A2D31] rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-          <div className="p-6 border-b border-[#2A2D31] flex justify-between items-center bg-[#0F1113]">
-            <h2 id="auth-modal-title" className="text-xl font-bold text-white flex items-center gap-2">
+        <div className="bg-surface border border-border-token rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="p-6 border-b border-border-token flex justify-between items-center bg-background">
+            <h2 id="auth-modal-title" className="text-xl font-bold text-text-primary flex items-center gap-2">
               {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Join as a Guide'}
             </h2>
-            <button onClick={onClose} className="text-[#8E9299] hover:text-white transition-colors p-2 rounded-full hover:bg-white/5">
+            <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors p-2 rounded-full hover:bg-white/5">
               ✕
             </button>
           </div>
@@ -194,38 +194,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
             <form onSubmit={handleSubmit} className="space-y-4">
               {(mode === 'signup' || mode === 'guide') && (
                 <div>
-                  <label htmlFor="auth-name" className="text-[10px] uppercase tracking-[0.2em] text-[#8E9299] font-bold block mb-2">Full Name</label>
+                  <label htmlFor="auth-name" className="text-[10px] uppercase tracking-[0.2em] text-text-secondary font-bold block mb-2">Full Name</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-                    <input id="auth-name" type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#2A2D31] bg-[#1E2124] text-white focus:ring-1 focus:ring-[#C8A25E] outline-none text-sm" placeholder="John Doe" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
+                    <input id="auth-name" type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border-token bg-surface-elevated text-text-primary focus:ring-1 focus:ring-primary-action outline-none text-sm" placeholder="John Doe" />
                   </div>
                 </div>
               )}
 
               <div>
-                <label htmlFor="auth-email" className="text-[10px] uppercase tracking-[0.2em] text-[#8E9299] font-bold block mb-2">Email Address</label>
+                <label htmlFor="auth-email" className="text-[10px] uppercase tracking-[0.2em] text-text-secondary font-bold block mb-2">Email Address</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-                  <input id="auth-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#2A2D31] bg-[#1E2124] text-white focus:ring-1 focus:ring-[#C8A25E] outline-none text-sm" placeholder="hello@example.com" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
+                  <input id="auth-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border-token bg-surface-elevated text-text-primary focus:ring-1 focus:ring-primary-action outline-none text-sm" placeholder="hello@example.com" />
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label htmlFor="auth-password" className="text-[10px] uppercase tracking-[0.2em] text-[#8E9299] font-bold">Password</label>
+                  <label htmlFor="auth-password" className="text-[10px] uppercase tracking-[0.2em] text-text-secondary font-bold">Password</label>
                   {mode === 'login' && (
                     <button
                       type="button"
                       onClick={handleForgotPassword}
-                      className="text-[10px] text-[#C8A25E] font-bold hover:underline uppercase tracking-wider bg-transparent border-none cursor-pointer"
+                      className="text-[10px] text-primary-action font-bold hover:underline uppercase tracking-wider bg-transparent border-none cursor-pointer"
                     >
                       Forgot?
                     </button>
                   )}
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-                  <input id="auth-password" type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#2A2D31] bg-[#1E2124] text-white focus:ring-1 focus:ring-[#C8A25E] outline-none text-sm" placeholder="••••••••" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
+                  <input id="auth-password" type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border-token bg-surface-elevated text-text-primary focus:ring-1 focus:ring-primary-action outline-none text-sm" placeholder="••••••••" />
                 </div>
               </div>
 
@@ -234,13 +234,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
               )}
 
               {mode === 'signup' && (
-                <div className="mt-4 p-4 bg-[#1E2124] border border-[#2A2D31] rounded-xl flex items-start gap-3">
-                  <input type="checkbox" id="terms-signup" required checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-1 accent-[#C8A25E] cursor-pointer" />
-                  <label htmlFor="terms-signup" className="text-xs text-[#8E9299] leading-relaxed cursor-pointer">
+                <div className="mt-4 p-4 bg-surface-elevated border border-border-token rounded-xl flex items-start gap-3">
+                  <input type="checkbox" id="terms-signup" required checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-1 accent-primary-action cursor-pointer" />
+                  <label htmlFor="terms-signup" className="text-xs text-text-secondary leading-relaxed cursor-pointer">
                     I agree to the{' '}
-                    <button type="button" onClick={() => setShowDocType('terms')} className="text-[#C8A25E] font-medium hover:underline inline bg-transparent border-none">Terms of Service</button>
+                    <button type="button" onClick={() => setShowDocType('terms')} className="text-primary-action font-medium hover:underline inline bg-transparent border-none">Terms of Service</button>
                     {' '}and{' '}
-                    <button type="button" onClick={() => setShowDocType('privacy')} className="text-[#C8A25E] font-medium hover:underline inline bg-transparent border-none">Privacy Policy</button>
+                    <button type="button" onClick={() => setShowDocType('privacy')} className="text-primary-action font-medium hover:underline inline bg-transparent border-none">Privacy Policy</button>
                     .
                   </label>
                 </div>
@@ -249,54 +249,54 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
               {mode === 'guide' && (
                 <>
                   <div>
-                    <label htmlFor="auth-location" className="text-[10px] uppercase tracking-[0.2em] text-[#8E9299] font-bold block mb-2">Location / City</label>
+                    <label htmlFor="auth-location" className="text-[10px] uppercase tracking-[0.2em] text-text-secondary font-bold block mb-2">Location / City</label>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-                      <input id="auth-location" type="text" required value={location} onChange={e => setLocation(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#2A2D31] bg-[#1E2124] text-white focus:ring-1 focus:ring-[#C8A25E] outline-none text-sm" placeholder="Kathmandu" />
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
+                      <input id="auth-location" type="text" required value={location} onChange={e => setLocation(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border-token bg-surface-elevated text-text-primary focus:ring-1 focus:ring-primary-action outline-none text-sm" placeholder="Kathmandu" />
                     </div>
                   </div>
 
                   <div>
-                    <label htmlFor="auth-rate" className="text-[10px] uppercase tracking-[0.2em] text-[#8E9299] font-bold block mb-2">Hourly Rate (NPR)</label>
+                    <label htmlFor="auth-rate" className="text-[10px] uppercase tracking-[0.2em] text-text-secondary font-bold block mb-2">Hourly Rate (NPR)</label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-                      <input id="auth-rate" type="number" required min="500" value={rate} onChange={e => setRate(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#2A2D31] bg-[#1E2124] text-white focus:ring-1 focus:ring-[#C8A25E] outline-none text-sm" placeholder="1500" />
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
+                      <input id="auth-rate" type="number" required min="500" value={rate} onChange={e => setRate(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border-token bg-surface-elevated text-text-primary focus:ring-1 focus:ring-primary-action outline-none text-sm" placeholder="1500" />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E9299] font-bold block mb-2" id="auth-upload-label">Identity Verification</label>
-                    <div className="w-full py-6 rounded-xl border-2 border-dashed border-[#2A2D31] bg-[#1E2124] text-[#8E9299] hover:border-[#C8A25E] hover:text-[#C8A25E] transition-colors flex flex-col items-center justify-center gap-2 cursor-pointer" role="button" tabIndex={0} aria-labelledby="auth-upload-label" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); } }}>
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-text-secondary font-bold block mb-2" id="auth-upload-label">Identity Verification</label>
+                    <div className="w-full py-6 rounded-xl border-2 border-dashed border-border-token bg-surface-elevated text-text-muted hover:border-primary-action hover:text-primary-action transition-colors flex flex-col items-center justify-center gap-2 cursor-pointer" role="button" tabIndex={0} aria-labelledby="auth-upload-label" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); } }}>
                       <Upload className="w-6 h-6" />
                       <span className="text-xs">Upload Citizenship / Passport Document</span>
                     </div>
                   </div>
 
-                  <div className="mt-4 p-4 bg-[#1E2124] border border-[#2A2D31] rounded-xl flex items-start gap-3">
-                    <input type="checkbox" id="terms" required checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-1 accent-[#C8A25E] cursor-pointer" />
-                    <label htmlFor="terms" className="text-xs text-[#8E9299] leading-relaxed cursor-pointer">
+                  <div className="mt-4 p-4 bg-surface-elevated border border-border-token rounded-xl flex items-start gap-3">
+                    <input type="checkbox" id="terms" required checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-1 accent-primary-action cursor-pointer" />
+                    <label htmlFor="terms" className="text-xs text-text-secondary leading-relaxed cursor-pointer">
                       I agree to the{' '}
-                      <button type="button" onClick={() => setShowDocType('terms')} className="text-[#C8A25E] font-medium hover:underline inline bg-transparent border-none">Terms of Service</button>
+                      <button type="button" onClick={() => setShowDocType('terms')} className="text-primary-action font-medium hover:underline inline bg-transparent border-none">Terms of Service</button>
                       {' '}and{' '}
-                      <button type="button" onClick={() => setShowDocType('privacy')} className="text-[#C8A25E] font-medium hover:underline inline bg-transparent border-none">Privacy Policy</button>
+                      <button type="button" onClick={() => setShowDocType('privacy')} className="text-primary-action font-medium hover:underline inline bg-transparent border-none">Privacy Policy</button>
                       , and confirm that I have undergone a mandatory background check. I understand that any violation of safety protocols will result in immediate termination.
                     </label>
                   </div>
                 </>
               )}
 
-              <button 
+              <button
                 type="submit"
                 disabled={loading || ((mode === 'guide' || mode === 'signup') && !agreed)}
-                className="w-full py-3 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] transition-colors mt-6 uppercase tracking-wider text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-primary-action text-white rounded-xl font-bold hover:bg-primary-action-hover transition-colors mt-6 uppercase tracking-wider text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Submit Application'}
               </button>
             </form>
 
             <div className="relative my-6 flex items-center justify-center">
-              <div className="border-t border-[#2A2D31] w-full"></div>
-              <span className="bg-[#17191C] px-3 text-[#8E9299] text-xs absolute">or continue with</span>
+              <div className="border-t border-border-token w-full"></div>
+              <span className="bg-surface px-3 text-text-secondary text-xs absolute">or continue with</span>
             </div>
 
             <button
@@ -314,13 +314,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
               Google
             </button>
 
-            <div className="mt-6 text-center text-sm text-[#8E9299]">
+            <div className="mt-6 text-center text-sm text-text-secondary">
               {mode === 'login' ? (
-                <p>Don't have an account? <button onClick={() => { setMode('signup'); setAgreed(false); }} className="text-[#C8A25E] font-medium hover:underline bg-transparent border-none cursor-pointer">Sign up</button></p>
+                <p>Don't have an account? <button onClick={() => { setMode('signup'); setAgreed(false); }} className="text-primary-action font-medium hover:underline bg-transparent border-none cursor-pointer">Sign up</button></p>
               ) : mode === 'signup' ? (
-                <p>Already have an account? <button onClick={() => setMode('login')} className="text-[#C8A25E] font-medium hover:underline bg-transparent border-none cursor-pointer">Log in</button></p>
+                <p>Already have an account? <button onClick={() => setMode('login')} className="text-primary-action font-medium hover:underline bg-transparent border-none cursor-pointer">Log in</button></p>
               ) : (
-                <p>Just want to browse? <button onClick={() => { setMode('signup'); setAgreed(false); }} className="text-[#C8A25E] font-medium hover:underline bg-transparent border-none cursor-pointer">Create a user account</button></p>
+                <p>Just want to browse? <button onClick={() => { setMode('signup'); setAgreed(false); }} className="text-primary-action font-medium hover:underline bg-transparent border-none cursor-pointer">Create a user account</button></p>
               )}
             </div>
           </div>

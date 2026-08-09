@@ -23,10 +23,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.error) {
       return (this as any).props.fallback || (
-        <div className="min-h-screen bg-[#0F1113] text-white flex items-center justify-center p-6">
-          <div className="max-w-lg w-full bg-[#17191C] border border-red-500/30 rounded-2xl p-6">
+        <div className="min-h-screen bg-background text-text-primary flex items-center justify-center p-6">
+          <div className="max-w-lg w-full bg-surface border border-red-500/30 rounded-2xl p-6">
             <h1 className="text-xl font-bold text-red-400 mb-2">Something went wrong</h1>
-            <pre className="text-xs text-[#8E9299] whitespace-pre-wrap bg-black/20 p-3 rounded-xl mt-3">
+            <pre className="text-xs text-text-secondary whitespace-pre-wrap bg-black/20 p-3 rounded-xl mt-3">
               {this.state.error.message}
             </pre>
             <button
@@ -34,7 +34,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 (this as any).setState({ error: null });
                 window.location.reload();
               }}
-              className="mt-4 px-4 py-2 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold text-sm"
+              className="mt-4 px-4 py-2 bg-primary-action text-background rounded-xl font-bold text-sm"
             >
               Retry
             </button>

@@ -43,18 +43,18 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
             className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border backdrop-blur-md min-w-[300px] ${
-              toast.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-500' :
-              toast.type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-500' :
-              'bg-[#1E2124]/90 border-[#2A2D31] text-white'
+              toast.type === 'success' ? 'bg-success/10 border-success/30 text-success' :
+              toast.type === 'error' ? 'bg-danger/10 border-danger/30 text-danger' :
+              'bg-surface-elevated/90 border-border-token text-text-primary'
             }`}
           >
             {toast.type === 'success' && <CheckCircle className="w-5 h-5 flex-shrink-0" />}
             {toast.type === 'error' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-            {toast.type === 'info' && <Info className="w-5 h-5 flex-shrink-0 text-[#C8A25E]" />}
-            
+            {toast.type === 'info' && <Info className="w-5 h-5 flex-shrink-0 text-primary-action" />}
+
             <p className="text-sm font-medium flex-1">{toast.message}</p>
-            
-            <button 
+
+            <button
               onClick={() => removeToast(toast.id)}
               className="p-1 hover:bg-black/10 rounded-full transition-colors flex-shrink-0"
             >

@@ -34,62 +34,62 @@ export const PartnerDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#17191C] border border-[#2A2D31] rounded-3xl p-6 md:p-8">
+      <div className="bg-surface border border-border-token rounded-3xl p-6 md:p-8">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 rounded-xl bg-[#C8A25E]/10 text-[#C8A25E] flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-primary-action/10 text-primary-action flex items-center justify-center">
             <Store className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">Partner Dashboard</h1>
-            <p className="text-sm text-[#8E9299]">Manage your business profile, offers, and bookings.</p>
+            <p className="text-sm text-text-secondary">Manage your business profile, offers, and bookings.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-[#1E2124] border border-[#2A2D31] p-4 rounded-2xl">
+          <div className="bg-surface-elevated border border-border-token p-4 rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
-              <BarChart2 className="w-4 h-4 text-[#C8A25E]" />
-              <span className="text-xs text-[#8E9299] uppercase tracking-wider">Views</span>
+              <BarChart2 className="w-4 h-4 text-primary-action" />
+              <span className="text-xs text-text-secondary uppercase tracking-wider">Views</span>
             </div>
             <p className="text-2xl font-bold text-white">{stats.views}</p>
           </div>
-          <div className="bg-[#1E2124] border border-[#2A2D31] p-4 rounded-2xl">
+          <div className="bg-surface-elevated border border-border-token p-4 rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4 text-[#C8A25E]" />
-              <span className="text-xs text-[#8E9299] uppercase tracking-wider">Bookings</span>
+              <Calendar className="w-4 h-4 text-primary-action" />
+              <span className="text-xs text-text-secondary uppercase tracking-wider">Bookings</span>
             </div>
             <p className="text-2xl font-bold text-white">{stats.bookings}</p>
           </div>
-          <div className="bg-[#1E2124] border border-[#2A2D31] p-4 rounded-2xl">
+          <div className="bg-surface-elevated border border-border-token p-4 rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-4 h-4 text-[#C8A25E]" />
-              <span className="text-xs text-[#8E9299] uppercase tracking-wider">Revenue</span>
+              <TrendingUp className="w-4 h-4 text-primary-action" />
+              <span className="text-xs text-text-secondary uppercase tracking-wider">Revenue</span>
             </div>
             <p className="text-2xl font-bold text-white">NPR {stats.revenue.toLocaleString()}</p>
           </div>
-          <div className="bg-[#1E2124] border border-[#2A2D31] p-4 rounded-2xl">
+          <div className="bg-surface-elevated border border-border-token p-4 rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
-              <Star className="w-4 h-4 text-[#C8A25E]" />
-              <span className="text-xs text-[#8E9299] uppercase tracking-wider">Rating</span>
+              <Star className="w-4 h-4 text-primary-action" />
+              <span className="text-xs text-text-secondary uppercase tracking-wider">Rating</span>
             </div>
             <p className="text-2xl font-bold text-white">{stats.rating}</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-[#17191C] border border-[#2A2D31] rounded-3xl p-6 md:p-8">
+      <div className="bg-surface border border-border-token rounded-3xl p-6 md:p-8">
         <div className="flex items-center gap-2 mb-6">
-          <Users className="w-5 h-5 text-[#C8A25E]" />
+          <Users className="w-5 h-5 text-primary-action" />
           <h2 className="text-xl font-bold text-white">Active Offers</h2>
         </div>
         <div className="space-y-4">
           {offers.map(offer => (
-            <div key={offer.id} className="bg-[#1E2124] border border-[#2A2D31] p-4 rounded-2xl flex items-center justify-between">
+            <div key={offer.id} className="bg-surface-elevated border border-border-token p-4 rounded-2xl flex items-center justify-between">
               <div>
                 <p className="font-semibold text-white">{offer.title}</p>
-                <p className="text-xs text-[#8E9299] mt-1">Valid until {offer.validUntil}</p>
+                <p className="text-xs text-text-secondary mt-1">Valid until {offer.validUntil}</p>
               </div>
-              <span className="text-[#C8A25E] font-bold">{offer.discount}</span>
+              <span className="text-primary-action font-bold">{offer.discount}</span>
             </div>
           ))}
         </div>

@@ -281,8 +281,8 @@ export const CommunityFeed: React.FC = () => {
               onClick={() => setActiveCategory(cat)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
                 activeCategory === cat 
-                  ? 'bg-[#C8A25E] text-[#0F1113] border-[#C8A25E] shadow-md shadow-[#C8A25E]/20' 
-                  : 'bg-[#1E2124] text-[#8E9299] border-[#2A2D31]/50 hover:border-white/10 hover:text-white'
+                  ? 'bg-primary-action text-background border-primary-action shadow-md shadow-primary-action/20' 
+                  : 'bg-surface-elevated text-text-secondary border-border-token/50 hover:border-white/10 hover:text-text-primary'
               }`}
             >
               {cat}
@@ -298,7 +298,7 @@ export const CommunityFeed: React.FC = () => {
               setShowCreateModal(true);
             }
           }}
-          className="flex items-center gap-2 bg-[#C8A25E]/10 border border-[#C8A25E] text-[#C8A25E] hover:bg-[#C8A25E] hover:text-[#0F1113] px-4 py-2 rounded-xl text-xs font-black tracking-wide transition-all uppercase"
+          className="flex items-center gap-2 bg-primary-action/10 border border-primary-action text-primary-action hover:bg-primary-action hover:text-background px-4 py-2 rounded-xl text-xs font-black tracking-wide transition-all uppercase"
         >
           <Sparkles className="w-3.5 h-3.5" /> Share Co-Experience
         </button>
@@ -306,16 +306,16 @@ export const CommunityFeed: React.FC = () => {
 
       {/* Grid List */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-[#8E9299]">
+        <div className="py-12 text-center text-xs text-text-secondary">
           <span className="inline-block animate-pulse">Syncing feed with real-time Firestore database...</span>
         </div>
       ) : filteredPosts.length === 0 ? (
-        <div className="py-12 text-center border border-[#2A2D31]/40 rounded-[32px] bg-[#17191C] px-6 space-y-2">
-          <p className="text-sm font-semibold text-white">Be the first to share something with the SATHI community.</p>
-          <p className="text-xs text-[#8E9299]">Post your photos, stories, and recommendations in Nepal!</p>
+        <div className="py-12 text-center border border-border-token/40 rounded-[32px] bg-surface px-6 space-y-2">
+          <p className="text-sm font-semibold text-text-primary">Be the first to share something with the SATHI community.</p>
+          <p className="text-xs text-text-secondary">Post your photos, stories, and recommendations in Nepal!</p>
           <button
             onClick={() => currentUser ? setShowCreateModal(true) : openAuthModal()}
-            className="mt-3 px-4 py-2 bg-[#C8A25E] text-[#0F1113] font-extrabold text-xs rounded-xl inline-flex items-center gap-2"
+            className="mt-3 px-4 py-2 bg-primary-action text-background font-extrabold text-xs rounded-xl inline-flex items-center gap-2"
           >
             <Sparkles className="w-3.5 h-3.5" /> Share First Adventure
           </button>
@@ -333,7 +333,7 @@ export const CommunityFeed: React.FC = () => {
             return (
               <div 
                 key={`${post.id || 'post'}-${idx}`} 
-                className="rounded-[32px] overflow-hidden border border-[#2A2D31]/40 bg-[#17191C] hover:border-[#C8A25E]/30 transition-all duration-300 flex flex-col h-full shadow-lg"
+                className="rounded-[32px] overflow-hidden border border-border-token/40 bg-surface hover:border-primary-action/30 transition-all duration-300 flex flex-col h-full shadow-lg"
               >
                 {/* Header info */}
                 <div className="p-4 flex justify-between items-center">
@@ -343,22 +343,22 @@ export const CommunityFeed: React.FC = () => {
                       alt={post.userName} 
                       fallbackType="avatar"
                       textForInitials={post.userName}
-                      className="w-8 h-8 rounded-full border border-[#C8A25E]/50 object-cover" 
+                      className="w-8 h-8 rounded-full border border-primary-action/50 object-cover" 
                     />
                     <div>
-                      <h4 className="text-xs font-black text-white leading-tight">{post.userName}</h4>
-                      <p className="text-[10px] text-[#8E9299] flex items-center gap-1 mt-0.5">
-                        <Filter className="w-2.5 h-2.5 text-[#C8A25E]" /> {post.category}
+                      <h4 className="text-xs font-black text-text-primary leading-tight">{post.userName}</h4>
+                      <p className="text-[10px] text-text-secondary flex items-center gap-1 mt-0.5">
+                        <Filter className="w-2.5 h-2.5 text-primary-action" /> {post.category}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-[9px] text-[#5A5E66] font-bold">{post.location || 'Nepal'}</span>
+                    <span className="text-[9px] text-text-muted font-bold">{post.location || 'Nepal'}</span>
                     {isAuthor && (
                       <button
                         onClick={() => handleDeletePost(post.id)}
-                        className="text-[#8E9299] hover:text-red-500 transition-colors p-1"
+                        className="text-text-secondary hover:text-red-500 transition-colors p-1"
                         title="Delete Post"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -369,7 +369,7 @@ export const CommunityFeed: React.FC = () => {
 
                 {/* Main image */}
                 {post.imageUrl && (
-                  <div className="aspect-[16/10] overflow-hidden bg-[#1E2124] relative">
+                  <div className="aspect-[16/10] overflow-hidden bg-surface-elevated relative">
                     <SafeImage 
                       src={post.imageUrl} 
                       alt={post.title} 
@@ -382,18 +382,18 @@ export const CommunityFeed: React.FC = () => {
 
                 {/* Content */}
                 <div className="p-4 flex-1 flex flex-col text-left">
-                  <h3 className="text-sm font-extrabold text-white leading-snug line-clamp-1 mb-2">{post.title}</h3>
-                  <p className="text-xs text-white/70 font-light leading-relaxed mb-4 flex-1 line-clamp-3">
+                  <h3 className="text-sm font-extrabold text-text-primary leading-snug line-clamp-1 mb-2">{post.title}</h3>
+                  <p className="text-xs text-text-primary/70 font-light leading-relaxed mb-4 flex-1 line-clamp-3">
                     {post.content}
                   </p>
 
                   {/* Actions Row */}
-                  <div className="pt-3 border-t border-[#2A2D31]/40 flex items-center justify-between">
+                  <div className="pt-3 border-t border-border-token/40 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <button 
                         onClick={() => handleToggleLike(post.id)}
                         className={`flex items-center gap-1 text-[11px] font-black transition-all ${
-                          isLiked ? 'text-red-500 scale-105' : 'text-[#8E9299] hover:text-red-500'
+                          isLiked ? 'text-red-500 scale-105' : 'text-text-secondary hover:text-red-500'
                         }`}
                       >
                         <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
@@ -403,7 +403,7 @@ export const CommunityFeed: React.FC = () => {
                       <button 
                         onClick={() => toggleCommentsSection(post.id)}
                         className={`flex items-center gap-1 text-[11px] font-black transition-all ${
-                          showComments ? 'text-[#C8A25E]' : 'text-[#8E9299] hover:text-white'
+                          showComments ? 'text-primary-action' : 'text-text-secondary hover:text-text-primary'
                         }`}
                       >
                         <MessageSquare className="w-4 h-4" />
@@ -416,8 +416,8 @@ export const CommunityFeed: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <button 
                         onClick={() => handleSavePost(post.id)}
-                        className={`text-[#8E9299] hover:text-white transition-all ${
-                          isSaved ? 'text-[#C8A25E]' : ''
+                        className={`text-text-secondary hover:text-text-primary transition-all ${
+                          isSaved ? 'text-primary-action' : ''
                         }`}
                       >
                         <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
@@ -425,14 +425,14 @@ export const CommunityFeed: React.FC = () => {
 
                       <button 
                         onClick={() => handleSharePost(post)}
-                        className="text-[#8E9299] hover:text-white transition-all"
+                        className="text-text-secondary hover:text-text-primary transition-all"
                       >
                         <Share2 className="w-3.5 h-3.5" />
                       </button>
 
                       <button 
                         onClick={() => handleReportPost(post.id)}
-                        className="text-[#8E9299] hover:text-red-500 transition-all"
+                        className="text-text-secondary hover:text-red-500 transition-all"
                       >
                         <AlertTriangle className="w-3.5 h-3.5" />
                       </button>
@@ -442,26 +442,26 @@ export const CommunityFeed: React.FC = () => {
 
                 {/* Real-time Comments Box */}
                 {showComments && (
-                  <div className="bg-[#101214] border-t border-[#2A2D31]/40 p-3 text-left space-y-3">
+                  <div className="bg-background border-t border-border-token/40 p-3 text-left space-y-3">
                     <div className="max-h-48 overflow-y-auto space-y-2.5 custom-scrollbar pr-1">
                       {loadingComments[post.id] ? (
-                        <p className="text-[10px] text-[#8E9299] animate-pulse">Loading comments from Firestore...</p>
+                        <p className="text-[10px] text-text-secondary animate-pulse">Loading comments from Firestore...</p>
                       ) : currentCommentsList.length === 0 ? (
-                        <p className="text-[10px] text-[#5A5E66] italic py-1">Be the first to comment.</p>
+                        <p className="text-[10px] text-text-muted italic py-1">Be the first to comment.</p>
                       ) : (
                         currentCommentsList.map((comm, idx) => (
-                          <div key={`${comm.id || 'comm'}-${idx}`} className="flex gap-2 items-start text-xs bg-[#17191C] p-2 rounded-xl">
+                          <div key={`${comm.id || 'comm'}-${idx}`} className="flex gap-2 items-start text-xs bg-surface p-2 rounded-xl">
                             <SafeImage src={comm.userAvatar} className="w-5 h-5 rounded-full object-cover mt-0.5" alt={comm.userName} fallbackType="avatar" textForInitials={comm.userName} />
                             <div className="flex-1">
                               <div className="flex justify-between items-center">
-                                <span className="font-extrabold text-white text-[10px]">{comm.userName}</span>
+                                <span className="font-extrabold text-text-primary text-[10px]">{comm.userName}</span>
                                 {currentUser && currentUser.id === comm.userId && (
-                                  <button onClick={() => handleDeleteComment(comm.id, post.id)} className="text-[#5A5E66] hover:text-red-500">
+                                  <button onClick={() => handleDeleteComment(comm.id, post.id)} className="text-text-muted hover:text-red-500">
                                     <Trash2 className="w-3 h-3" />
                                   </button>
                                 )}
                               </div>
-                              <p className="text-[#8E9299] font-light text-[10px] mt-0.5 leading-relaxed">{comm.text}</p>
+                              <p className="text-text-secondary font-light text-[10px] mt-0.5 leading-relaxed">{comm.text}</p>
                             </div>
                           </div>
                         ))
@@ -477,11 +477,11 @@ export const CommunityFeed: React.FC = () => {
                           value={newCommentText[post.id] || ''}
                           onChange={(e) => setNewCommentText(prev => ({ ...prev, [post.id]: e.target.value }))}
                           onKeyDown={(e) => e.key === 'Enter' && handleCreateComment(post.id)}
-                          className="flex-1 bg-[#1E2124] text-white border border-[#2A2D31]/40 rounded-xl px-3 py-1.5 text-[10px] focus:outline-none focus:border-[#C8A25E]"
+                          className="flex-1 bg-surface-elevated text-text-primary border border-border-token/40 rounded-xl px-3 py-1.5 text-[10px] focus:outline-none focus:border-primary-action"
                         />
                         <button 
                           onClick={() => handleCreateComment(post.id)}
-                          className="w-7 h-7 rounded-full bg-[#C8A25E] flex items-center justify-center text-[#0F1113] active:scale-95 transition-transform shrink-0"
+                          className="w-7 h-7 rounded-full bg-primary-action flex items-center justify-center text-background active:scale-95 transition-transform shrink-0"
                         >
                           <Send className="w-3.5 h-3.5" />
                         </button>
@@ -489,7 +489,7 @@ export const CommunityFeed: React.FC = () => {
                     ) : (
                       <button
                         onClick={openAuthModal}
-                        className="w-full text-left py-1 text-[10px] text-[#C8A25E] font-bold hover:underline"
+                        className="w-full text-left py-1 text-[10px] text-primary-action font-bold hover:underline"
                       >
                         Sign in to leave a comment
                       </button>
@@ -505,14 +505,14 @@ export const CommunityFeed: React.FC = () => {
       {/* CREATE POST MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-[#17191C] border border-[#2A2D31] rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
-            <div className="p-5 border-b border-[#2A2D31] flex justify-between items-center bg-[#101214]">
-              <h3 className="text-md font-extrabold text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#C8A25E]" /> Share SATHI Co-Experience
+          <div className="bg-surface border border-border-token rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-5 border-b border-border-token flex justify-between items-center bg-background">
+              <h3 className="text-md font-extrabold text-text-primary flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary-action" /> Share SATHI Co-Experience
               </h3>
               <button 
                 onClick={() => setShowCreateModal(false)}
-                className="text-[#8E9299] hover:text-white transition-all"
+                className="text-text-secondary hover:text-text-primary transition-all"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -527,24 +527,24 @@ export const CommunityFeed: React.FC = () => {
               )}
 
               <div>
-                <label className="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider block mb-1.5">Adventure Title</label>
+                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block mb-1.5">Adventure Title</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g., Hidden Waterfalls in Shivapuri Hills"
                   value={newPostTitle}
                   onChange={(e) => setNewPostTitle(e.target.value)}
-                  className="w-full bg-[#1E2124] text-white border border-[#2A2D31]/60 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-[#C8A25E]"
+                  className="w-full bg-surface-elevated text-text-primary border border-border-token/60 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-primary-action"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider block mb-1.5">Category</label>
+                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block mb-1.5">Category</label>
                   <select
                     value={newPostCategory}
                     onChange={(e) => setNewPostCategory(e.target.value)}
-                    className="w-full bg-[#1E2124] text-white border border-[#2A2D31]/60 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#C8A25E]"
+                    className="w-full bg-surface-elevated text-text-primary border border-border-token/60 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary-action"
                   >
                     <option value="Adventure">Adventure</option>
                     <option value="Food">Food</option>
@@ -555,8 +555,8 @@ export const CommunityFeed: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider block mb-1.5">Upload Image (Firebase Storage)</label>
-                  <label className="flex items-center gap-2 px-3 py-2 bg-[#1E2124] border border-[#2A2D31]/60 rounded-xl text-xs font-bold text-[#C8A25E] cursor-pointer hover:bg-[#25282c]">
+                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block mb-1.5">Upload Image (Firebase Storage)</label>
+                  <label className="flex items-center gap-2 px-3 py-2 bg-surface-elevated border border-border-token/60 rounded-xl text-xs font-bold text-primary-action cursor-pointer hover:bg-surface-hover">
                     <Upload className="w-3.5 h-3.5" />
                     <span className="truncate">{selectedImageFile ? selectedImageFile.name : 'Select Photo File'}</span>
                     <input
@@ -571,7 +571,7 @@ export const CommunityFeed: React.FC = () => {
 
               {/* Image Preview or URL Option */}
               {imagePreview ? (
-                <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-black/40 border border-[#2A2D31]">
+                <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-black/40 border border-border-token">
                   <img src={imagePreview} alt="Post preview" className="w-full h-full object-cover" />
                   <button
                     type="button"
@@ -579,20 +579,20 @@ export const CommunityFeed: React.FC = () => {
                       setSelectedImageFile(null);
                       setImagePreview(null);
                     }}
-                    className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1 hover:bg-black"
+                    className="absolute top-2 right-2 bg-black/70 text-text-primary rounded-full p-1 hover:bg-black"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
                 <div>
-                  <label className="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider block mb-1.5">Or Image URL</label>
+                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block mb-1.5">Or Image URL</label>
                   <input
                     type="url"
                     placeholder="https://images.unsplash.com/..."
                     value={newPostImageURL}
                     onChange={(e) => setNewPostImageURL(e.target.value)}
-                    className="w-full bg-[#1E2124] text-white border border-[#2A2D31]/60 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#C8A25E]"
+                    className="w-full bg-surface-elevated text-text-primary border border-border-token/60 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary-action"
                   />
                 </div>
               )}
@@ -600,13 +600,13 @@ export const CommunityFeed: React.FC = () => {
               {/* Upload Progress */}
               {uploadProgress !== null && (
                 <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] text-[#8E9299] font-bold">
+                  <div className="flex justify-between text-[10px] text-text-secondary font-bold">
                     <span>Uploading photo to Firebase Storage...</span>
                     <span>{uploadProgress}%</span>
                   </div>
-                  <div className="w-full h-1.5 bg-[#1E2124] rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-surface-elevated rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[#C8A25E] transition-all duration-200"
+                      className="h-full bg-primary-action transition-all duration-200"
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
@@ -614,29 +614,29 @@ export const CommunityFeed: React.FC = () => {
               )}
 
               <div>
-                <label className="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider block mb-1.5">What did you co-experience?</label>
+                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block mb-1.5">What did you co-experience?</label>
                 <textarea
                   required
                   rows={4}
                   placeholder="Tell your SATHI companion experience in detail..."
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
-                  className="w-full bg-[#1E2124] text-white border border-[#2A2D31]/60 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#C8A25E] resize-none"
+                  className="w-full bg-surface-elevated text-text-primary border border-border-token/60 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-primary-action resize-none"
                 />
               </div>
 
-              <div className="pt-3 border-t border-[#2A2D31]/40 flex gap-3 justify-end">
+              <div className="pt-3 border-t border-border-token/40 flex gap-3 justify-end">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 bg-[#1E2124] border border-[#2A2D31]/60 rounded-xl text-xs font-bold text-[#8E9299] hover:text-white transition-all"
+                  className="px-4 py-2 bg-surface-elevated border border-border-token/60 rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingPost}
-                  className="px-5 py-2 bg-[#C8A25E] hover:bg-[#B69150] disabled:bg-[#C8A25E]/40 text-[#0F1113] font-black rounded-xl text-xs uppercase tracking-wide transition-all shadow-md"
+                  className="px-5 py-2 bg-primary-action hover:bg-primary-action-hover disabled:bg-primary-action/40 text-background font-black rounded-xl text-xs uppercase tracking-wide transition-all shadow-md"
                 >
                   {submittingPost ? 'Publishing...' : 'Publish Adventure'}
                 </button>

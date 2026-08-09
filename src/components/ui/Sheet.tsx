@@ -28,8 +28,8 @@ export const Sheet: React.FC<SheetProps> = ({
   };
 
   const layoutClasses = isRight
-    ? 'fixed top-0 bottom-0 right-0 w-full md:w-[420px] max-w-full h-full border-l border-[#2A2D31]/40 rounded-l-3xl shadow-2xl z-50 flex flex-col overflow-hidden bg-[#17191C]'
-    : 'fixed bottom-0 left-0 right-0 max-h-[90vh] w-full border-t border-[#2A2D31]/40 rounded-t-3xl shadow-2xl z-50 flex flex-col overflow-hidden bg-[#17191C]';
+    ? 'fixed top-0 bottom-0 right-0 w-full md:w-[420px] max-w-full h-full border-l border-border-token/40 rounded-l-3xl shadow-2xl z-50 flex flex-col overflow-hidden bg-surface'
+    : 'fixed bottom-0 left-0 right-0 max-h-[90vh] w-full border-t border-border-token/40 rounded-t-3xl shadow-2xl z-50 flex flex-col overflow-hidden bg-surface';
 
   return (
     <AnimatePresence>
@@ -56,12 +56,12 @@ export const Sheet: React.FC<SheetProps> = ({
             {/* Grab handle for bottom sheet */}
             {!isRight && (
               <div className="flex justify-center py-2 shrink-0">
-                <div className="w-12 h-1 bg-[#2A2D31]/80 rounded-full" />
+                <div className="w-12 h-1 bg-border-token/80 rounded-full" />
               </div>
             )}
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2D31]/40 shrink-0">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border-token/40 shrink-0">
               {title ? (
                 <h3 className="text-lg font-semibold text-white">
                   {title}
@@ -71,7 +71,7 @@ export const Sheet: React.FC<SheetProps> = ({
               )}
               <button
                 onClick={onClose}
-                className="text-[#8E9299] hover:text-white transition p-1.5 hover:bg-[#1E2124] rounded-full"
+                className="text-text-secondary hover:text-white transition p-1.5 hover:bg-surface-elevated rounded-full"
                 aria-label="Close sheet"
               >
                 <X className="w-5 h-5" />

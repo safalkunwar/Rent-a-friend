@@ -156,8 +156,8 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
       const markerIcon = L.divIcon({
         html: `
           <div class="relative flex items-center justify-center w-8 h-8 group">
-            <div class="absolute w-8 h-8 rounded-full bg-[#2563EB]/20 animate-ping"></div>
-            <div class="absolute w-5 h-5 rounded-full bg-[#2563EB] border-2 border-white shadow-lg flex items-center justify-center transition-transform scale-110">
+            <div class="absolute w-8 h-8 rounded-full bg-primary-action/20 animate-ping"></div>
+            <div class="absolute w-5 h-5 rounded-full bg-primary-action border-2 border-white shadow-lg flex items-center justify-center transition-transform scale-110">
               <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
             </div>
           </div>
@@ -405,9 +405,9 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
                 setSearchQuery(e.target.value);
                 setShowSuggestions(true);
               }}
-              className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl pl-10 pr-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#2563EB] disabled:opacity-50"
+              className="w-full bg-surface-elevated border border-border-token rounded-xl pl-10 pr-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action disabled:opacity-50"
             />
-            <Search className="w-4 h-4 text-[#8E9299] absolute left-3 top-3" />
+            <Search className="w-4 h-4 text-text-secondary absolute left-3 top-3" />
           </div>
           
           <button
@@ -415,15 +415,15 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
             onClick={handleGetCurrentLocation}
             disabled={isLocked}
             title="Use current location"
-            className="bg-[#1E2124] hover:bg-[#2A2D31] text-white border border-[#2A2D31] p-2.5 rounded-xl transition-colors shrink-0 flex items-center justify-center disabled:opacity-50"
+            className="bg-surface-elevated hover:bg-border-token text-text-primary border border-border-token p-2.5 rounded-xl transition-colors shrink-0 flex items-center justify-center disabled:opacity-50"
           >
-            <Navigation className="w-4 h-4 text-[#C8A25E]" />
+            <Navigation className="w-4 h-4 text-primary-action" />
           </button>
 
           <button
             type="submit"
             disabled={searching || isLocked}
-            className="bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shrink-0"
+            className="bg-primary-action hover:bg-primary-action-hover disabled:opacity-50 text-text-primary text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shrink-0"
           >
             {searching ? 'Locating...' : 'Search'}
           </button>
@@ -431,7 +431,7 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
 
         {/* Autocomplete Suggestions drop-down */}
         {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute left-0 right-0 z-[500] mt-1 bg-[#1E2124] border border-[#2A2D31] rounded-xl overflow-hidden shadow-2xl max-h-56 overflow-y-auto">
+          <div className="absolute left-0 right-0 z-[500] mt-1 bg-surface-elevated border border-border-token rounded-xl overflow-hidden shadow-2xl max-h-56 overflow-y-auto">
             {suggestions.map((item, index) => {
               const shortName = item.display_name.split(',').slice(0, 3).join(',').trim();
               return (
@@ -439,12 +439,12 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
                   key={index}
                   type="button"
                   onClick={() => handleSelectSuggestion(item)}
-                  className="w-full text-left px-4 py-2.5 text-xs text-white hover:bg-[#2563EB]/10 border-b border-[#2A2D31] last:border-0 flex items-start gap-2 transition-colors"
+                  className="w-full text-left px-4 py-2.5 text-xs text-text-primary hover:bg-primary-action/10 border-b border-border-token last:border-0 flex items-start gap-2 transition-colors"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-[#C8A25E] shrink-0 mt-0.5" />
+                  <MapPin className="w-3.5 h-3.5 text-primary-action shrink-0 mt-0.5" />
                   <div className="truncate">
                     <div className="font-semibold truncate text-[11px]">{shortName}</div>
-                    <div className="text-[9px] text-[#8E9299] truncate">{item.display_name}</div>
+                    <div className="text-[9px] text-text-secondary truncate">{item.display_name}</div>
                   </div>
                 </button>
               );
@@ -455,15 +455,15 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
 
       {/* Map Element */}
       <div
-        className="relative w-full rounded-2xl border border-[#2A2D31] overflow-hidden bg-[#17191C] shadow-md"
+        className="relative w-full rounded-2xl border border-border-token overflow-hidden bg-surface shadow-md"
         style={{ height }}
       >
         <div ref={mapContainerRef} className="w-full h-full z-10" />
 
         {/* Tip Badge */}
-        <div className="absolute bottom-3 left-3 z-[400] bg-[#0F1113]/90 backdrop-blur-md border border-[#2A2D31] rounded-lg px-2.5 py-1 flex items-center gap-1.5 pointer-events-none">
-          <AlertCircle className="w-3.5 h-3.5 text-[#2563EB]" />
-          <span className="text-[10px] text-white">
+        <div className="absolute bottom-3 left-3 z-[400] bg-background/90 backdrop-blur-md border border-border-token rounded-lg px-2.5 py-1 flex items-center gap-1.5 pointer-events-none">
+          <AlertCircle className="w-3.5 h-3.5 text-primary-action" />
+          <span className="text-[10px] text-text-primary">
             {isLocked ? 'Location is locked' : 'Drag marker or double click to set meeting point'}
           </span>
         </div>
@@ -471,18 +471,18 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
 
       {/* Selected Spot Details & Lock Trigger */}
       {address && (
-        <div className="bg-[#1E2124] border border-[#2A2D31] rounded-xl p-3.5 flex items-center justify-between gap-3">
+        <div className="bg-surface-elevated border border-border-token rounded-xl p-3.5 flex items-center justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#2563EB]/10 flex items-center justify-center text-[#2563EB] shrink-0 mt-0.5">
+            <div className="w-8 h-8 rounded-full bg-primary-action/10 flex items-center justify-center text-primary-action shrink-0 mt-0.5">
               <MapPin className="w-4 h-4" />
             </div>
             <div className="space-y-0.5">
-              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-text-primary flex items-center gap-1.5">
                 Meeting Address
-                {isLocked && <span className="bg-[#10B981]/15 text-[#10B981] text-[9px] px-1.5 py-0.5 rounded-full border border-[#10B981]/25 flex items-center gap-1"><Lock className="w-2.5 h-2.5" /> Locked</span>}
+                {isLocked && <span className="bg-success/15 text-success text-[9px] px-1.5 py-0.5 rounded-full border border-success/25 flex items-center gap-1"><Lock className="w-2.5 h-2.5" /> Locked</span>}
               </h4>
-              <p className="text-xs text-[#8E9299] line-clamp-2">{address}</p>
-              <div className="text-[9px] text-[#8E9299] font-mono mt-1">
+              <p className="text-xs text-text-secondary line-clamp-2">{address}</p>
+              <div className="text-[9px] text-text-secondary font-mono mt-1">
                 Lat: {selectedCoords.lat.toFixed(5)} • Lng: {selectedCoords.lng.toFixed(5)}
               </div>
             </div>
@@ -493,8 +493,8 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
             onClick={toggleLockLocation}
             className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0 border ${
               isLocked
-                ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30 hover:bg-[#10B981]/20'
-                : 'bg-transparent text-[#8E9299] border-[#2A2D31] hover:border-[#C8A25E] hover:text-white'
+                ? 'bg-success/10 text-success border-success/30 hover:bg-success/20'
+                : 'bg-transparent text-text-secondary border-border-token hover:border-primary-action hover:text-text-primary'
             }`}
           >
             {isLocked ? (

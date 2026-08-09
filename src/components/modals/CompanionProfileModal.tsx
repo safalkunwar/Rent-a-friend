@@ -51,11 +51,11 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
           onClick={onClose} 
         />
         
-        <motion.div 
-          initial={{ opacity: 0, y: 100, scale: 0.95 }} 
-          animate={{ opacity: 1, y: 0, scale: 1 }} 
-          exit={{ opacity: 0, y: 100, scale: 0.95 }} 
-          className="relative w-full max-w-4xl bg-[#0F1113] rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] md:max-h-[85vh] border border-[#2A2D31]"
+        <motion.div
+          initial={{ opacity: 0, y: 100, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 100, scale: 0.95 }}
+          className="relative w-full max-w-4xl bg-background rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] md:max-h-[85vh] border border-border-token"
           role="dialog"
           aria-modal="true"
           aria-labelledby="companion-profile-name"
@@ -63,20 +63,20 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
           {/* Header Image */}
           <div className="h-48 md:h-80 relative shrink-0">
             <SafeImage src={companion.imageUrl} alt={companion.name} className="w-full h-full object-cover" fallbackType="thumbnail" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0F1113] via-[#0F1113]/40 to-transparent" />
-            
-            <button 
+            <div className="absolute inset-0" style={{ background: 'var(--overlay-gradient)' }} />
+
+            <button
               onClick={onClose}
               className="absolute top-4 right-4 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/80 transition"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <button 
+            <button
               onClick={() => toggleFavorite(companion.id)}
               className="absolute top-4 right-16 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/80 transition"
             >
-              <Heart className={`w-5 h-5 ${isFavorite ? 'fill-[#C8A25E] text-[#C8A25E]' : ''}`} />
+              <Heart className={`w-5 h-5 ${isFavorite ? 'fill-primary-action text-primary-action' : ''}`} />
             </button>
           </div>
 
@@ -86,28 +86,28 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
               {/* Left Column: Details */}
               <div className="flex-1">
                 <div className="flex items-end gap-3 md:gap-4 mb-3 md:mb-4">
-                  <h1 id="companion-profile-name" className="text-2xl md:text-4xl font-bold text-white flex items-center gap-2">
+                  <h1 id="companion-profile-name" className="text-2xl md:text-4xl font-bold text-overlay-text-primary flex items-center gap-2">
                     {companion.name}, {companion.age}
-                    {companion.isVerified && <ShieldCheck className="w-5 h-5 md:w-6 md:h-6 text-[#C8A25E]" />}
+                    {companion.isVerified && <ShieldCheck className="w-5 h-5 md:w-6 md:h-6 text-primary-action" />}
                   </h1>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 text-[#8E9299] mb-6 text-xs md:text-sm">
+                <div className="flex flex-wrap items-center gap-3 text-text-secondary mb-6 text-xs md:text-sm">
                   <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 md:w-4 md:h-4" /> {companion.location}</span>
-                  <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 md:w-4 md:h-4 text-yellow-500 fill-yellow-500" /> {companion.rating} ({companion.reviewsCount} reviews)</span>
+                  <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 md:w-4 md-4 text-rating fill-rating" /> {companion.rating} ({companion.reviewsCount} reviews)</span>
                   <span className="flex items-center gap-1"><Languages className="w-3.5 h-3.5 md:w-4 md:h-4" /> {companion.languages.join(', ')}</span>
                 </div>
 
                 <div className="mb-6 md:mb-8">
-                  <h2 className="text-lg md:text-xl font-bold text-white mb-2 md:mb-3">About Me</h2>
-                  <p className="text-[#8E9299] leading-relaxed text-sm md:text-[15px]">{companion.bio}</p>
+                  <h2 className="text-lg md:text-xl font-bold text-overlay-text-primary mb-2 md:mb-3">About Me</h2>
+                  <p className="text-text-secondary leading-relaxed text-sm md:text-[15px]">{companion.bio}</p>
                 </div>
 
                 <div className="mb-6 md:mb-8">
-                  <h2 className="text-lg md:text-xl font-bold text-white mb-2 md:mb-3">Interests & Activities</h2>
+                  <h2 className="text-lg md:text-xl font-bold text-overlay-text-primary mb-2 md:mb-3">Interests & Activities</h2>
                   <div className="flex flex-wrap gap-2">
                     {companion.interests.map((interest, idx) => (
-                      <span key={`${interest}-${idx}`} className="px-3 py-1.5 md:px-4 md:py-2 bg-[#1E2124] border border-[#2A2D31] text-[#E0E0E0] rounded-xl text-xs md:text-sm font-medium">
+                      <span key={`${interest}-${idx}`} className="px-3 py-1.5 md:px-4 md:py-2 bg-surface-elevated border border-border-token text-text-primary rounded-xl text-xs md:text-sm font-medium">
                         {interest}
                       </span>
                     ))}
@@ -121,63 +121,63 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                    const lng = coords.longitude ?? coords._long ?? coords._lng ?? coords.lng;
                    if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) return null;
 
-                   return (
-                     <div className="mb-8">
-                       <h2 className="text-xl font-bold text-white mb-3">Location</h2>
-                       <MapPreview
-                         center={{ lat, lng }}
-                         zoom={14}
-                         height="220px"
-                         markers={[
-                           {
-                             id: companion.id,
-                             position: { lat, lng },
-                             title: companion.location || 'Nepal',
-                             subtitle: companion.name,
-                           },
-                         ]}
-                       />
-                     </div>
-                   );
-                 })()}
+                    return (
+                      <div className="mb-8">
+                        <h2 className="text-xl font-bold text-text-primary mb-3">Location</h2>
+                        <MapPreview
+                          center={{ lat, lng }}
+                          zoom={14}
+                          height="220px"
+                          markers={[
+                            {
+                              id: companion.id,
+                              position: { lat, lng },
+                              title: companion.location || 'Nepal',
+                              subtitle: companion.name,
+                            },
+                          ]}
+                        />
+                      </div>
+                    );
+                  })()}
 
-                 {/* Reviews Summary Placeholder */}
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-white mb-4">Recent Reviews</h2>
-                  {companion.reviews && companion.reviews.length > 0 ? (
-                    <div className="space-y-4">
-                      {companion.reviews.map((review, idx) => (
-                        <div key={`${review.id || 'rev'}-${idx}`} className="bg-[#17191C] p-4 rounded-2xl border border-[#2A2D31]">
-                          <div className="flex items-center gap-2 mb-2">
-                             <div className="flex text-[#C8A25E]"><Star className="w-3.5 h-3.5 fill-current" /></div>
-                             <span className="font-medium text-white text-sm">{review.authorName}</span>
-                             <span className="text-xs text-[#8E9299] ml-auto">{review.date}</span>
-                          </div>
-                          <p className="text-[#8E9299] text-sm">{review.text}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[#8E9299] italic">No reviews yet.</p>
-                  )}
-                </div>
+                  {/* Reviews Summary Placeholder */}
+                 <div className="mb-8">
+                   <h2 className="text-xl font-bold text-text-primary mb-4">Recent Reviews</h2>
+                   {companion.reviews && companion.reviews.length > 0 ? (
+                     <div className="space-y-4">
+                       {companion.reviews.map((review, idx) => (
+                         <div key={`${review.id || 'rev'}-${idx}`} className="bg-surface border border-border-token p-4 rounded-2xl">
+                           <div className="flex items-center gap-2 mb-2">
+                              <div className="flex text-rating"><Star className="w-3.5 h-3.5 fill-current" /></div>
+                              <span className="font-medium text-text-primary text-sm">{review.authorName}</span>
+                              <span className="text-xs text-text-muted ml-auto">{review.date}</span>
+                           </div>
+                           <p className="text-text-secondary text-sm">{review.text}</p>
+                         </div>
+                       ))}
+                     </div>
+                   ) : (
+                     <p className="text-text-muted italic">No reviews yet.</p>
+                   )}
+                 </div>
               </div>
 
               {/* Right Column: Booking Card (Hidden on Mobile) */}
               <div className="hidden md:block w-80 shrink-0">
-                <div className="bg-[#17191C] rounded-3xl p-6 border border-[#2A2D31] sticky top-0 shadow-xl">
-                  <div className="mb-6 pb-6 border-b border-[#2A2D31]">
-                     <span className="text-3xl font-bold text-white">NPR {companion.hourlyRate}</span>
-                    <span className="text-[#8E9299]"> / hour</span>
+                <div className="bg-surface rounded-3xl p-6 border border-border-token sticky top-0 shadow-lg">
+                  <div className="mb-6 pb-6 border-b border-border-token">
+                     <span className="text-3xl font-bold text-text-primary">NPR {companion.hourlyRate}</span>
+                    <span className="text-text-secondary"> / hour</span>
                   </div>
 
                   <div className="space-y-4 mb-8">
-                    <div className="flex items-center gap-3 text-sm text-[#E0E0E0]">
-                      <CheckCircle2 className="w-5 h-5 text-[#C8A25E]" />
+                    <div className="flex items-center gap-3 text-sm text-text-primary">
+                      <CheckCircle2 className="w-5 h-5 text-primary-action" />
                       <span>Usually responds in {companion.responseTime || '1 hour'}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-[#E0E0E0]">
-                      <Calendar className="w-5 h-5 text-[#C8A25E]" />
+                    <div className="flex items-center gap-3 text-sm text-text-primary">
+                      <Calendar className="w-5 h-5 text-primary-action" />
                       <span>
                         {companion.availableDays && companion.availableDays.length > 0
                           ? `Available: ${companion.availableDays.join(', ')}`
@@ -187,21 +187,21 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                     {companion.availableDays && companion.availableDays.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {companion.availableDays.map((day, idx) => (
-                          <span key={`${day}-${idx}`} className="px-3 py-1 bg-[#C8A25E]/10 text-[#C8A25E] border border-[#C8A25E]/20 rounded-lg text-xs font-medium">{day}</span>
+                          <span key={`${day}-${idx}`} className="px-3 py-1 bg-primary-action/10 text-primary-action border border-primary-action/20 rounded-lg text-xs font-medium">{day}</span>
                         ))}
                       </div>
                     )}
                   </div>
 
-                  <button 
+                  <button
                     onClick={handleBookClick}
-                    className="w-full py-4 bg-[#C8A25E] text-[#0F1113] rounded-2xl font-bold text-lg hover:bg-[#B69150] transition-colors mb-3 shadow-lg shadow-[#C8A25E]/20"
+                    className="w-full py-4 bg-primary-action text-white rounded-2xl font-bold text-lg hover:bg-primary-action-hover transition-colors mb-3 shadow-md shadow-primary-action/20"
                   >
                     Request to Book
                   </button>
-                  <button 
+                  <button
                     onClick={handleMessageClick}
-                    className="w-full py-3 bg-[#1E2124] text-white border border-[#2A2D31] rounded-2xl font-medium hover:border-[#C8A25E] transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-surface-elevated text-text-primary border border-border-token rounded-2xl font-medium hover:border-primary-action transition-colors flex items-center justify-center gap-2"
                   >
                     <MessageSquare className="w-4 h-4" /> Message
                   </button>
@@ -209,25 +209,25 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
               </div>
             </div>
           </div>
-          
+
           {/* Mobile Fixed Bottom Action Bar */}
-          <div className="md:hidden absolute bottom-0 left-0 right-0 p-4 bg-[#17191C] border-t border-[#2A2D31] flex flex-col gap-2 z-20">
+          <div className="md:hidden absolute bottom-0 left-0 right-0 p-4 bg-surface border-t border-border-token flex flex-col gap-2 z-20">
             <div className="flex justify-between items-center mb-1">
               <div>
-                <span className="text-xl font-bold text-white">NPR {companion.hourlyRate}</span>
-                <span className="text-xs text-[#8E9299]"> / hour</span>
+                <span className="text-xl font-bold text-text-primary">NPR {companion.hourlyRate}</span>
+                <span className="text-xs text-text-secondary"> / hour</span>
               </div>
             </div>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={handleBookClick}
-                className="flex-1 py-3 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold text-sm hover:bg-[#B69150] transition-colors shadow-lg shadow-[#C8A25E]/20"
+                className="flex-1 py-3 bg-primary-action text-white rounded-xl font-bold text-sm hover:bg-primary-action-hover transition-colors shadow-md shadow-primary-action/20"
               >
                 Request to Book
               </button>
-              <button 
+              <button
                 onClick={handleMessageClick}
-                className="px-4 py-3 bg-[#1E2124] text-white border border-[#2A2D31] rounded-xl font-medium hover:border-[#C8A25E] transition-colors flex items-center justify-center gap-2"
+                className="px-4 py-3 bg-surface-elevated text-text-primary border border-border-token rounded-xl font-medium hover:border-primary-action transition-colors flex items-center justify-center gap-2"
               >
                 <MessageSquare className="w-4 h-4" />
               </button>

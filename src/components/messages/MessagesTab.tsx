@@ -335,23 +335,23 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
   }, [fetchedCompanions, companionId, travelerProfiles]);
 
   return (
-    <div className="h-full w-full md:h-[650px] flex md:rounded-3xl overflow-hidden md:border border-[#2A2D31] bg-[#0F1113] transition-all duration-300">
+    <div className="h-full w-full md:h-[650px] flex md:rounded-3xl overflow-hidden md:border border-border-token bg-background transition-all duration-300">
       {/* Sidebar */}
-      <div className={`w-full md:w-80 flex-col border-r border-[#2A2D31] bg-[#17191C] ${selectedConvo ? 'hidden md:flex' : 'flex'}`} role="region" aria-label="Conversations">
-        <div className="p-4 border-b border-[#2A2D31]">
-          <h2 className="text-xl font-bold text-white mb-4">Messages</h2>
+      <div className={`w-full md:w-80 flex-col border-r border-border-token bg-surface ${selectedConvo ? 'hidden md:flex' : 'flex'}`} role="region" aria-label="Conversations">
+        <div className="p-4 border-b border-border-token">
+          <h2 className="text-xl font-bold text-text-primary mb-4">Messages</h2>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E9299]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
             <input 
               type="text" 
               placeholder="Search conversations..." 
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)} 
               aria-label="Search conversations" 
-              className="w-full bg-[#1E2124] text-white border border-[#2A2D31] rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-[#C8A25E]" 
+              className="w-full bg-surface-elevated text-text-primary border border-border-token rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-primary-action" 
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E9299] hover:text-white text-xs">Clear</button>
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary text-xs">Clear</button>
             )}
           </div>
         </div>
@@ -359,14 +359,14 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {!currentUser ? (
             <div className="p-6 flex flex-col items-center justify-center h-full text-center space-y-4">
-              <div className="w-12 h-12 rounded-full bg-[#C8A25E]/10 flex items-center justify-center text-[#C8A25E]">
+              <div className="w-12 h-12 rounded-full bg-primary-action/10 flex items-center justify-center text-primary-action">
                 <MessageSquare className="w-6 h-6" />
               </div>
-              <p className="text-xs text-[#8E9299]">Log in to view messages.</p>
+              <p className="text-xs text-text-secondary">Log in to view messages.</p>
               {onOpenAuth && (
                 <button 
                   onClick={() => onOpenAuth('login')} 
-                  className="px-4 py-2 bg-[#C8A25E] text-[#0F1113] rounded-xl text-xs font-bold hover:bg-[#B69150] transition-all flex items-center gap-2"
+                  className="px-4 py-2 bg-primary-action text-background rounded-xl text-xs font-bold hover:bg-primary-action-hover transition-all flex items-center gap-2"
                 >
                   <LogIn className="w-3.5 h-3.5" /> Log In
                 </button>
@@ -374,25 +374,25 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
             </div>
           ) : filteredConversations.length === 0 ? (
             <div className="p-8 text-center h-full flex flex-col items-center justify-center space-y-4">
-              <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-[#8E9299]">
+              <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-text-secondary">
                 <MessageSquare className="w-6 h-6 opacity-40" />
               </div>
               <div>
-                <p className="text-sm font-bold text-white">No conversations yet</p>
-                <p className="text-xs text-[#8E9299] mt-1 max-w-[200px] mx-auto">Start exploring companions and send your first message.</p>
+                <p className="text-sm font-bold text-text-primary">No conversations yet</p>
+                <p className="text-xs text-text-secondary mt-1 max-w-[200px] mx-auto">Start exploring companions and send your first message.</p>
               </div>
               <div className="flex flex-col gap-2 w-full px-4">
                 <button 
                   onClick={onBrowseCompanions} 
-                  className="w-full py-2 bg-[#C8A25E] text-black rounded-xl text-xs font-bold hover:bg-[#B69150] transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full py-2 bg-primary-action text-black rounded-xl text-xs font-bold hover:bg-primary-action-hover transition-colors flex items-center justify-center gap-1.5"
                 >
                   <Users className="w-3.5 h-3.5" /> Browse Companions
                 </button>
                 <button 
                   onClick={onBrowseActivities} 
-                  className="w-full py-2 bg-[#1E2124] text-white border border-[#2A2D31] rounded-xl text-xs font-bold hover:bg-white/5 transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full py-2 bg-surface-elevated text-text-primary border border-border-token rounded-xl text-xs font-bold hover:bg-white/5 transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <Compass className="w-3.5 h-3.5 text-[#C8A25E]" /> Browse Activities
+                  <Compass className="w-3.5 h-3.5 text-primary-action" /> Browse Activities
                 </button>
               </div>
             </div>
@@ -410,28 +410,28 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                 <div
                   key={convo.id}
                   onClick={() => setSelectedConvo(convo.id)}
-                  className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-[#1E2124] transition-colors border-b border-[#2A2D31]/30 ${selectedConvo === convo.id ? 'bg-[#1E2124]' : ''}`}
+                  className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-surface-elevated transition-colors border-b border-border-token/30 ${selectedConvo === convo.id ? 'bg-surface-elevated' : ''}`}
                 >
                   <div className="relative shrink-0">
                     <SafeImage src={comp.imageUrl} alt={comp.name} className="w-11 h-11 rounded-full object-cover border border-white/5 shadow-inner" fallbackType="avatar" textForInitials={comp.name} />
-                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#17191C] bg-green-500"></span>
+                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-surface bg-green-500"></span>
                     {(convo.unreadCount || 0) > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C8A25E] text-[#0F1113] text-[9px] font-black rounded-full flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary-action text-background text-[9px] font-black rounded-full flex items-center justify-center">
                         {convo.unreadCount}
                       </span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-0.5">
-                      <h4 className="font-bold text-xs text-white truncate flex items-center gap-1">
+                      <h4 className="font-bold text-xs text-text-primary truncate flex items-center gap-1">
                         {comp.name}
-                        {comp.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-[#C8A25E]" />}
+                        {comp.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-primary-action" />}
                       </h4>
-                      <span className="text-[10px] text-[#8E9299]">
+                      <span className="text-[10px] text-text-secondary">
                         {convo.lastMessage?.timestamp ? new Date(convo.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                       </span>
                     </div>
-                    <p className={`text-xs truncate ${(convo.unreadCount || 0) > 0 ? 'text-white font-semibold' : 'text-[#8E9299]'}`}>
+                    <p className={`text-xs truncate ${(convo.unreadCount || 0) > 0 ? 'text-text-primary font-semibold' : 'text-text-secondary'}`}>
                       {convo.lastMessage?.text || 'Tap to chat'}
                     </p>
                   </div>
@@ -444,20 +444,20 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
 
       {/* Chat Area */}
       {selectedConvo ? (
-        <div className="flex-1 flex flex-col bg-[#0F1113]">
+        <div className="flex-1 flex flex-col bg-background">
           {/* Header */}
-          <div className="h-16 border-b border-[#2A2D31] flex items-center justify-between px-6 bg-[#17191C] shrink-0">
+          <div className="h-16 border-b border-border-token flex items-center justify-between px-6 bg-surface shrink-0">
             <div className="flex items-center gap-3">
-              <button onClick={() => setSelectedConvo(null)} className="md:hidden text-[#8E9299] hover:text-white mr-2 text-xl font-bold">
+              <button onClick={() => setSelectedConvo(null)} className="md:hidden text-text-secondary hover:text-text-primary mr-2 text-xl font-bold">
                 ←
               </button>
               {companion ? (
                 <>
                   <SafeImage src={companion.imageUrl} className="w-9 h-9 rounded-full object-cover border border-white/5" alt={companion.name} fallbackType="avatar" textForInitials={companion.name} />
                   <div className="text-left">
-                    <h3 className="font-bold text-white text-xs flex items-center gap-1">
+                    <h3 className="font-bold text-text-primary text-xs flex items-center gap-1">
                       {companion.name}
-                      {companion.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-[#C8A25E]" />}
+                      {companion.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-primary-action" />}
                     </h3>
                     <span className="text-[10px] text-green-500 flex items-center gap-1 font-semibold">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
@@ -466,26 +466,26 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                   </div>
                 </>
               ) : (
-                <h3 className="font-bold text-white text-xs">Conversation</h3>
+                <h3 className="font-bold text-text-primary text-xs">Conversation</h3>
               )}
             </div>
-            <div className="flex items-center gap-4 text-[#8E9299]">
-              <Phone onClick={() => showToast('Audio calls coming soon', 'info')} className="w-4 h-4 cursor-pointer hover:text-white transition" />
-              <Video onClick={() => showToast('Video calls coming soon', 'info')} className="w-4 h-4 cursor-pointer hover:text-white transition" />
-              <Info onClick={() => showToast(`SATHI companion verification status: Active`, 'info')} className="w-4 h-4 cursor-pointer hover:text-white transition" />
+            <div className="flex items-center gap-4 text-text-secondary">
+              <Phone onClick={() => showToast('Audio calls coming soon', 'info')} className="w-4 h-4 cursor-pointer hover:text-text-primary transition" />
+              <Video onClick={() => showToast('Video calls coming soon', 'info')} className="w-4 h-4 cursor-pointer hover:text-text-primary transition" />
+              <Info onClick={() => showToast(`SATHI companion verification status: Active`, 'info')} className="w-4 h-4 cursor-pointer hover:text-text-primary transition" />
             </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar bg-[#0F1113]">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar bg-background">
             {messages.length === 0 ? (
-              <div className="text-center text-[#8E9299] py-16 space-y-3">
-                <div className="w-12 h-12 rounded-full bg-[#C8A25E]/5 flex items-center justify-center mx-auto text-[#C8A25E] opacity-40">
+              <div className="text-center text-text-secondary py-16 space-y-3">
+                <div className="w-12 h-12 rounded-full bg-primary-action/5 flex items-center justify-center mx-auto text-primary-action opacity-40">
                   <MessageSquare className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-white">No messages yet</p>
-                  <p className="text-[11px] text-[#8E9299] mt-0.5">Send a message to start the conversation.</p>
+                  <p className="text-xs font-bold text-text-primary">No messages yet</p>
+                  <p className="text-[11px] text-text-secondary mt-0.5">Send a message to start the conversation.</p>
                 </div>
               </div>
             ) : (
@@ -494,10 +494,10 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                 return (
                   <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                     <div className="flex flex-col max-w-[75%]">
-                      <div className={`rounded-2xl px-4 py-2.5 shadow-md ${isMe ? 'bg-[#C8A25E] text-[#0F1113] rounded-br-sm font-medium text-xs' : 'bg-[#1E2124] text-white rounded-bl-sm border border-[#2A2D31] text-xs'}`}>
+                      <div className={`rounded-2xl px-4 py-2.5 shadow-md ${isMe ? 'bg-primary-action text-background rounded-br-sm font-medium text-xs' : 'bg-surface-elevated text-text-primary rounded-bl-sm border border-border-token text-xs'}`}>
                         <p className="leading-relaxed break-words whitespace-pre-wrap">{msg.text}</p>
                       </div>
-                      <span className={`text-[9px] mt-1 px-1 ${isMe ? 'text-right text-[#8E9299]' : 'text-left text-[#8E9299]'}`}>
+                      <span className={`text-[9px] mt-1 px-1 ${isMe ? 'text-right text-text-secondary' : 'text-left text-text-secondary'}`}>
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         {isMe && !msg.isRead && ' • Sent'}
                         {isMe && msg.isRead && ' • Read'}
@@ -511,9 +511,9 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
           </div>
 
           {/* Input */}
-          <div className="p-3 bg-[#17191C] border-t border-[#2A2D31] shrink-0">
+          <div className="p-3 bg-surface border-t border-border-token shrink-0">
             <div className="flex items-center gap-2">
-              <button onClick={() => showToast('Image attachments coming soon', 'info')} className="text-[#8E9299] hover:text-[#C8A25E] transition p-2.5 bg-[#1E2124] rounded-full shrink-0">
+              <button onClick={() => showToast('Image attachments coming soon', 'info')} className="text-text-secondary hover:text-primary-action transition p-2.5 bg-surface-elevated rounded-full shrink-0">
                 <ImageIcon className="w-4 h-4" />
               </button>
               <input
@@ -522,12 +522,12 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Type a message..."
-                className="flex-1 bg-[#1E2124] text-white border border-[#2A2D31] rounded-full px-4 py-2.5 text-xs focus:outline-none focus:border-[#C8A25E]"
+                className="flex-1 bg-surface-elevated text-text-primary border border-border-token rounded-full px-4 py-2.5 text-xs focus:outline-none focus:border-primary-action"
               />
               <button
                 onClick={() => handleSend()}
                 disabled={!inputText.trim()}
-                className="w-10 h-10 bg-[#C8A25E] text-[#0F1113] rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#B69150] transition-colors shrink-0"
+                className="w-10 h-10 bg-primary-action text-background rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-action-hover transition-colors shrink-0"
               >
                 <Send className="w-4 h-4 ml-0.5" />
               </button>
@@ -535,13 +535,13 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
           </div>
         </div>
       ) : (
-        <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-[#0F1113] text-[#8E9299] p-8 text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-[#17191C] border border-[#2A2D31] flex items-center justify-center text-[#C8A25E] shadow-xl">
+        <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-background text-text-secondary p-8 text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-surface border border-border-token flex items-center justify-center text-primary-action shadow-xl">
             <MessageSquare className="w-7 h-7" />
           </div>
           <div>
-            <h3 className="font-bold text-white text-sm">Select a conversation</h3>
-            <p className="text-xs text-[#8E9299] mt-1 max-w-[240px]">Choose a chat from the sidebar or visit any companion profile to message them instantly.</p>
+            <h3 className="font-bold text-text-primary text-sm">Select a conversation</h3>
+            <p className="text-xs text-text-secondary mt-1 max-w-[240px]">Choose a chat from the sidebar or visit any companion profile to message them instantly.</p>
           </div>
         </div>
       )}

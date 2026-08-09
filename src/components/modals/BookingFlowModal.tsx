@@ -164,68 +164,68 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
         initial={{ opacity: 0, scale: 0.95 }} 
         animate={{ opacity: 1, scale: 1 }} 
         exit={{ opacity: 0, scale: 0.95 }} 
-        className="relative w-full max-w-lg bg-[#17191C] rounded-3xl overflow-hidden shadow-2xl border border-[#2A2D31] max-h-[90vh] md:max-h-[85vh] flex flex-col"
+        className="relative w-full max-w-lg bg-surface rounded-3xl overflow-hidden shadow-2xl border border-border-token max-h-[90vh] md:max-h-[85vh] flex flex-col"
       >
-        <div className="p-6 border-b border-[#2A2D31] flex items-center justify-between bg-[#0F1113] shrink-0">
-          <h2 id="booking-flow-title" className="text-xl font-bold text-white">
+        <div className="p-6 border-b border-border-token flex items-center justify-between bg-background shrink-0">
+          <h2 id="booking-flow-title" className="text-xl font-bold text-text-primary">
             {step === 4 ? 'Booking Confirmed' : `Book ${companion.name}`}
           </h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#1E2124] flex items-center justify-center text-[#8E9299] hover:text-white transition-colors" aria-label="Close booking dialog">
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-surface-elevated flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors" aria-label="Close booking dialog">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-5 md:p-6 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-[#2A2D31] scrollbar-track-transparent">
+        <div className="p-5 md:p-6 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-border-token scrollbar-track-transparent">
           <AnimatePresence mode="wait">
             {step === 1 && (
               <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <h3 className="text-lg font-bold text-white mb-5">When do you want to meet?</h3>
-                
+                <h3 className="text-lg font-bold text-text-primary mb-5">When do you want to meet?</h3>
+
                  <div className="space-y-4">
-                     <div>
-                       <label htmlFor="booking-date" className="block text-xs font-bold uppercase tracking-wider text-[#8E9299] mb-2 flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-[#C8A25E]" /> Date</label>
-                       <input id="booking-date" type="date" min={today} value={date} onChange={e => { setDate(e.target.value); setError(''); }} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#C8A25E]" />
-                     </div>
+                      <div>
+                        <label htmlFor="booking-date" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2 flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-primary-action" /> Date</label>
+                        <input id="booking-date" type="date" min={today} value={date} onChange={e => { setDate(e.target.value); setError(''); }} className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action" />
+                      </div>
+
+                      <div>
+                        <label htmlFor="booking-time" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-primary-action" /> Time</label>
+                        <input id="booking-time" type="time" value={time} onChange={e => { setTime(e.target.value); setError(''); }} className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action" />
+                      </div>
 
                      <div>
-                       <label htmlFor="booking-time" className="block text-xs font-bold uppercase tracking-wider text-[#8E9299] mb-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-[#C8A25E]" /> Time</label>
-                       <input id="booking-time" type="time" value={time} onChange={e => { setTime(e.target.value); setError(''); }} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#C8A25E]" />
+                       <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-primary-action" /> Duration</label>
+                       <div className="flex items-center gap-4">
+                         <button type="button" onClick={() => setDuration(Math.max(1, duration - 1))} className="w-9 h-9 rounded-full bg-surface-elevated border border-border-token text-text-primary flex items-center justify-center hover:bg-surface-hover transition-colors" aria-label="Decrease duration">-</button>
+                         <span className="text-base font-bold text-text-primary w-8 text-center">{duration} hrs</span>
+                         <button type="button" onClick={() => setDuration(duration + 1)} className="w-9 h-9 rounded-full bg-surface-elevated border border-border-token text-text-primary flex items-center justify-center hover:bg-surface-hover transition-colors" aria-label="Increase duration">+</button>
+                       </div>
                      </div>
 
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-[#8E9299] mb-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-[#C8A25E]" /> Duration</label>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2 flex items-center gap-2"><Users className="w-3.5 h-3.5 text-primary-action" /> Participants</label>
                       <div className="flex items-center gap-4">
-                        <button type="button" onClick={() => setDuration(Math.max(1, duration - 1))} className="w-9 h-9 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center hover:bg-[#2A2D31] transition-colors" aria-label="Decrease duration">-</button>
-                        <span className="text-base font-bold text-white w-8 text-center">{duration} hrs</span>
-                        <button type="button" onClick={() => setDuration(duration + 1)} className="w-9 h-9 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center hover:bg-[#2A2D31] transition-colors" aria-label="Increase duration">+</button>
+                        <button type="button" onClick={() => setParticipants(Math.max(1, participants - 1))} className="w-9 h-9 rounded-full bg-surface-elevated border border-border-token text-text-primary flex items-center justify-center hover:bg-surface-hover transition-colors">-</button>
+                        <span className="text-base font-bold text-text-primary w-8 text-center">{participants}</span>
+                        <button type="button" onClick={() => setParticipants(Math.min(10, participants + 1))} className="w-9 h-9 rounded-full bg-surface-elevated border border-border-token text-text-primary flex items-center justify-center hover:bg-surface-hover transition-colors">+</button>
                       </div>
+                      <p className="text-[11px] text-text-muted mt-2 leading-relaxed">
+                        Base Rate: <span className="text-text-primary font-semibold">NPR {companion.hourlyRate}/hr</span>.
+                        {participants > 1 ? ` Additional participants add +30% each = NPR ${calculatedRate.toLocaleString()}/hr total.` : ''} Total = <span className="text-primary-action font-bold">NPR {baseTotal.toLocaleString()}</span>
+                      </p>
                     </div>
-                   
-                   <div>
-                     <label className="block text-xs font-bold uppercase tracking-wider text-[#8E9299] mb-2 flex items-center gap-2"><Users className="w-3.5 h-3.5 text-[#C8A25E]" /> Participants</label>
-                     <div className="flex items-center gap-4">
-                       <button type="button" onClick={() => setParticipants(Math.max(1, participants - 1))} className="w-9 h-9 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center hover:bg-[#2A2D31] transition-colors">-</button>
-                       <span className="text-base font-bold text-white w-8 text-center">{participants}</span>
-                       <button type="button" onClick={() => setParticipants(Math.min(10, participants + 1))} className="w-9 h-9 rounded-full bg-[#1E2124] border border-[#2A2D31] text-white flex items-center justify-center hover:bg-[#2A2D31] transition-colors">+</button>
-                     </div>
-                     <p className="text-[11px] text-[#8E9299] mt-2 leading-relaxed">
-                       Base Rate: <span className="text-white font-semibold">NPR {companion.hourlyRate}/hr</span>. 
-                       {participants > 1 ? ` Additional participants add +30% each = NPR ${calculatedRate.toLocaleString()}/hr total.` : ''} Total = <span className="text-[#C8A25E] font-bold">NPR {baseTotal.toLocaleString()}</span>
-                     </p>
-                   </div>
-                   {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
-                 </div>
+                    {error && <p className="text-danger text-xs mt-1">{error}</p>}
+                  </div>
               </motion.div>
             )}
 
             {step === 2 && (
               <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <h3 className="text-lg font-bold text-white mb-5">Details & Location</h3>
-                
+                <h3 className="text-lg font-bold text-text-primary mb-5">Details & Location</h3>
+
                 <div className="space-y-4">
                    <div>
-                     <label className="block text-xs font-bold uppercase tracking-wider text-[#8E9299] mb-2 flex items-center gap-2">
-                       <MapPin className="w-3.5 h-3.5 text-[#2563EB]" /> Set Meeting Location
+                     <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2 flex items-center gap-2">
+                       <MapPin className="w-3.5 h-3.5 text-primary-action" /> Set Meeting Location
                      </label>
                      <MeetingLocationSelector
                        initialPosition={initialCompanionCoords ?? MAP_CENTER}
@@ -238,24 +238,24 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                    </div>
 
                    <div>
-                     <label htmlFor="booking-client-name" className="block text-xs font-bold uppercase tracking-wider text-[#8E9299] mb-2">Your Name</label>
-                     <input id="booking-client-name" type="text" placeholder="Full Name" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#C8A25E]" aria-required="true" />
+                     <label htmlFor="booking-client-name" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Your Name</label>
+                     <input id="booking-client-name" type="text" placeholder="Full Name" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action" aria-required="true" />
                    </div>
 
                    <div className="grid grid-cols-2 gap-4">
                      <div>
-                       <label htmlFor="booking-client-phone" className="block text-xs font-bold uppercase tracking-wider text-[#8E9299] mb-2">Phone Number</label>
-                       <input id="booking-client-phone" type="tel" placeholder="e.g. 98XXXXXXXX" value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#C8A25E]" aria-required="true" />
+                       <label htmlFor="booking-client-phone" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Phone Number</label>
+                       <input id="booking-client-phone" type="tel" placeholder="e.g. 98XXXXXXXX" value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action" aria-required="true" />
                      </div>
                      <div>
-                       <label htmlFor="booking-client-email" className="block text-xs font-bold uppercase tracking-wider text-[#8E9299] mb-2">Email Address</label>
-                       <input id="booking-client-email" type="email" placeholder="email@domain.com" value={clientEmail} onChange={e => setClientEmail(e.target.value)} className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#C8A25E]" aria-required="true" />
+                       <label htmlFor="booking-client-email" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Email Address</label>
+                       <input id="booking-client-email" type="email" placeholder="email@domain.com" value={clientEmail} onChange={e => setClientEmail(e.target.value)} className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action" aria-required="true" />
                      </div>
                    </div>
 
                    <div>
-                     <label htmlFor="booking-requests" className="block text-xs font-bold uppercase tracking-wider text-[#8E9299] mb-2">Special Requests (Optional)</label>
-                     <textarea id="booking-requests" value={requests} onChange={e => setRequests(e.target.value)} placeholder="Any specific activities or preferences?" className="w-full bg-[#1E2124] border border-[#2A2D31] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#C8A25E] h-20 resize-none" />
+                     <label htmlFor="booking-requests" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Special Requests (Optional)</label>
+                     <textarea id="booking-requests" value={requests} onChange={e => setRequests(e.target.value)} placeholder="Any specific activities or preferences?" className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action h-20 resize-none" />
                    </div>
                  </div>
               </motion.div>
@@ -263,67 +263,67 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
 
             {step === 3 && (
               <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <h3 className="text-lg font-bold text-white mb-5">Review & Pay</h3>
-                
-                <div className="bg-[#1E2124] rounded-2xl p-4.5 border border-[#2A2D31] mb-5 space-y-3.5 text-xs">
+                <h3 className="text-lg font-bold text-text-primary mb-5">Review & Pay</h3>
+
+                <div className="bg-surface-elevated rounded-2xl p-4.5 border border-border-token mb-5 space-y-3.5 text-xs">
                   <div className="flex justify-between items-center">
-                    <span className="text-[#8E9299]">Your Name</span>
-                    <span className="text-white font-semibold">{clientName}</span>
+                    <span className="text-text-secondary">Your Name</span>
+                    <span className="text-text-primary font-semibold">{clientName}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[#8E9299]">Contact Info</span>
-                    <span className="text-white font-semibold">{clientPhone}</span>
+                    <span className="text-text-secondary">Contact Info</span>
+                    <span className="text-text-primary font-semibold">{clientPhone}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[#8E9299]">Date & Time</span>
-                    <span className="text-white font-semibold">{date} at {time}</span>
+                    <span className="text-text-secondary">Date & Time</span>
+                    <span className="text-text-primary font-semibold">{date} at {time}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[#8E9299]">Duration & Participants</span>
-                    <span className="text-white font-semibold">{duration} hour(s) x {participants} people</span>
+                    <span className="text-text-secondary">Duration & Participants</span>
+                    <span className="text-text-primary font-semibold">{duration} hour(s) x {participants} people</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[#8E9299]">Meeting Point</span>
-                    <span className="text-white font-semibold truncate max-w-[200px] text-right">{location}</span>
+                    <span className="text-text-secondary">Meeting Point</span>
+                    <span className="text-text-primary font-semibold truncate max-w-[200px] text-right">{location}</span>
                   </div>
-                  
-                  <div className="border-t border-[#2A2D31] pt-3 mt-3 space-y-2">
+
+                  <div className="border-t border-border-token pt-3 mt-3 space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-[#8E9299]">
-                        NPR {companion.hourlyRate}/hr base 
+                      <span className="text-text-secondary">
+                        NPR {companion.hourlyRate}/hr base
                         {participants > 1 ? ` x ${multiplier.toFixed(2)}x` : ''} x {duration} hrs
                       </span>
-                      <span className="text-white">NPR {baseTotal.toFixed(2)}</span>
+                      <span className="text-text-primary">NPR {baseTotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[#8E9299]">Service Fee (10%)</span>
-                      <span className="text-white">NPR {serviceFee.toFixed(2)}</span>
+                      <span className="text-text-secondary">Service Fee (10%)</span>
+                      <span className="text-text-primary">NPR {serviceFee.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between items-center text-base font-black pt-2 border-t border-[#2A2D31]">
-                      <span className="text-white">Total</span>
-                      <span className="text-[#C8A25E]">NPR {grandTotal.toFixed(2)}</span>
+                    <div className="flex justify-between items-center text-base font-black pt-2 border-t border-border-token">
+                      <span className="text-text-primary">Total</span>
+                      <span className="text-primary-action">NPR {grandTotal.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#C8A25E] mb-3">Select Payment Method</h3>
+                  <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-primary-action mb-3">Select Payment Method</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setPaymentMethod('khalti')}
-                      className={"p-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all " + (paymentMethod === 'khalti' ? 'border-[#C8A25E] bg-[#C8A25E]/10' : 'border-[#2A2D31] hover:border-[#C8A25E] bg-transparent')}
+                      className={"p-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all " + (paymentMethod === 'khalti' ? 'border-primary-action bg-primary-action/10' : 'border-border-token hover:border-primary-action bg-transparent')}
                     >
                       <div className="font-extrabold text-purple-400 text-base tracking-tight">Khalti</div>
-                      <span className="text-[10px] text-[#8E9299]">Digital Wallet</span>
+                      <span className="text-[10px] text-text-muted">Digital Wallet</span>
                     </button>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setPaymentMethod('esewa')}
-                      className={"p-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all " + (paymentMethod === 'esewa' ? 'border-[#C8A25E] bg-[#C8A25E]/10' : 'border-[#2A2D31] hover:border-[#C8A25E] bg-transparent')}
+                      className={"p-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all " + (paymentMethod === 'esewa' ? 'border-primary-action bg-primary-action/10' : 'border-border-token hover:border-primary-action bg-transparent')}
                     >
                       <div className="font-extrabold text-green-400 text-base tracking-tight">eSewa</div>
-                      <span className="text-[10px] text-[#8E9299]">Digital Wallet</span>
+                      <span className="text-[10px] text-text-muted">Digital Wallet</span>
                     </button>
                   </div>
                 </div>
@@ -332,26 +332,26 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
 
             {step === 4 && (
               <motion.div key="step4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-6">
-                <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                <div className="w-16 h-16 bg-success/20 text-success rounded-full flex items-center justify-center mx-auto mb-5">
                   <Check className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">Request Sent!</h3>
-                <p className="text-xs text-[#8E9299] mb-8 leading-relaxed max-w-sm mx-auto">
+                <h3 className="text-xl font-bold text-text-primary mb-2">Request Sent!</h3>
+                <p className="text-xs text-text-secondary mb-8 leading-relaxed max-w-sm mx-auto">
                   {companion.name} will review your request and get back to you shortly. You can track this in your Bookings tab.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <button 
+                  <button
                     type="button"
                     onClick={onComplete}
-                    className="flex-1 py-3 bg-[#1E2124] text-white rounded-xl font-bold hover:bg-[#2A2D31] transition-colors border border-[#2A2D31] text-xs"
+                    className="flex-1 py-3 bg-surface-elevated text-text-primary rounded-xl font-bold hover:bg-surface-hover transition-colors border border-border-token text-xs"
                   >
                     Done
                   </button>
                   {onMessageCompanion && (
-                    <button 
+                    <button
                       type="button"
                       onClick={onMessageCompanion}
-                      className="flex-1 py-3 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] transition-colors text-xs"
+                      className="flex-1 py-3 bg-primary-action text-text-primary rounded-xl font-bold hover:bg-primary-action-hover transition-colors text-xs"
                     >
                       Message Companion
                     </button>
@@ -363,12 +363,12 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
         </div>
 
         {step < 4 && (
-          <div className="p-4 md:p-5 border-t border-[#2A2D31] bg-[#0F1113] shrink-0 flex gap-3 z-10">
+          <div className="p-4 md:p-5 border-t border-border-token bg-background shrink-0 flex gap-3 z-10">
             {step > 1 && (
               <button 
                 type="button"
                 onClick={() => setStep(step - 1)} 
-                className="px-5 py-3.5 bg-[#1E2124] text-white rounded-xl font-bold hover:bg-[#2A2D31] transition-colors border border-[#2A2D31] text-xs shrink-0"
+                className="px-5 py-3.5 bg-surface-elevated text-text-primary rounded-xl font-bold hover:bg-border-token transition-colors border border-border-token text-xs shrink-0"
               >
                 Back
               </button>
@@ -386,7 +386,7 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                   setError('');
                   setStep(2);
                 }}
-                className="w-full py-3.5 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                className="w-full py-3.5 bg-primary-action text-background rounded-xl font-bold hover:bg-primary-action-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
               >
                 Continue
               </button>
@@ -397,7 +397,7 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                 type="button"
                 disabled={!location || !clientName || !clientPhone || !clientEmail}
                 onClick={() => setStep(3)}
-                className="flex-1 py-3.5 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                className="flex-1 py-3.5 bg-primary-action text-background rounded-xl font-bold hover:bg-primary-action-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
               >
                 Review Booking
               </button>
@@ -421,7 +421,7 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                     setProcessing(false);
                   }
                 }}
-                className="flex-1 py-3.5 bg-[#C8A25E] text-[#0F1113] rounded-xl font-bold hover:bg-[#B69150] transition-colors shadow-lg shadow-[#C8A25E]/20 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                className="flex-1 py-3.5 bg-primary-action text-background rounded-xl font-bold hover:bg-primary-action-hover transition-colors shadow-lg shadow-primary-action/20 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
               >
                 {processing ? 'Processing...' : `Pay NPR ${grandTotal.toFixed(2)}`}
               </button>

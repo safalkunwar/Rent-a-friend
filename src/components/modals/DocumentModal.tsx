@@ -87,24 +87,24 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({ documentType, onCl
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="doc-modal-title">
-      <div className="bg-[#17191C] border border-[#2A2D31] rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
-        <div className="p-6 border-b border-[#2A2D31] flex justify-between items-center bg-[#0F1113]">
+      <div className="bg-surface border border-border-token rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <div className="p-6 border-b border-border-token flex justify-between items-center bg-background">
           <h2 id="doc-modal-title" className="text-xl font-bold text-white">
             {title}
           </h2>
           <button 
             onClick={onClose} 
-            className="text-[#8E9299] hover:text-white transition-colors p-2 rounded-full hover:bg-white/5"
+            className="text-text-secondary hover:text-white transition-colors p-2 rounded-full hover:bg-white/5"
             aria-label="Close modal"
           >
             ✕
           </button>
         </div>
 
-        <div className="p-8 overflow-y-auto flex-1 text-[#8E9299]">
+        <div className="p-8 overflow-y-auto flex-1 text-text-secondary">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <div className="w-10 h-10 border-4 border-t-[#C8A25E] border-white/10 rounded-full animate-spin" />
+              <div className="w-10 h-10 border-4 border-t-primary-action border-white/10 rounded-full animate-spin" />
               <p className="text-sm font-medium">Fetching document...</p>
             </div>
           ) : error ? (
@@ -113,7 +113,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({ documentType, onCl
               <p className="text-sm text-red-300 max-w-md mx-auto">{error}</p>
               <button 
                 onClick={onClose}
-                className="px-6 py-2.5 bg-[#C8A25E]/20 hover:bg-[#C8A25E]/30 text-[#C8A25E] border border-[#C8A25E]/30 rounded-xl font-medium transition-colors text-sm"
+                className="px-6 py-2.5 bg-primary-action/20 hover:bg-primary-action/30 text-primary-action border border-primary-action/30 rounded-xl font-medium transition-colors text-sm"
               >
                 Go Back
               </button>
@@ -125,10 +125,10 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({ documentType, onCl
           )}
         </div>
 
-        <div className="p-6 border-t border-[#2A2D31] flex justify-end bg-[#0F1113]">
+        <div className="p-6 border-t border-border-token flex justify-end bg-background">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 bg-[#C8A25E] hover:bg-[#B69150] text-[#0F1113] rounded-xl font-bold transition-colors text-sm uppercase tracking-wider"
+            className="px-6 py-2.5 bg-primary-action hover:bg-primary-action-hover text-background rounded-xl font-bold transition-colors text-sm uppercase tracking-wider"
           >
             Close Document
           </button>

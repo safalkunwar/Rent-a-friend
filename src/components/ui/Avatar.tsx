@@ -33,10 +33,10 @@ export const Avatar: React.FC<AvatarProps> = ({
         alt={alt}
         fallbackType="avatar"
         textForInitials={alt}
-        className={`rounded-full object-cover ${sizeClasses[size]} border border-[#2A2D31]/40 shadow-sm`}
+        className={`rounded-full object-cover ${sizeClasses[size]} border border-border-token shadow-sm`}
       />
       {isOnline && (
-        <span className="absolute bottom-0 right-0 block w-3 h-3 rounded-full bg-[#22C55E] ring-2 ring-[#0F1113] theme-light:ring-white" />
+        <span className="absolute bottom-0 right-0 block w-3 h-3 rounded-full bg-success ring-2 ring-background theme-light:ring-white" />
       )}
     </div>
   );

@@ -17,40 +17,40 @@ export function AdminApp() {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'guides' | 'companions' | 'bookings' | 'content' | 'security' | 'feedback'>('overview');
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] font-sans text-white flex">
+    <div className="min-h-screen bg-background font-sans text-text-primary flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#111111] border-r border-[#222] hidden md:flex flex-col">
-        <div className="h-16 flex items-center px-6 border-b border-[#222]">
-           <span className="text-xl font-semibold tracking-tight text-white">SATHI <span className="text-[#C8A25E]">Admin</span></span>
+      <aside className="w-64 bg-background border-r border-border-token hidden md:flex flex-col">
+        <div className="h-16 flex items-center px-6 border-b border-border-token">
+           <span className="text-xl font-semibold tracking-tight text-text-primary">SATHI <span className="text-primary-action">Admin</span></span>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-2">
-           <button onClick={() => setActiveTab('overview')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'overview' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-gray-400 hover:text-white hover:bg-[#222]'}`}>
+           <button onClick={() => setActiveTab('overview')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'overview' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
              <Activity className="w-4 h-4" /> Overview
            </button>
-           <button onClick={() => setActiveTab('users')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'users' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-gray-400 hover:text-white hover:bg-[#222]'}`}>
+           <button onClick={() => setActiveTab('users')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'users' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
              <Users className="w-4 h-4" /> Users
            </button>
-           <button onClick={() => setActiveTab('guides')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'guides' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-gray-400 hover:text-white hover:bg-[#222]'}`}>
+           <button onClick={() => setActiveTab('guides')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'guides' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
              <UserCheck className="w-4 h-4" /> Guides & Verification
            </button>
-           <button onClick={() => setActiveTab('companions')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'companions' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-gray-400 hover:text-white hover:bg-[#222]'}`}>
+           <button onClick={() => setActiveTab('companions')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'companions' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
              <Briefcase className="w-4 h-4" /> Companions
            </button>
-           <button onClick={() => setActiveTab('bookings')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'bookings' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-gray-400 hover:text-white hover:bg-[#222]'}`}>
+           <button onClick={() => setActiveTab('bookings')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'bookings' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
              <CalendarDays className="w-4 h-4" /> Bookings
            </button>
-           <button onClick={() => setActiveTab('content')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'content' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-gray-400 hover:text-white hover:bg-[#222]'}`}>
+           <button onClick={() => setActiveTab('content')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'content' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
              <Briefcase className="w-4 h-4" /> Content
            </button>
-           <button onClick={() => setActiveTab('security')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'security' ? 'bg-red-500/10 text-red-500' : 'text-gray-400 hover:text-white hover:bg-[#222]'}`}>
+           <button onClick={() => setActiveTab('security')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'security' ? 'bg-red-500/10 text-red-500' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
              <ShieldAlert className="w-4 h-4" /> Security & SOS
            </button>
-           <button onClick={() => setActiveTab('feedback')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'feedback' ? 'bg-[#C8A25E]/10 text-[#C8A25E]' : 'text-gray-400 hover:text-white hover:bg-[#222]'}`}>
+           <button onClick={() => setActiveTab('feedback')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'feedback' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
              <MessageSquare className="w-4 h-4" /> Feedback & Alerts
            </button>
         </nav>
-        <div className="p-4 border-t border-[#222]">
-           <a href="/" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-400 hover:text-white hover:bg-[#222] rounded-lg transition-colors">
+        <div className="p-4 border-t border-border-token">
+           <a href="/" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors">
               <LogOut className="w-4 h-4" />
               Exit to App
            </a>
@@ -60,21 +60,21 @@ export function AdminApp() {
       {/* Main Content */}
       <main className="flex-1 pb-20 md:pb-0 overflow-y-auto">
          {/* Mobile Header */}
-         <div className="md:hidden h-14 bg-[#111111] border-b border-[#222] flex items-center justify-between px-4 sticky top-0 z-50">
-            <span className="font-semibold text-white">SATHI Admin</span>
+         <div className="md:hidden h-14 bg-background border-b border-border-token flex items-center justify-between px-4 sticky top-0 z-50">
+            <span className="font-semibold text-text-primary">SATHI Admin</span>
             <div className="flex gap-2">
                <button onClick={() => setActiveTab('security')} className="p-2 text-red-500 hover:text-red-400"><ShieldAlert className="w-5 h-5" /></button>
-               <a href="/" className="p-2 text-gray-400 hover:text-white"><LogOut className="w-5 h-5" /></a>
+               <a href="/" className="p-2 text-text-secondary hover:text-text-primary"><LogOut className="w-5 h-5" /></a>
             </div>
          </div>
          
           {/* Mobile Nav Tabs */}
-          <div className="md:hidden flex overflow-x-auto bg-[#111] border-b border-[#222] hide-scrollbar">
+          <div className="md:hidden flex overflow-x-auto bg-background border-b border-border-token hide-scrollbar">
             {['overview', 'users', 'guides', 'companions', 'bookings', 'content', 'security', 'feedback'].map((tab) => (
               <button
                  key={tab}
                  onClick={() => setActiveTab(tab as any)}
-                 className={`px-4 py-3 text-xs font-medium whitespace-nowrap capitalize ${activeTab === tab ? 'text-[#C8A25E] border-b-2 border-[#C8A25E]' : 'text-gray-400'}`}
+                 className={`px-4 py-3 text-xs font-medium whitespace-nowrap capitalize ${activeTab === tab ? 'text-primary-action border-b-2 border-primary-action' : 'text-text-secondary'}`}
               >
                  {tab}
               </button>
@@ -85,8 +85,8 @@ export function AdminApp() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                  <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-white capitalize">{activeTab.replace('-', ' ')}</h1>
-                     <p className="text-gray-400 text-sm mt-1">
+                    <h1 className="text-2xl font-bold tracking-tight text-text-primary capitalize">{activeTab.replace('-', ' ')}</h1>
+                     <p className="text-text-secondary text-sm mt-1">
                         {activeTab === 'overview' && 'Monitor overall platform metrics and growth.'}
                         {activeTab === 'users' && 'Manage user accounts and roles.'}
                         {activeTab === 'guides' && 'Review and approve guides on the platform.'}

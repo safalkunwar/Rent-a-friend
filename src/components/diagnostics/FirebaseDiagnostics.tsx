@@ -67,18 +67,18 @@ export const FirebaseDiagnostics: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0F1113] text-white p-6">
+    <div className="min-h-screen bg-background text-text-primary p-6">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Firebase Diagnostics</h1>
         
-        <div className="bg-[#17191C] border border-[#2A2D31] rounded-2xl p-6 mb-6">
+        <div className="bg-surface border border-border-token rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-bold mb-4">Configuration</h2>
           <pre className="text-xs bg-black/20 p-4 rounded-xl overflow-auto">
             {JSON.stringify(info.firebaseConfig, null, 2)}
           </pre>
         </div>
 
-        <div className="bg-[#17191C] border border-[#2A2D31] rounded-2xl p-6 mb-6">
+        <div className="bg-surface border border-border-token rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-bold mb-4">Services</h2>
           <div className="grid grid-cols-2 gap-4">
             {Object.entries(info.services || {}).map(([key, value]) => (
@@ -90,7 +90,7 @@ export const FirebaseDiagnostics: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-[#17191C] border border-[#2A2D31] rounded-2xl p-6 mb-6">
+        <div className="bg-surface border border-border-token rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-bold mb-4">Auth State</h2>
           <pre className="text-xs bg-black/20 p-4 rounded-xl overflow-auto">
             {JSON.stringify(info.authState, null, 2)}

@@ -42,29 +42,27 @@ export const SafeImage: React.FC<SafeImageProps> = ({
     if (fallbackType === 'avatar') {
       const initials = getInitials(textForInitials || alt);
       return (
-        <div 
-          className={`flex items-center justify-center bg-[#1E2124] text-[#C8A25E] font-bold border border-[#C8A25E]/20 select-none ${className}`}
+        <div
+          className={`flex items-center justify-center bg-surface-elevated text-primary-action font-bold border border-border-token select-none ${className}`}
           title={alt}
         >
           {initials !== '?' ? (
             <span className="text-[11px] uppercase tracking-wider">{initials}</span>
           ) : (
-            <User className="w-1/2 h-1/2 text-[#5A5E66]" />
+            <User className="w-1/2 h-1/2 text-text-muted" />
           )}
         </div>
       );
     }
 
-    // Default or thumbnail fallback: A beautiful, modern slate-gold gradient with a image icon
     return (
-      <div 
-        className={`flex flex-col items-center justify-center bg-gradient-to-br from-[#17191C] to-[#1E2124] border border-[#2A2D31]/40 text-[#5A5E66] relative overflow-hidden select-none ${className}`}
+      <div
+        className={`flex flex-col items-center justify-center bg-gradient-to-br from-surface to-surface-elevated border border-border-token text-text-muted relative overflow-hidden select-none ${className}`}
         title={alt}
       >
-        <ImageIcon className="w-1/4 h-1/4 text-[#C8A25E]/40 mb-1" />
-        <span className="text-[9px] text-[#8E9299]/50 font-medium px-2 text-center truncate w-full">{alt}</span>
-        {/* Subtle decorative gold-accent bar on the side/bottom */}
-        <div className="absolute bottom-0 inset-x-0 h-[2px] bg-[#C8A25E]/30" />
+        <ImageIcon className="w-1/4 h-1/4 text-primary-action/40 mb-1" />
+        <span className="text-[9px] text-text-muted/80 font-medium px-2 text-center truncate w-full">{alt}</span>
+        <div className="absolute bottom-0 inset-x-0 h-[2px] bg-primary-action/30" />
       </div>
     );
   }
@@ -72,8 +70,8 @@ export const SafeImage: React.FC<SafeImageProps> = ({
   return (
     <div className={`relative overflow-hidden ${className}`}>
       {loading && (
-        <div className="absolute inset-0 bg-[#1E2124] animate-pulse flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-[#C8A25E]/20 border-t-[#C8A25E] rounded-full animate-spin" />
+        <div className="absolute inset-0 bg-surface-elevated animate-pulse flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-primary-action/20 border-t-primary-action rounded-full animate-spin" />
         </div>
       )}
       <img

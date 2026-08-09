@@ -160,7 +160,7 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
         html: `
           <div class="relative flex items-center justify-center w-8 h-8 group">
             <div class="absolute w-8 h-8 rounded-full bg-[${pinColor}]/20 animate-ping"></div>
-            <div class="absolute w-4.5 h-4.5 rounded-full bg-[${pinColor}] border-2 border-[#17191C] shadow-lg flex items-center justify-center transition-transform group-hover:scale-125 duration-300">
+            <div class="absolute w-4.5 h-4.5 rounded-full bg-[${pinColor}] border-2 border-surface shadow-lg flex items-center justify-center transition-transform group-hover:scale-125 duration-300">
               <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
             </div>
           </div>
@@ -211,14 +211,14 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
 
   return (
     <div
-      className={`relative w-full rounded-3xl border border-[#2A2D31] overflow-hidden bg-[#17191C] ${className} shadow-2xl transition-all duration-300`}
+      className={`relative w-full rounded-3xl border border-border-token overflow-hidden bg-surface ${className} shadow-2xl transition-all duration-300`}
       style={{ height }}
     >
       <div ref={mapContainerRef} className="w-full h-full z-10" />
 
       {/* Map Header Overlay */}
       <div className="absolute top-4 left-4 z-[400] bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl px-3 py-1.5 flex items-center gap-2 pointer-events-none">
-        <Compass className="w-4 h-4 text-[#C8A25E] animate-spin" style={{ animationDuration: '6s' }} />
+        <Compass className="w-4 h-4 text-primary-action animate-spin" style={{ animationDuration: '6s' }} />
         <span className="text-[10px] md:text-xs font-bold text-white tracking-wide">
           SATHI Live Map • Kathmandu
         </span>
@@ -238,7 +238,7 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
                     map.setView([marker.position.lat, marker.position.lng], 15, { animate: true });
                   }
                 }}
-                className="pointer-events-auto flex items-center gap-1 bg-[#17191C]/90 backdrop-blur-md border border-[#2A2D31] rounded-full px-2.5 py-1 text-[10px] text-white hover:bg-[#C8A25E] hover:text-[#0F1113] hover:border-[#C8A25E] transition-all duration-300 shadow-lg"
+                className="pointer-events-auto flex items-center gap-1 bg-surface/90 backdrop-blur-md border border-border-token rounded-full px-2.5 py-1 text-[10px] text-white hover:bg-primary-action hover:text-background hover:border-primary-action transition-all duration-300 shadow-lg"
               >
                 <Navigation className="w-2.5 h-2.5" />
                 <span className="truncate max-w-[80px] font-medium">{marker.title}</span>
