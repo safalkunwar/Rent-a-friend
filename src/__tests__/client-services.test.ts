@@ -9,6 +9,7 @@ import { reviewService } from '../services/reviews';
 import { searchService } from '../services/search';
 import { presenceService } from '../services/presence';
 import { reminderService } from '../services/reminders';
+import { featureFlags } from '../services/featureFlags';
 
 describe('booking service', () => {
   beforeEach(() => {
@@ -519,5 +520,27 @@ describe('reminder service', () => {
         sent: true,
       })
     );
+  });
+});
+
+describe('feature flags', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('returns null for unknown flag', () => {
+    expect(featureFlags.getFlag('unknown')).toBeNull();
+  });
+
+  it('enables and checks flag', () => {
+    featureFlags.enableFlag('new_booking_flow', 'New booking experience');
+    expect(featureFlags.isEnabled('new_booking_flow')).toBe(true);
+    expect(featureFlags.getFlag('new_booking_flow')?.description).toBe('New booking experience');
+  });
+
+  it('disables flag', () => {
+    featureFlags.enableFlag('test_flag');
+    featureFlags.disableFlag('test_flag');
+    expect(featureFlags.isEnabled('test_flag')).toBe(false);
   });
 });
