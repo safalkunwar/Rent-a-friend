@@ -5,6 +5,7 @@ import { mapsService } from '../services/maps';
 import { companionDashboardService } from '../services/companionDashboard';
 import { offlineMessageService } from '../services/offlineMessages';
 import { locationTrackingService } from '../services/locationTracking';
+import { reviewService } from '../services/reviews';
 
 describe('booking service', () => {
   beforeEach(() => {
@@ -291,6 +292,72 @@ describe('location tracking service', () => {
       'booking_locations/b1',
       expect.objectContaining({
         status: 'ended',
+      })
+    );
+  });
+});
+
+describe('review service', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('addReviewToCompanion returns review id', async () => {
+    const updateDocument = vi.fn();
+    const getDocument = vi.fn().mockResolvedValue({ reviews: [] });
+
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        updateDocument,
+        getDocument,
+      },
+    }));
+
+    const { reviewService } = await import('../services/reviews');
+    const id = await reviewService.addReviewToCompanion('c1', {
+      authorName: 'User',
+      rating: 5,
+      text: 'Great!',
+    });
+
+    expect(id).toMatch(/^review-\d+$/);
+    expect(updateDocument).toHaveBeenCalledTimes(2);
+  });
+
+  it('getReviewStats returns empty stats for companion with no reviews', async () => {
+    const getDocument = vi.fn().mockResolvedValue({ reviews: [] });
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        getDocument,
+      },
+    }));
+    const { reviewService } = await import('../services/reviews');
+    const stats = await reviewService.getReviewStats('c1');
+    expect(stats.totalReviews).toBe(0);
+    expect(stats.averageRating).toBe(0);
+  });
+
+  it('recalculateCompanionRating updates companion document', async () => {
+    const getDocument = vi.fn().mockResolvedValue({
+      reviews: [
+        { rating: 5 },
+        { rating: 3 },
+      ],
+    });
+    const updateDocument = vi.fn();
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        getDocument,
+        updateDocument,
+      },
+    }));
+    const { reviewService } = await import('../services/reviews');
+    await reviewService.recalculateCompanionRating('c1');
+    expect(updateDocument).toHaveBeenCalledWith(
+      'companions/c1',
+      expect.objectContaining({
+        rating: 4,
+        reviewsCount: 2,
       })
     );
   });
