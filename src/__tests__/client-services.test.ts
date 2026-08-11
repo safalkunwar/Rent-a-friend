@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { bookingService } from '../services/bookings';
 import { messagingService } from '../services/messaging';
 import { mapsService } from '../services/maps';
+import { firestore } from '../services/firestore';
 
 describe('booking service', () => {
   beforeEach(() => {
