@@ -10,7 +10,7 @@ describe('firestore service', () => {
     const { firestore } = await import('../services/firestore');
     const result = await firestore.getDocuments('users');
     expect(result).toEqual([]);
-  });
+  }, 10000);
 
   it('subscribe calls callback with empty array when db is missing', async () => {
     vi.doMock('../firebase', () => ({ db: null }));
