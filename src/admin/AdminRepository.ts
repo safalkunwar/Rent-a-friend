@@ -99,6 +99,14 @@ export class AdminRepository {
     await firestore.updateDocument(`sosAlerts/${sosId}`, { status, updatedAt: new Date().toISOString() });
   }
 
+  async assignSOSAlert(sosId: string, assigneeId: string) {
+    await firestore.updateDocument(`sosAlerts/${sosId}`, { assigneeId, updatedAt: new Date().toISOString() });
+  }
+
+  async updateSOSPriority(sosId: string, priority: string) {
+    await firestore.updateDocument(`sosAlerts/${sosId}`, { priority, updatedAt: new Date().toISOString() });
+  }
+
   async listSuspiciousActivity(limitCount = 100) {
     return firestore.getDocuments<any>('suspiciousActivity', {
       orderByField: 'date',
