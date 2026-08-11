@@ -1,4 +1,4 @@
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter, onSnapshot, type Unsubscribe, type Query, type DocumentData, type Firestore } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter, onSnapshot, writeBatch, type Unsubscribe, type Query, type DocumentData, type Firestore } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from './firestore-errors';
 
@@ -153,5 +153,26 @@ export const firestore = {
         handleFirestoreError(error, OperationType.GET, path);
       }
     );
+  },
+
+  batchWrite: async (operations: Array<{ type: 'set' | 'update' | 'delete'; path: string; data?: Record<string, unknown> }>): Promise<void> => {
+    if (!db) return;
+    try {
+      const batch = writeBatch(db);
+      for (const op of operations) {
+        const ref = doc(db, op.path);
+        if (op.type === 'set') {
+          batch.set(ref, op.data || {});
+        } else if (op.type === 'update') {
+          batch.update(ref, op.data || {});
+        } else if (op.type === 'delete') {
+          batch.delete(ref);
+        }
+      }
+      await batch.commit();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'batch');
+      throw error;
+    }
   },
 };
