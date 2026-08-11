@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { firestore } from '../services/firestore';
-import { auditService } from '../services/audit';
+import { firestore } from './services/firestore';
+import { auditService } from './services/audit';
 import { AuditLogEntry } from './types';
 
 const PAGE_SIZE = 20;

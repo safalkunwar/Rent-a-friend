@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
 import { AdminContentRow } from './types';
-import { useToast } from '../components/ui/Toast';
+import { useToast } from './components/ui/Toast';
 import { adminRepository } from './AdminRepository';
 
 export function AdminContent() {
