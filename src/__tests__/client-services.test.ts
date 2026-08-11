@@ -6,6 +6,7 @@ import { companionDashboardService } from '../services/companionDashboard';
 import { offlineMessageService } from '../services/offlineMessages';
 import { locationTrackingService } from '../services/locationTracking';
 import { reviewService } from '../services/reviews';
+import { searchService } from '../services/search';
 
 describe('booking service', () => {
   beforeEach(() => {
@@ -360,5 +361,77 @@ describe('review service', () => {
         reviewsCount: 2,
       })
     );
+  });
+});
+
+describe('search service', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('searchCompanions filters by query and location', async () => {
+    const companions = [
+      { id: 'c1', name: 'Aarav', location: 'Kathmandu', languages: ['English'], interests: ['hiking'], hourlyRate: 500 },
+      { id: 'c2', name: 'Priya', location: 'Pokhara', languages: ['Nepali'], interests: ['food'], hourlyRate: 400 },
+    ];
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        getDocuments: vi.fn().mockResolvedValue(companions),
+      },
+    }));
+    const { searchService } = await import('../services/search');
+    const result = await searchService.searchCompanions('Aarav', { location: 'Kathmandu' });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].name).toBe('Aarav');
+  });
+
+  it('searchActivities filters by category', async () => {
+    const activities = [
+      { id: 'a1', title: 'Hiking', location: 'Kathmandu', category: 'outdoor', avgPrice: 1000 },
+      { id: 'a2', title: 'Cooking', location: 'Kathmandu', category: 'food', avgPrice: 800 },
+    ];
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        getDocuments: vi.fn().mockImplementation((_collection: string, options: any) => {
+          const where = options?.where || [];
+          const categoryFilter = where.find((w: any) => w.field === 'category');
+          if (categoryFilter) {
+            return Promise.resolve(activities.filter((a: any) => a.category === categoryFilter.value));
+          }
+          return Promise.resolve(activities);
+        }),
+      },
+    }));
+    const { searchService } = await import('../services/search');
+    const result = await searchService.searchActivities('', { category: 'food' });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].title).toBe('Cooking');
+  });
+
+  it('searchEvents filters by date range', async () => {
+    const events = [
+      { id: 'e1', title: 'Festival', location: 'Kathmandu', date: '2025-01-01' },
+      { id: 'e2', title: 'Concert', location: 'Kathmandu', date: '2025-02-01' },
+    ];
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        getDocuments: vi.fn().mockImplementation((_collection: string, options: any) => {
+          const where = options?.where || [];
+          const dateFrom = where.find((w: any) => w.field === 'date' && w.operator === '>=')?.value;
+          const dateTo = where.find((w: any) => w.field === 'date' && w.operator === '<=')?.value;
+          if (dateFrom || dateTo) {
+            return Promise.resolve(events.filter((e: any) => {
+              if (dateFrom && e.date < dateFrom) return false;
+              if (dateTo && e.date > dateTo) return false;
+              return true;
+            }));
+          }
+          return Promise.resolve(events);
+        }),
+      },
+    }));
+    const { searchService } = await import('../services/search');
+    const result = await searchService.searchEvents('', { dateFrom: '2025-01-15', dateTo: '2025-01-31' });
+    expect(result.items).toHaveLength(0);
   });
 });
