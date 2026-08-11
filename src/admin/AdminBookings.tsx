@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search, Filter, Eye } from 'lucide-react';
 import { AdminBookingRow } from './AdminRepository';
 import { adminRepository } from './AdminRepository';
+import { useAdminPagination } from './useAdminPagination';
+
+const PAGE_SIZE = 20;
 
 export function AdminBookings() {
-  const [bookings, setBookings] = useState<AdminBookingRow[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedBooking, setSelectedBooking] = useState<AdminBookingRow | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      const data = await adminRepository.listBookings(100);
-      setBookings(data);
-      setLoading(false);
-    };
-    load();
-  }, []);
+  const { items: bookings, loading, hasMore, nextPage } = useAdminPagination<AdminBookingRow>(
+    async ({ startAfter, limitCount }) => {
+      const result = await adminRepository.listBookings(limitCount, startAfter);
+      return { items: result.items, lastVisible: result.lastVisible, hasMore: result.hasMore };
+    },
+    PAGE_SIZE
+  );
 
   const filtered = bookings.filter(b => {
     const matchesSearch = b.id.includes(search) || b.meetingPoint?.toLowerCase().includes(search.toLowerCase()) || b.userId.toLowerCase().includes(search.toLowerCase());
@@ -47,7 +47,7 @@ export function AdminBookings() {
         </div>
       </div>
       <div className="p-4 space-y-3 flex-1 overflow-y-auto">
-        {loading && <p className="text-gray-500 text-sm text-center py-8">Loading bookings...</p>}
+        {loading && bookings.length === 0 && <p className="text-gray-500 text-sm text-center py-8">Loading bookings...</p>}
         {!loading && filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No bookings found.</p>}
         {filtered.map((booking, idx) => (
           <div key={`${booking.id || 'b'}-${idx}`} className="p-4 bg-surface rounded-xl border border-border-token flex items-center justify-between hover:border-primary-action/50 transition-colors">
@@ -72,6 +72,13 @@ export function AdminBookings() {
           </div>
         ))}
       </div>
+      {hasMore && (
+        <div className="p-4 border-t border-border-token flex justify-center">
+          <button onClick={nextPage} disabled={loading} className="px-6 py-2 bg-primary-action text-background text-xs font-bold rounded-lg hover:bg-primary-action-hover transition-colors disabled:opacity-50">
+            {loading ? 'Loading...' : 'Load More'}
+          </button>
+        </div>
+      )}
 
       {selectedBooking && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop:blur-sm" onClick={() => setSelectedBooking(null)}>

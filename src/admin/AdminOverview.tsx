@@ -35,9 +35,9 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
   useEffect(() => {
     const loadStats = async () => {
       const [
-        usersData,
+        usersResult,
         companionsData,
-        bookingsData,
+        bookingsResult,
         pendingApps,
         sosAlerts,
         posts,
@@ -51,6 +51,9 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
         adminRepository.listCommunityPosts(1),
         adminRepository.listComments(1),
       ]);
+
+      const usersData = usersResult.items;
+      const bookingsData = bookingsResult.items;
 
       setStats({
         users: usersData.length,

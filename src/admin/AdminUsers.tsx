@@ -1,26 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { Search, ShieldCheck, UserCircle, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, ShieldCheck } from 'lucide-react';
 import { User } from '../types';
 import { auditService } from '../services/audit';
 import { adminRepository } from './AdminRepository';
+import { useAdminPagination } from './useAdminPagination';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 export function AdminUsers() {
-  const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkRole, setBulkRole] = useState<string>('');
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      const data = await adminRepository.listUsers(PAGE_SIZE);
-      setUsers(data as User[]);
-      setLoading(false);
-    };
-    load();
-  }, []);
+  const { items: users, loading, hasMore, nextPage, error } = useAdminPagination<User>(
+    async ({ startAfter, limitCount }) => {
+      const result = await adminRepository.listUsers(limitCount, startAfter);
+      return { items: result.items as User[], lastVisible: result.lastVisible, hasMore: result.hasMore };
+    },
+    PAGE_SIZE
+  );
 
   const filtered = users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
 
@@ -63,7 +61,8 @@ export function AdminUsers() {
         </div>
       </div>
       <div className="p-4 space-y-3 flex-1 overflow-y-auto">
-        {loading && <p className="text-gray-500 text-sm text-center py-8">Loading users...</p>}
+        {loading && users.length === 0 && <p className="text-gray-500 text-sm text-center py-8">Loading users...</p>}
+        {error && <p className="text-red-500 text-sm text-center py-8">{error}</p>}
         {!loading && filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No users found.</p>}
         {filtered.map((user, idx) => (
           <div key={`${user.id || 'u'}-${idx}`} className="p-4 bg-surface rounded-xl border border-border-token flex items-center justify-between hover:border-primary-action/50 transition-colors">
@@ -91,6 +90,13 @@ export function AdminUsers() {
           </div>
         ))}
       </div>
+      {hasMore && (
+        <div className="p-4 border-t border-border-token flex justify-center">
+          <button onClick={nextPage} disabled={loading} className="px-6 py-2 bg-primary-action text-background text-xs font-bold rounded-lg hover:bg-primary-action-hover transition-colors disabled:opacity-50">
+            {loading ? 'Loading...' : 'Load More'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

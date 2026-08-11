@@ -26,7 +26,7 @@ export function AdminFeedback() {
         adminRepository.listFeedback(100),
       ]);
       setNotifications(notifs as Notification[]);
-      setFeedbackItems(feedback as FeedbackItem[]);
+      setFeedbackItems(feedback.items as FeedbackItem[]);
       setLoading(false);
     };
     load();

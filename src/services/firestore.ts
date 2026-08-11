@@ -1,4 +1,4 @@
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, onSnapshot, type Unsubscribe, type Query, type DocumentData, type Firestore } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter, onSnapshot, type Unsubscribe, type Query, type DocumentData, type Firestore } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from './firestore-errors';
 
@@ -13,6 +13,7 @@ export interface QueryOptions {
   orderByField?: string;
   orderDirection?: 'asc' | 'desc';
   limitCount?: number;
+  startAfter?: unknown[];
 };
 
 const buildQuery = <T = DocumentData>(collectionName: string, options: QueryOptions = {}): Query<T> => {
@@ -27,6 +28,10 @@ const buildQuery = <T = DocumentData>(collectionName: string, options: QueryOpti
 
   if (options.orderByField) {
     q = query(q, orderBy(options.orderByField, options.orderDirection || 'asc'));
+  }
+
+  if (options.startAfter && options.startAfter.length > 0 && options.orderByField) {
+    q = query(q, startAfter(...options.startAfter));
   }
 
   if (options.limitCount) {
@@ -94,6 +99,21 @@ export const firestore = {
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, collectionName);
       return [];
+    }
+  },
+
+  getDocumentsPaginated: async <T = DocumentData>(collectionName: string, options: QueryOptions = {}): Promise<{ items: T[]; lastVisible?: unknown[]; hasMore: boolean }> => {
+    if (!db) return { items: [], hasMore: false };
+    try {
+      const q = buildQuery<T>(collectionName, options);
+      const snap = await getDocs(q);
+      const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as T));
+      const lastVisible = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1].data() as unknown[] : undefined;
+      const hasMore = snap.docs.length >= (options.limitCount || 0);
+      return { items, lastVisible, hasMore };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, collectionName);
+      return { items: [], hasMore: false };
     }
   },
 

@@ -33,8 +33,9 @@ export interface AdminReportRow {
 }
 
 export class AdminRepository {
-  async listUsers(limitCount = 50) {
-    return firestore.getDocuments<AdminUserRow>('users', { limitCount });
+  async listUsers(limitCount = 20, startAfter?: unknown[]) {
+    const result = await firestore.getDocumentsPaginated<AdminUserRow>('users', { limitCount, startAfter, orderByField: 'name', orderDirection: 'asc' });
+    return result;
   }
 
   async updateUserRole(userId: string, role: string) {
@@ -60,12 +61,14 @@ export class AdminRepository {
     });
   }
 
-  async listBookings(limitCount = 100) {
-    return firestore.getDocuments<AdminBookingRow>('bookings', {
+  async listBookings(limitCount = 20, startAfter?: unknown[]) {
+    const result = await firestore.getDocumentsPaginated<AdminBookingRow>('bookings', {
       orderByField: 'createdAt',
       orderDirection: 'desc',
       limitCount,
+      startAfter,
     });
+    return result;
   }
 
   async updateBookingStatus(bookingId: string, status: string) {
@@ -215,12 +218,14 @@ export class AdminRepository {
     await firestore.updateDocument(`notifications/${notificationId}`, { isRead: true });
   }
 
-  async listFeedback(limitCount = 100) {
-    return firestore.getDocuments<any>('feedback', {
+  async listFeedback(limitCount = 20, startAfter?: unknown[]) {
+    const result = await firestore.getDocumentsPaginated<any>('feedback', {
       orderByField: 'date',
       orderDirection: 'desc',
       limitCount,
+      startAfter,
     });
+    return result;
   }
 
   async updateFeedbackStatus(feedbackId: string, status: string) {
