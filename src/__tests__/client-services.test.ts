@@ -3,6 +3,8 @@ import { bookingService } from '../services/bookings';
 import { messagingService } from '../services/messaging';
 import { mapsService } from '../services/maps';
 import { companionDashboardService } from '../services/companionDashboard';
+import { offlineMessageService } from '../services/offlineMessages';
+import { locationTrackingService } from '../services/locationTracking';
 
 describe('booking service', () => {
   beforeEach(() => {
@@ -202,5 +204,94 @@ describe('companion dashboard service', () => {
     expect(requests).toHaveLength(1);
     expect(requests[0].userName).toBe('');
     expect(requests[0].specialRequests).toBe('Near mall');
+  });
+});
+
+describe('offline message service', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    localStorage.clear();
+  });
+
+  it('enqueues and retrieves messages', async () => {
+    vi.doMock('../services/firestore', () => ({
+      firestore: {},
+    }));
+    const { offlineMessageService } = await import('../services/offlineMessages');
+    await offlineMessageService.enqueue({
+      conversationId: 'c1',
+      senderId: 'u1',
+      text: 'Hello',
+      timestamp: new Date().toISOString(),
+    });
+    const queue = await offlineMessageService.getQueue();
+    expect(queue).toHaveLength(1);
+    expect(queue[0].text).toBe('Hello');
+    expect(queue[0].retries).toBe(0);
+  });
+
+  it('returns 0 for empty queue', async () => {
+    const { offlineMessageService } = await import('../services/offlineMessages');
+    const length = await offlineMessageService.getQueueLength();
+    expect(length).toBe(0);
+  });
+
+  it('clears queue', async () => {
+    vi.doMock('../services/firestore', () => ({
+      firestore: {},
+    }));
+    const { offlineMessageService } = await import('../services/offlineMessages');
+    await offlineMessageService.enqueue({
+      conversationId: 'c1',
+      senderId: 'u1',
+      text: 'Hello',
+      timestamp: new Date().toISOString(),
+    });
+    await offlineMessageService.clearQueue();
+    const queue = await offlineMessageService.getQueue();
+    expect(queue).toHaveLength(0);
+  });
+});
+
+describe('location tracking service', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('startTracking creates a session', async () => {
+    const setDocument = vi.fn();
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        setDocument,
+      },
+    }));
+    const { locationTrackingService } = await import('../services/locationTracking');
+    await locationTrackingService.startTracking('b1', 'c1', 'u1');
+    expect(setDocument).toHaveBeenCalledWith(
+      'booking_locations/b1',
+      expect.objectContaining({
+        bookingId: 'b1',
+        companionId: 'c1',
+        userId: 'u1',
+        status: 'active',
+      })
+    );
+  });
+
+  it('stopTracking updates session to ended', async () => {
+    const updateDocument = vi.fn();
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        updateDocument,
+      },
+    }));
+    const { locationTrackingService } = await import('../services/locationTracking');
+    await locationTrackingService.stopTracking('b1');
+    expect(updateDocument).toHaveBeenCalledWith(
+      'booking_locations/b1',
+      expect.objectContaining({
+        status: 'ended',
+      })
+    );
   });
 });
