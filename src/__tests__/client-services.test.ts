@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { bookingService } from '../services/bookings';
 import { messagingService } from '../services/messaging';
 import { mapsService } from '../services/maps';
-import { firestore } from '../services/firestore';
+import { companionDashboardService } from '../services/companionDashboard';
 
 describe('booking service', () => {
   beforeEach(() => {
@@ -162,5 +162,45 @@ describe('maps service', () => {
     const center = { lat: 27.7172, lng: 85.324 };
     const far = { lat: 27.8, lng: 85.4 };
     expect(mapsService.isWithinRadius(center, far, 1)).toBe(false);
+  });
+});
+
+describe('companion dashboard service', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('getStats calculates earnings from completed bookings', async () => {
+    const bookings = [
+      { id: 'b1', status: 'completed', totalPrice: 1000, companionId: 'c1' },
+      { id: 'b2', status: 'completed', totalPrice: 2000, companionId: 'c1' },
+      { id: 'b3', status: 'pending', totalPrice: 500, companionId: 'c1' },
+    ];
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        getDocuments: vi.fn().mockResolvedValue(bookings),
+      },
+    }));
+    const { companionDashboardService } = await import('../services/companionDashboard');
+    const stats = await companionDashboardService.getStats('c1');
+    expect(stats.totalEarnings).toBe(3000);
+    expect(stats.pendingRequests).toBe(1);
+    expect(stats.completedBookings).toBe(2);
+  });
+
+  it('getBookingRequests returns mapped booking data', async () => {
+    const bookings = [
+      { id: 'b1', userId: 'u1', date: '2025-01-01', time: '10:00', duration: 2, participants: 1, totalPrice: 1000, status: 'pending', specialRequests: 'Near mall', createdAt: '2025-01-01T08:00:00Z' },
+    ];
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        getDocuments: vi.fn().mockResolvedValue(bookings),
+      },
+    }));
+    const { companionDashboardService } = await import('../services/companionDashboard');
+    const requests = await companionDashboardService.getBookingRequests('c1');
+    expect(requests).toHaveLength(1);
+    expect(requests[0].userName).toBe('');
+    expect(requests[0].specialRequests).toBe('Near mall');
   });
 });
