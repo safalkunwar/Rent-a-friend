@@ -1,31 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search, ShieldAlert } from 'lucide-react';
-import { firestore } from '../services/firestore';
-import { AuditLogEntry } from '../services/audit';
-
-const PAGE_SIZE = 20;
+import { useAdminAuditLogs } from './useAdminData';
 
 export function AdminAuditLogs() {
-  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
-
-  useEffect(() => {
-    const unsub = firestore.subscribe<AuditLogEntry>('auditLogs', {
-      orderByField: 'timestamp',
-      orderDirection: 'desc',
-      limitCount: PAGE_SIZE
-    }, (items) => {
-      setLogs(items);
-    });
-    return () => unsub();
-  }, []);
-
-  const filtered = logs.filter(log =>
-    log.action.toLowerCase().includes(search.toLowerCase()) ||
-    log.actorName.toLowerCase().includes(search.toLowerCase()) ||
-    log.targetId?.toLowerCase().includes(search.toLowerCase())
-  );
+  const { logs, loading, search } = useAdminAuditLogs(50);
+  const [query, setQuery] = useState('');
+  const filtered = search(query);
 
   return (
     <div className="bg-background border border-border-token rounded-2xl overflow-hidden flex flex-col min-h-[60vh]">
@@ -38,15 +18,16 @@ export function AdminAuditLogs() {
           <input
             type="text"
             placeholder="Search logs..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             className="bg-transparent text-sm text-text-primary outline-none w-32 md:w-auto"
           />
         </div>
       </div>
 
       <div className="p-4 space-y-3 flex-1 overflow-y-auto">
-        {filtered.length === 0 && (
+        {loading && <p className="text-gray-500 text-sm text-center py-8">Loading audit logs...</p>}
+        {!loading && filtered.length === 0 && (
           <p className="text-gray-500 text-sm text-center py-8">No audit logs found.</p>
         )}
         {filtered.map((log, idx) => (

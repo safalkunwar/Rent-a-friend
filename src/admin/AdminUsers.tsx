@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ShieldCheck, UserCircle, Trash2 } from 'lucide-react';
-import { firestore } from '../services/firestore';
 import { User } from '../types';
 import { auditService } from '../services/audit';
-import { adminService, type AdminRole, ADMIN_ROLES } from '../services/admin';
+import { adminRepository } from './AdminRepository';
 
 const PAGE_SIZE = 50;
 
@@ -12,12 +11,15 @@ export function AdminUsers() {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkRole, setBulkRole] = useState<string>('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = firestore.subscribe<User>('users', { limitCount: PAGE_SIZE }, (items) => {
-      setUsers(items);
-    });
-    return () => unsubscribe();
+    const load = async () => {
+      const data = await adminRepository.listUsers(PAGE_SIZE);
+      setUsers(data as User[]);
+      setLoading(false);
+    };
+    load();
   }, []);
 
   const filtered = users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
@@ -27,27 +29,12 @@ export function AdminUsers() {
   };
 
   const handleRoleChange = async (userId: string, role: string) => {
-    await firestore.updateDocument(`users/${userId}`, { role });
-    await auditService.log({
-      action: 'update_user_role',
-      actorId: 'admin',
-      actorName: 'Admin',
-      targetType: 'user',
-      targetId: userId,
-      details: { role },
-    });
+    await adminRepository.updateUserRole(userId, role);
   };
 
   const handleBulkRoleChange = async () => {
     if (!bulkRole || selectedIds.length === 0) return;
-    await Promise.all(selectedIds.map(id => firestore.updateDocument(`users/${id}`, { role: bulkRole })));
-    await auditService.log({
-      action: 'bulk_update_user_role',
-      actorId: 'admin',
-      actorName: 'Admin',
-      targetType: 'user',
-      details: { role: bulkRole, count: selectedIds.length },
-    });
+    await adminRepository.bulkUpdateUserRole(selectedIds, bulkRole);
     setSelectedIds([]);
     setBulkRole('');
   };
@@ -76,7 +63,8 @@ export function AdminUsers() {
         </div>
       </div>
       <div className="p-4 space-y-3 flex-1 overflow-y-auto">
-        {filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No users found.</p>}
+        {loading && <p className="text-gray-500 text-sm text-center py-8">Loading users...</p>}
+        {!loading && filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No users found.</p>}
         {filtered.map((user, idx) => (
           <div key={`${user.id || 'u'}-${idx}`} className="p-4 bg-surface rounded-xl border border-border-token flex items-center justify-between hover:border-primary-action/50 transition-colors">
             <div className="flex items-center gap-4">

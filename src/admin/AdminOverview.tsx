@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserCheck, CalendarDays, ShieldAlert, UserPlus, FileText, AlertTriangle, MessageSquare } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { firestore } from '../services/firestore';
+import { adminRepository } from './AdminRepository';
 
 interface AdminOverviewProps {
   onNavigate?: (tab: string) => void;
@@ -29,58 +29,52 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
     postsCount: 0,
     commentsCount: 0,
   });
-  const [chartData, setChartData] = useState<Array<{ name: string; users: number; bookings: number }>>([]);
+  const [chartData, setChartData] = useState<Array<{ name: string; bookings: number }>>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubUsers = firestore.subscribe('users', { limitCount: 1 }, (items) => {
-      setStats(prev => ({ ...prev, users: items.length }));
-    });
+    const loadStats = async () => {
+      const [
+        usersData,
+        companionsData,
+        bookingsData,
+        pendingApps,
+        sosAlerts,
+        posts,
+        comments,
+      ] = await Promise.all([
+        adminRepository.listUsers(1),
+        adminRepository.listCompanions(1),
+        adminRepository.listBookings(100),
+        adminRepository.listGuideApplications(1),
+        adminRepository.listSOSAlerts(1),
+        adminRepository.listCommunityPosts(1),
+        adminRepository.listComments(1),
+      ]);
 
-    const unsubCompanions = firestore.subscribe('companions', { limitCount: 1 }, (items) => {
-      setStats(prev => ({ ...prev, guides: items.length }));
-    });
+      setStats({
+        users: usersData.length,
+        guides: companionsData.length,
+        pending: pendingApps.filter((a: any) => a.status === 'pending').length,
+        bookings: bookingsData.length,
+        activeBookings: bookingsData.filter((b: any) => b.status === 'confirmed' || b.status === 'active').length,
+        sosActive: sosAlerts.filter((s: any) => s.status === 'active').length,
+        postsCount: posts.length,
+        commentsCount: comments.length,
+      });
 
-    const unsubBookings = firestore.subscribe('bookings', { limitCount: 100 }, (items) => {
-      const active = items.filter(b => b.status === 'confirmed' || b.status === 'active').length;
-      setStats(prev => ({ ...prev, bookings: items.length, activeBookings: active }));
-      const monthly = new Map<string, { users: number; bookings: number }>();
-      items.forEach((booking: any) => {
+      const monthly = new Map<string, number>();
+      bookingsData.forEach((booking: any) => {
         const date = booking.createdAt || booking.date;
         if (!date) return;
         const month = new Date(date).toLocaleString('default', { month: 'short' });
-        if (!monthly.has(month)) monthly.set(month, { users: 0, bookings: 0 });
-        const entry = monthly.get(month)!;
-        entry.bookings += 1;
+        monthly.set(month, (monthly.get(month) || 0) + 1);
       });
-      const data = Array.from(monthly.entries()).map(([name, values]) => ({ name, ...values }));
+      const data = Array.from(monthly.entries()).map(([name, bookings]) => ({ name, bookings }));
       setChartData(data);
-    });
-
-    const unsubPending = firestore.subscribe('guideApplications', { where: [{ field: 'status', operator: '==', value: 'pending' }], limitCount: 1 }, (items) => {
-      setStats(prev => ({ ...prev, pending: items.length }));
-    });
-
-    const unsubSOS = firestore.subscribe('sosAlerts', { where: [{ field: 'status', operator: '==', value: 'active' }], limitCount: 1 }, (items) => {
-      setStats(prev => ({ ...prev, sosActive: items.length }));
-    });
-
-    const unsubPosts = firestore.subscribe('community_posts', { where: [{ field: 'status', operator: '==', value: 'published' }], limitCount: 1 }, (items) => {
-      setStats(prev => ({ ...prev, postsCount: items.length }));
-    });
-
-    const unsubComments = firestore.subscribe('comments', { limitCount: 1 }, (items) => {
-      setStats(prev => ({ ...prev, commentsCount: items.length }));
-    });
-
-    return () => {
-      unsubUsers();
-      unsubCompanions();
-      unsubBookings();
-      unsubPending();
-      unsubSOS();
-      unsubPosts();
-      unsubComments();
+      setLoading(false);
     };
+    loadStats();
   }, []);
 
   return (
@@ -93,7 +87,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
             </div>
             <span className="text-sm font-medium text-gray-400">Total Users</span>
           </div>
-          <p className="text-3xl font-bold text-white ml-2">{stats.users}</p>
+          <p className="text-3xl font-bold text-white ml-2">{loading ? '...' : stats.users}</p>
         </div>
         <div className="bg-background border border-border-token p-5 rounded-2xl">
           <div className="flex items-center gap-3 mb-2">
@@ -102,7 +96,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
             </div>
             <span className="text-sm font-medium text-gray-400">Active Guides</span>
           </div>
-          <p className="text-3xl font-bold text-white ml-2">{stats.guides}</p>
+          <p className="text-3xl font-bold text-white ml-2">{loading ? '...' : stats.guides}</p>
         </div>
         <div className="bg-background border border-border-token p-5 rounded-2xl">
           <div className="flex items-center gap-3 mb-2">
@@ -111,7 +105,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
             </div>
             <span className="text-sm font-medium text-gray-400">Pending</span>
           </div>
-          <p className="text-3xl font-bold text-white ml-2">{stats.pending}</p>
+          <p className="text-3xl font-bold text-white ml-2">{loading ? '...' : stats.pending}</p>
         </div>
         <div className="bg-background border border-border-token p-5 rounded-2xl">
           <div className="flex items-center gap-3 mb-2">
@@ -120,7 +114,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
             </div>
             <span className="text-sm font-medium text-gray-400">Total Bookings</span>
           </div>
-          <p className="text-3xl font-bold text-white ml-2">{stats.bookings}</p>
+          <p className="text-3xl font-bold text-white ml-2">{loading ? '...' : stats.bookings}</p>
         </div>
       </div>
 
@@ -132,7 +126,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
             </div>
             <span className="text-sm font-medium text-gray-400">Active Bookings</span>
           </div>
-          <p className="text-3xl font-bold text-white ml-2">{stats.activeBookings}</p>
+          <p className="text-3xl font-bold text-white ml-2">{loading ? '...' : stats.activeBookings}</p>
         </div>
         <div className="bg-background border border-border-token p-5 rounded-2xl">
           <div className="flex items-center gap-3 mb-2">
@@ -141,7 +135,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
             </div>
             <span className="text-sm font-medium text-gray-400">Active SOS</span>
           </div>
-          <p className="text-3xl font-bold text-white ml-2">{stats.sosActive}</p>
+          <p className="text-3xl font-bold text-white ml-2">{loading ? '...' : stats.sosActive}</p>
         </div>
         <div className="bg-background border border-border-token p-5 rounded-2xl">
           <div className="flex items-center gap-3 mb-2">
@@ -150,7 +144,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
             </div>
             <span className="text-sm font-medium text-gray-400">Community Posts</span>
           </div>
-          <p className="text-3xl font-bold text-white ml-2">{stats.postsCount}</p>
+          <p className="text-3xl font-bold text-white ml-2">{loading ? '...' : stats.postsCount}</p>
         </div>
         <div className="bg-background border border-border-token p-5 rounded-2xl">
           <div className="flex items-center gap-3 mb-2">
@@ -159,7 +153,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
             </div>
             <span className="text-sm font-medium text-gray-400">Comments</span>
           </div>
-          <p className="text-3xl font-bold text-white ml-2">{stats.commentsCount}</p>
+          <p className="text-3xl font-bold text-white ml-2">{loading ? '...' : stats.commentsCount}</p>
         </div>
       </div>
 
@@ -170,14 +164,14 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
             <UserPlus className="w-5 h-5 text-primary-action" />
             <div>
               <p className="text-sm font-medium text-white">Review Guides</p>
-              <p className="text-xs text-gray-400">{stats.pending} pending applications</p>
+              <p className="text-xs text-gray-400">{loading ? '...' : stats.pending} pending applications</p>
             </div>
           </button>
           <button onClick={() => onNavigate?.('bookings')} className="flex items-center gap-3 p-4 bg-surface border border-border-token rounded-xl hover:border-primary-action/50 transition-colors text-left">
             <CalendarDays className="w-5 h-5 text-primary-action" />
             <div>
               <p className="text-sm font-medium text-white">Manage Bookings</p>
-              <p className="text-xs text-gray-400">{stats.bookings} total bookings</p>
+              <p className="text-xs text-gray-400">{loading ? '...' : stats.bookings} total bookings</p>
             </div>
           </button>
           <button onClick={() => onNavigate?.('security')} className="flex items-center gap-3 p-4 bg-surface border border-border-token rounded-xl hover:border-red-500/50 transition-colors text-left">

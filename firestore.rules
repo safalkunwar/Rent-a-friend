@@ -24,11 +24,11 @@ service cloud.firestore {
       );
     }
 
-    function hasAdminPermission(permission: string) {
+    function hasAdminPermission(permission) {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
-        request.auth.token.adminPermissions hasAny([permission]) ||
-        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.permissions hasAny([permission])
+        request.auth.token.adminPermissions.hasAny([permission]) ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.permissions.hasAny([permission])
       );
     }
 

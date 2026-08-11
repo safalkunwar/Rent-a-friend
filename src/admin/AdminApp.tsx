@@ -2,7 +2,6 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { Activity, UserCheck, CalendarDays, ShieldAlert, MessageSquare, LogOut, Users, Briefcase } from 'lucide-react';
 import * as motion from 'motion/react-client';
-import { firestore } from '../services/firestore';
 
 import { AdminOverview } from './AdminOverview';
 import { AdminGuides } from './AdminGuides';
@@ -13,9 +12,10 @@ import { AdminUsers } from './AdminUsers';
 import { AdminCompanions } from './AdminCompanions';
 import { AdminContent } from './AdminContent';
 import { AdminAuditLogs } from './AdminAuditLogs';
+import { AdminModeration } from './AdminModeration';
 
 export function AdminApp() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'guides' | 'companions' | 'bookings' | 'content' | 'security' | 'feedback' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'guides' | 'companions' | 'bookings' | 'content' | 'security' | 'feedback' | 'moderation' | 'audit'>('overview');
 
   return (
     <div className="min-h-screen bg-background font-sans text-text-primary flex">
@@ -42,6 +42,9 @@ export function AdminApp() {
            </button>
            <button onClick={() => setActiveTab('content')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'content' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
              <Briefcase className="w-4 h-4" /> Content
+           </button>
+           <button onClick={() => setActiveTab('moderation')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'moderation' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+             <ShieldAlert className="w-4 h-4" /> Moderation
            </button>
            <button onClick={() => setActiveTab('security')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'security' ? 'bg-red-500/10 text-red-500' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
              <ShieldAlert className="w-4 h-4" /> Security & SOS
@@ -74,7 +77,7 @@ export function AdminApp() {
          
           {/* Mobile Nav Tabs */}
           <div className="md:hidden flex overflow-x-auto bg-background border-b border-border-token hide-scrollbar">
-            {['overview', 'users', 'guides', 'companions', 'bookings', 'content', 'security', 'feedback', 'audit'].map((tab) => (
+            {['overview', 'users', 'guides', 'companions', 'bookings', 'content', 'moderation', 'security', 'feedback', 'audit'].map((tab) => (
               <button
                  key={tab}
                  onClick={() => setActiveTab(tab as any)}
@@ -97,6 +100,7 @@ export function AdminApp() {
                         {activeTab === 'companions' && 'Manage companion profiles and verifications.'}
                         {activeTab === 'bookings' && 'Manage all platform transactions.'}
                         {activeTab === 'content' && 'Manage activities and events.'}
+                        {activeTab === 'moderation' && 'Review and moderate community content and comments.'}
                         {activeTab === 'security' && 'Monitor suspicious activities and SOS alerts.'}
                         {activeTab === 'feedback' && 'Review user feedback and system notifications.'}
                         {activeTab === 'audit' && 'Review privileged actions and system audit trail.'}
@@ -110,6 +114,7 @@ export function AdminApp() {
                {activeTab === 'companions' && <AdminCompanions />}
                {activeTab === 'bookings' && <AdminBookings />}
                {activeTab === 'content' && <AdminContent />}
+               {activeTab === 'moderation' && <AdminModeration />}
                {activeTab === 'security' && <AdminSecurity />}
                 {activeTab === 'feedback' && <AdminFeedback />}
                 {activeTab === 'audit' && <AdminAuditLogs />}

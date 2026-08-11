@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Eye } from 'lucide-react';
-import { firestore } from '../services/firestore';
-import { Booking } from '../types';
+import { AdminBookingRow } from './AdminRepository';
+import { adminRepository } from './AdminRepository';
 
 export function AdminBookings() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<AdminBookingRow[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<AdminBookingRow | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = firestore.subscribe<Booking>('bookings', { orderByField: 'createdAt', orderDirection: 'desc' }, (items) => {
-      setBookings(items);
-    });
-    return () => unsubscribe();
+    const load = async () => {
+      const data = await adminRepository.listBookings(100);
+      setBookings(data);
+      setLoading(false);
+    };
+    load();
   }, []);
 
   const filtered = bookings.filter(b => {
@@ -44,7 +47,8 @@ export function AdminBookings() {
         </div>
       </div>
       <div className="p-4 space-y-3 flex-1 overflow-y-auto">
-        {filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No bookings found.</p>}
+        {loading && <p className="text-gray-500 text-sm text-center py-8">Loading bookings...</p>}
+        {!loading && filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No bookings found.</p>}
         {filtered.map((booking, idx) => (
           <div key={`${booking.id || 'b'}-${idx}`} className="p-4 bg-surface rounded-xl border border-border-token flex items-center justify-between hover:border-primary-action/50 transition-colors">
             <div>

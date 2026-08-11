@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
-import { firestore } from '../services/firestore';
 import { Activity, Event } from '../types';
 import { useToast } from '../components/ui/Toast';
+import { adminRepository } from './AdminRepository';
 
 export function AdminContent() {
   const { showToast } = useToast();
@@ -10,18 +10,19 @@ export function AdminContent() {
   const [events, setEvents] = useState<Event[]>([]);
   const [tab, setTab] = useState<'activities' | 'events'>('activities');
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubActivities = firestore.subscribe<Activity>('activities', {}, (items) => {
-      setActivities(items);
-    });
-    const unsubEvents = firestore.subscribe<Event>('events', {}, (items) => {
-      setEvents(items);
-    });
-    return () => {
-      unsubActivities();
-      unsubEvents();
+    const load = async () => {
+      const [acts, evts] = await Promise.all([
+        adminRepository.listActivities(100),
+        adminRepository.listEvents(100),
+      ]);
+      setActivities(acts as Activity[]);
+      setEvents(evts as Event[]);
+      setLoading(false);
     };
+    load();
   }, []);
 
   const filtered = tab === 'activities'
@@ -29,7 +30,8 @@ export function AdminContent() {
     : events.filter(e => e.title.toLowerCase().includes(search.toLowerCase()));
 
   const handleDelete = async (id: string) => {
-    await firestore.deleteDocument(`${tab === 'activities' ? 'activities' : 'events'}/${id}`);
+    await adminRepository.deleteContentItem(tab === 'activities' ? 'activities' : 'events', id);
+    showToast('Item deleted', 'success');
   };
 
   return (
@@ -53,7 +55,8 @@ export function AdminContent() {
           </div>
         </div>
         <div className="p-4 space-y-3 flex-1 overflow-y-auto">
-          {filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No {tab} found.</p>}
+          {loading && <p className="text-gray-500 text-sm text-center py-8">Loading...</p>}
+          {!loading && filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No {tab} found.</p>}
           {filtered.map((item, idx) => (
             <div key={`${item.id || tab}-${idx}`} className="p-4 bg-surface rounded-xl border border-border-token flex items-center justify-between hover:border-primary-action/50 transition-colors">
               <div>

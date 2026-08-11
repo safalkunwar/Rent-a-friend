@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Bell, Star } from 'lucide-react';
-import { firestore } from '../services/firestore';
 import { Notification } from '../types';
+import { adminRepository } from './AdminRepository';
 
 interface FeedbackItem {
   id: string;
@@ -17,36 +17,38 @@ interface FeedbackItem {
 export function AdminFeedback() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubNotifications = firestore.subscribe<Notification>('notifications', { orderByField: 'timestamp', orderDirection: 'desc' }, (items) => {
-      setNotifications(items);
-    });
-
-    const unsubFeedback = firestore.subscribe<FeedbackItem>('feedback', { orderByField: 'date', orderDirection: 'desc' }, (items) => {
-      setFeedbackItems(items);
-    });
-
-    return () => {
-      unsubNotifications();
-      unsubFeedback();
+    const load = async () => {
+      const [notifs, feedback] = await Promise.all([
+        adminRepository.listNotifications(100),
+        adminRepository.listFeedback(100),
+      ]);
+      setNotifications(notifs as Notification[]);
+      setFeedbackItems(feedback as FeedbackItem[]);
+      setLoading(false);
     };
+    load();
   }, []);
 
   const handleReply = async (id: string) => {
-    await firestore.updateDocument(`feedback/${id}`, { status: 'read' });
+    await adminRepository.updateFeedbackStatus(id, 'read');
+    setFeedbackItems(prev => prev.map(f => f.id === id ? { ...f, status: 'read' } : f));
   };
 
   const handleResolve = async (id: string) => {
-    await firestore.updateDocument(`feedback/${id}`, { status: 'resolved' });
+    await adminRepository.updateFeedbackStatus(id, 'resolved');
+    setFeedbackItems(prev => prev.map(f => f.id === id ? { ...f, status: 'resolved' } : f));
   };
 
   const handleMarkAllRead = async () => {
     for (const n of notifications) {
       if (n.id && !n.isRead) {
-        await firestore.updateDocument(`notifications/${n.id}`, { isRead: true });
+        await adminRepository.markNotificationRead(n.id);
       }
     }
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
   };
 
   return (
@@ -58,7 +60,8 @@ export function AdminFeedback() {
           <h3 className="font-semibold text-sm flex items-center gap-2"><MessageSquare className="w-4 h-4 text-primary-action" /> User Feedback & Reports</h3>
         </div>
         <div className="p-4 space-y-4 flex-1 overflow-y-auto">
-          {feedbackItems.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No feedback yet.</p>}
+          {loading && <p className="text-gray-500 text-sm text-center py-8">Loading...</p>}
+          {!loading && feedbackItems.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No feedback yet.</p>}
           {feedbackItems.map((item, idx) => (
             <div key={`${item.id || 'fb'}-${idx}`} className="p-4 bg-surface rounded-xl border border-border-token">
                <div className="flex justify-between items-start mb-2">
@@ -94,7 +97,8 @@ export function AdminFeedback() {
           <button onClick={handleMarkAllRead} className="text-xs text-gray-500 hover:text-text-primary transition-colors">Mark all read</button>
         </div>
         <div className="divide-y divide-border-token overflow-y-auto">
-          {notifications.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No notifications yet.</p>}
+          {loading && <p className="text-gray-500 text-sm text-center py-8">Loading...</p>}
+          {!loading && notifications.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No notifications yet.</p>}
           {notifications.map((notification, idx) => (
             <div key={`${notification.id || 'notif'}-${idx}`} className={`p-5 hover:bg-surface transition-colors ${!notification.isRead ? 'bg-primary-action/5' : ''}`}>
                <div className="flex justify-between items-start mb-1">

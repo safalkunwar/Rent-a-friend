@@ -1,23 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ShieldCheck, ShieldAlert } from 'lucide-react';
-import { firestore } from '../services/firestore';
 import { Companion } from '../types';
+import { adminRepository } from './AdminRepository';
 
 export function AdminCompanions() {
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = firestore.subscribe<Companion>('companions', {}, (items) => {
-      setCompanions(items);
-    });
-    return () => unsubscribe();
+    const load = async () => {
+      const data = await adminRepository.listCompanions(100);
+      setCompanions(data as Companion[]);
+      setLoading(false);
+    };
+    load();
   }, []);
 
   const filtered = companions.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.location.toLowerCase().includes(search.toLowerCase()));
 
   const toggleVerification = async (companionId: string, isVerified: boolean) => {
-    await firestore.updateDocument(`companions/${companionId}`, { isVerified: !isVerified });
+    await adminRepository.toggleCompanionVerification(companionId, isVerified);
+    setCompanions(prev => prev.map(c => c.id === companionId ? { ...c, isVerified: !isVerified } : c));
   };
 
   return (
@@ -26,11 +30,12 @@ export function AdminCompanions() {
         <h3 className="font-semibold text-sm">All Companions</h3>
         <div className="flex items-center gap-2 bg-surface-elevated px-3 py-1.5 rounded-lg border border-border-token">
           <Search className="w-4 h-4 text-gray-500" />
-          <input type="text" placeholder="Search companions..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-transparent text-sm text-white outline-none w-32 md:w-auto" />
+          <input type="text" placeholder="Search companions..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-transparent text-sm text-text-primary outline-none w-32 md:w-auto" />
         </div>
       </div>
       <div className="p-4 space-y-3 flex-1 overflow-y-auto">
-        {filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No companions found.</p>}
+        {loading && <p className="text-gray-500 text-sm text-center py-8">Loading companions...</p>}
+        {!loading && filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No companions found.</p>}
         {filtered.map((companion, idx) => (
           <div key={`${companion.id || 'c'}-${idx}`} className="p-4 bg-surface rounded-xl border border-border-token flex items-center justify-between hover:border-primary-action/50 transition-colors">
             <div className="flex items-center gap-4">

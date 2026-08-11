@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, CheckCircle2, XCircle, Search, FileText, StickyNote } from 'lucide-react';
-import { firestore } from '../services/firestore';
 import { Companion } from '../types';
 import { auditService } from '../services/audit';
+import { adminRepository } from './AdminRepository';
 
 interface GuideApplication {
   id: string;
@@ -21,49 +21,29 @@ export function AdminGuides() {
   const [guides, setGuides] = useState<Companion[]>([]);
   const [applications, setApplications] = useState<GuideApplication[]>([]);
   const [adminNote, setAdminNote] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubCompanions = firestore.subscribe<Companion>('companions', {}, (items) => {
-      setGuides(items);
-    });
-
-    const unsubApplications = firestore.subscribe<GuideApplication>('guideApplications', { orderByField: 'appliedDate', orderDirection: 'desc' }, (items) => {
-      setApplications(items);
-    });
-
-    return () => {
-      unsubCompanions();
-      unsubApplications();
+    const load = async () => {
+      const [companionsData, appsData] = await Promise.all([
+        adminRepository.listCompanions(100),
+        adminRepository.listGuideApplications(100),
+      ]);
+      setGuides(companionsData as Companion[]);
+      setApplications(appsData as GuideApplication[]);
+      setLoading(false);
     };
+    load();
   }, []);
 
   const handleApprove = async (app: GuideApplication) => {
-    if (app.companionId) {
-      await firestore.updateDocument(`companions/${app.companionId}`, { isVerified: true, updatedAt: new Date().toISOString() });
-    }
-    await firestore.updateDocument(`guideApplications/${app.id}`, { status: 'approved', adminNotes: adminNote || undefined });
-    await auditService.log({
-      action: 'approve_guide',
-      actorId: 'admin',
-      actorName: 'Admin',
-      targetType: 'guideApplication',
-      targetId: app.id,
-      details: { companionId: app.companionId, note: adminNote },
-    });
+    await adminRepository.approveGuideApplication(app.id, app.companionId);
     setSelectedGuide(null);
     setAdminNote('');
   };
 
   const handleReject = async (app: GuideApplication) => {
-    await firestore.updateDocument(`guideApplications/${app.id}`, { status: 'rejected', adminNotes: adminNote || undefined });
-    await auditService.log({
-      action: 'reject_guide',
-      actorId: 'admin',
-      actorName: 'Admin',
-      targetType: 'guideApplication',
-      targetId: app.id,
-      details: { note: adminNote },
-    });
+    await adminRepository.rejectGuideApplication(app.id);
     setSelectedGuide(null);
     setAdminNote('');
   };
@@ -77,7 +57,8 @@ export function AdminGuides() {
         </div>
 
         <div className="divide-y divide-border-token">
-          {applications.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No pending applications.</p>}
+          {loading && <p className="text-gray-500 text-sm text-center py-4">Loading applications...</p>}
+          {!loading && applications.filter(a => a.status === 'pending').length === 0 && <p className="text-gray-500 text-sm text-center py-4">No pending applications.</p>}
           {applications.filter(a => a.status === 'pending').map((app, idx) => (
             <div key={`${app.id || 'app'}-${idx}`} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-elevated/30 transition-colors">
               <div>
@@ -85,7 +66,7 @@ export function AdminGuides() {
                 <p className="text-xs text-gray-400 mt-1">{app.email} • {app.location}</p>
               </div>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => setSelectedGuide(app)}
                   className="flex items-center gap-1 px-3 py-1.5 bg-surface-elevated text-gray-300 border border-border-token rounded-lg text-xs font-medium hover:text-text-primary hover:border-primary-action transition-colors"
                 >
@@ -177,13 +158,13 @@ export function AdminGuides() {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <button 
+                <button
                   onClick={() => handleReject(selectedGuide)}
                   className="flex-1 py-3 bg-red-500/10 text-red-500 rounded-xl font-bold hover:bg-red-500/20 transition-colors uppercase tracking-wider text-sm border border-red-500/20"
                 >
                   Reject
                 </button>
-                <button 
+                <button
                   onClick={() => handleApprove(selectedGuide)}
                   className="flex-1 py-3 bg-primary-action text-background rounded-xl font-bold hover:bg-primary-action-hover transition-colors uppercase tracking-wider text-sm"
                 >

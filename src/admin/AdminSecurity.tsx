@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, MapPin, PhoneCall, ShieldAlert, Navigation } from 'lucide-react';
-import { firestore } from '../services/firestore';
+import { adminRepository } from './AdminRepository';
 
 interface SOSAlert {
   id: string;
@@ -23,30 +23,34 @@ interface SuspiciousActivity {
 export function AdminSecurity() {
   const [sosAlerts, setSosAlerts] = useState<SOSAlert[]>([]);
   const [suspiciousActivities, setSuspiciousActivities] = useState<SuspiciousActivity[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubSOS = firestore.subscribe<SOSAlert>('sosAlerts', { orderByField: 'timestamp', orderDirection: 'desc' }, (items) => {
-      setSosAlerts(items);
-    });
-    const unsubSuspicious = firestore.subscribe<SuspiciousActivity>('suspiciousActivity', { orderByField: 'date', orderDirection: 'desc' }, (items) => {
-      setSuspiciousActivities(items);
-    });
-    return () => {
-      unsubSOS();
-      unsubSuspicious();
+    const load = async () => {
+      const [sos, suspicious] = await Promise.all([
+        adminRepository.listSOSAlerts(100),
+        adminRepository.listSuspiciousActivity(100),
+      ]);
+      setSosAlerts(sos as SOSAlert[]);
+      setSuspiciousActivities(suspicious as SuspiciousActivity[]);
+      setLoading(false);
     };
+    load();
   }, []);
 
   const handleDispatch = async (id: string) => {
-    await firestore.updateDocument(`sosAlerts/${id}`, { status: 'resolved' });
+    await adminRepository.updateSOSStatus(id, 'resolved');
+    setSosAlerts(prev => prev.map(a => a.id === id ? { ...a, status: 'resolved' } : a));
   };
 
   const handleFalseAlarm = async (id: string) => {
-    await firestore.updateDocument(`sosAlerts/${id}`, { status: 'resolved', priority: 'low' });
+    await adminRepository.updateSOSStatus(id, 'resolved');
+    setSosAlerts(prev => prev.map(a => a.id === id ? { ...a, status: 'resolved', priority: 'low' } : a));
   };
 
   const handleInvestigate = async (id: string) => {
-    await firestore.updateDocument(`suspiciousActivity/${id}`, { status: 'investigating' });
+    await adminRepository.updateSuspiciousActivityStatus(id, 'investigating');
+    setSuspiciousActivities(prev => prev.map(a => a.id === id ? { ...a, status: 'investigating' } : a));
   };
 
   return (
@@ -57,7 +61,8 @@ export function AdminSecurity() {
           <h3 className="font-semibold text-sm text-red-500 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Active SOS Alerts</h3>
         </div>
         <div className="p-4 space-y-4">
-          {sosAlerts.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No SOS alerts.</p>}
+          {loading && <p className="text-gray-500 text-sm text-center py-4">Loading...</p>}
+          {!loading && sosAlerts.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No SOS alerts.</p>}
           {sosAlerts.map((alert, idx) => (
             <div key={`${alert.id || 'sos'}-${idx}`} className={`p-4 rounded-xl border ${alert.status === 'active' ? 'bg-red-500/10 border-red-500/30' : 'bg-surface border-border-token'}`}>
               <div className="flex justify-between items-start mb-3">
@@ -101,7 +106,8 @@ export function AdminSecurity() {
           <h3 className="font-semibold text-sm flex items-center gap-2"><ShieldAlert className="w-4 h-4 text-yellow-500" /> Suspicious Activity Logs</h3>
         </div>
         <div className="divide-y divide-border-token">
-          {suspiciousActivities.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No suspicious activity logs.</p>}
+          {loading && <p className="text-gray-500 text-sm text-center py-4">Loading...</p>}
+          {!loading && suspiciousActivities.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No suspicious activity logs.</p>}
           {suspiciousActivities.map((item, idx) => (
             <div key={`${item.id || 'sec'}-${idx}`} className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 hover:bg-surface transition-colors">
                <div>
@@ -109,18 +115,18 @@ export function AdminSecurity() {
                   <p className="text-xs text-gray-400">{item.target} • {item.date}</p>
                </div>
                <div className="flex items-center gap-2">
-                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                   item.status === 'new' ? 'bg-red-500/10 text-red-500' :
-                   item.status === 'investigating' ? 'bg-yellow-500/10 text-yellow-500' :
-                   'bg-gray-800 text-gray-400'
-                 }`}>
-                   {item.status}
-                 </span>
-                 {item.status !== 'resolved' && (
-                   <button onClick={() => handleInvestigate(item.id)} className="px-3 py-1.5 bg-surface-elevated text-text-secondary border border-border-token rounded-lg text-xs font-medium hover:text-text-primary transition-colors">
-                     Investigate
-                   </button>
-                 )}
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                    item.status === 'new' ? 'bg-red-500/10 text-red-500' :
+                    item.status === 'investigating' ? 'bg-yellow-500/10 text-yellow-500' :
+                    'bg-gray-800 text-gray-400'
+                  }`}>
+                    {item.status}
+                  </span>
+                  {item.status !== 'resolved' && (
+                    <button onClick={() => handleInvestigate(item.id)} className="px-3 py-1.5 bg-surface-elevated text-text-secondary border border-border-token rounded-lg text-xs font-medium hover:text-text-primary transition-colors">
+                      Investigate
+                    </button>
+                  )}
                </div>
             </div>
           ))}
