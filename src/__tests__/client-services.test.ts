@@ -7,6 +7,8 @@ import { offlineMessageService } from '../services/offlineMessages';
 import { locationTrackingService } from '../services/locationTracking';
 import { reviewService } from '../services/reviews';
 import { searchService } from '../services/search';
+import { presenceService } from '../services/presence';
+import { reminderService } from '../services/reminders';
 
 describe('booking service', () => {
   beforeEach(() => {
@@ -433,5 +435,89 @@ describe('search service', () => {
     const { searchService } = await import('../services/search');
     const result = await searchService.searchEvents('', { dateFrom: '2025-01-15', dateTo: '2025-01-31' });
     expect(result.items).toHaveLength(0);
+  });
+});
+
+describe('presence service', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('setOnline updates presence document', async () => {
+    const setDocument = vi.fn();
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        setDocument,
+      },
+    }));
+    const { presenceService } = await import('../services/presence');
+    await presenceService.setOnline('u1');
+    expect(setDocument).toHaveBeenCalledWith(
+      'presence/u1',
+      expect.objectContaining({
+        userId: 'u1',
+        isOnline: true,
+      })
+    );
+  });
+
+  it('setOffline updates presence document', async () => {
+    const updateDocument = vi.fn();
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        updateDocument,
+      },
+    }));
+    const { presenceService } = await import('../services/presence');
+    await presenceService.setOffline('u1');
+    expect(updateDocument).toHaveBeenCalledWith(
+      'presence/u1',
+      expect.objectContaining({
+        isOnline: false,
+      })
+    );
+  });
+});
+
+describe('reminder service', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('createReminder stores reminder document', async () => {
+    const setDocument = vi.fn();
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        setDocument,
+      },
+    }));
+    const { reminderService } = await import('../services/reminders');
+    const id = await reminderService.createReminder({
+      bookingId: 'b1',
+      userId: 'u1',
+      companionId: 'c1',
+      reminderTime: '2025-01-01T10:00:00Z',
+      type: '1_hour',
+      sent: false,
+    });
+    expect(id).toMatch(/^reminder-\d+$/);
+    expect(setDocument).toHaveBeenCalledTimes(1);
+  });
+
+  it('markReminderSent updates sent flag', async () => {
+    const updateDocument = vi.fn();
+    vi.doMock('../services/firestore', () => ({
+      firestore: {
+        updateDocument,
+      },
+    }));
+    const { reminderService } = await import('../services/reminders');
+    await reminderService.markReminderSent('reminder-1');
+    expect(updateDocument).toHaveBeenCalledWith(
+      'booking_reminders/reminder-1',
+      expect.objectContaining({
+        sent: true,
+      })
+    );
   });
 });
