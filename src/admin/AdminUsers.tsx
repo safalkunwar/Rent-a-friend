@@ -3,6 +3,9 @@ import { Search, ShieldCheck, UserCircle, Trash2 } from 'lucide-react';
 import { firestore } from '../services/firestore';
 import { User } from '../types';
 import { auditService } from '../services/audit';
+import { adminService, type AdminRole, ADMIN_ROLES } from '../services/admin';
+
+const PAGE_SIZE = 50;
 
 export function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);
@@ -11,7 +14,7 @@ export function AdminUsers() {
   const [bulkRole, setBulkRole] = useState<string>('');
 
   useEffect(() => {
-    const unsubscribe = firestore.subscribe<User>('users', {}, (items) => {
+    const unsubscribe = firestore.subscribe<User>('users', { limitCount: PAGE_SIZE }, (items) => {
       setUsers(items);
     });
     return () => unsubscribe();

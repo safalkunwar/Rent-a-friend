@@ -18,8 +18,17 @@ service cloud.firestore {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
         request.auth.token.role == 'admin' ||
+        request.auth.token.adminRole in ['super_admin','platform_admin','safety_admin','moderation_admin','support_agent','booking_admin','finance_admin','kyc_reviewer','content_admin','analytics_admin','read_only_admin'] ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function hasAdminPermission(permission: string) {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.adminPermissions hasAny([permission]) ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.permissions hasAny([permission])
       );
     }
 
@@ -343,6 +352,19 @@ service cloud.firestore {
     match /analytics/{analyticId} {
       allow read: if isAdmin();
       allow create: if false;
+      allow update, delete: if false;
+    }
+
+    // Admins Collection: /admins/{adminId}
+    match /admins/{adminId} {
+      allow read: if isAuthenticated() && request.auth.uid == adminId;
+      allow write: if isAdmin();
+    }
+
+    // Audit Logs Collection: /auditLogs/{logId}
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.actorId;
       allow update, delete: if false;
     }
 

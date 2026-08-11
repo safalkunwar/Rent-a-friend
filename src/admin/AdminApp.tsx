@@ -12,9 +12,10 @@ import { AdminFeedback } from './AdminFeedback';
 import { AdminUsers } from './AdminUsers';
 import { AdminCompanions } from './AdminCompanions';
 import { AdminContent } from './AdminContent';
+import { AdminAuditLogs } from './AdminAuditLogs';
 
 export function AdminApp() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'guides' | 'companions' | 'bookings' | 'content' | 'security' | 'feedback'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'guides' | 'companions' | 'bookings' | 'content' | 'security' | 'feedback' | 'audit'>('overview');
 
   return (
     <div className="min-h-screen bg-background font-sans text-text-primary flex">
@@ -48,6 +49,9 @@ export function AdminApp() {
            <button onClick={() => setActiveTab('feedback')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'feedback' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
              <MessageSquare className="w-4 h-4" /> Feedback & Alerts
            </button>
+           <button onClick={() => setActiveTab('audit')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'audit' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+             <ShieldAlert className="w-4 h-4" /> Audit Logs
+           </button>
         </nav>
         <div className="p-4 border-t border-border-token">
            <a href="/" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors">
@@ -70,7 +74,7 @@ export function AdminApp() {
          
           {/* Mobile Nav Tabs */}
           <div className="md:hidden flex overflow-x-auto bg-background border-b border-border-token hide-scrollbar">
-            {['overview', 'users', 'guides', 'companions', 'bookings', 'content', 'security', 'feedback'].map((tab) => (
+            {['overview', 'users', 'guides', 'companions', 'bookings', 'content', 'security', 'feedback', 'audit'].map((tab) => (
               <button
                  key={tab}
                  onClick={() => setActiveTab(tab as any)}
@@ -95,6 +99,7 @@ export function AdminApp() {
                         {activeTab === 'content' && 'Manage activities and events.'}
                         {activeTab === 'security' && 'Monitor suspicious activities and SOS alerts.'}
                         {activeTab === 'feedback' && 'Review user feedback and system notifications.'}
+                        {activeTab === 'audit' && 'Review privileged actions and system audit trail.'}
                      </p>
                  </div>
               </div>
@@ -106,7 +111,8 @@ export function AdminApp() {
                {activeTab === 'bookings' && <AdminBookings />}
                {activeTab === 'content' && <AdminContent />}
                {activeTab === 'security' && <AdminSecurity />}
-               {activeTab === 'feedback' && <AdminFeedback />}
+                {activeTab === 'feedback' && <AdminFeedback />}
+                {activeTab === 'audit' && <AdminAuditLogs />}
 
             </motion.div>
          </div>

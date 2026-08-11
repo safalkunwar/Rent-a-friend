@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserCheck, CalendarDays, ShieldAlert, UserPlus, FileText, AlertTriangle } from 'lucide-react';
+import { Users, UserCheck, CalendarDays, ShieldAlert, UserPlus, FileText, AlertTriangle, MessageSquare } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { firestore } from '../services/firestore';
 
@@ -7,21 +7,42 @@ interface AdminOverviewProps {
   onNavigate?: (tab: string) => void;
 }
 
+interface Stats {
+  users: number;
+  guides: number;
+  pending: number;
+  bookings: number;
+  activeBookings: number;
+  sosActive: number;
+  postsCount: number;
+  commentsCount: number;
+}
+
 export function AdminOverview({ onNavigate }: AdminOverviewProps) {
-  const [stats, setStats] = useState({ users: 0, guides: 0, pending: 0, bookings: 0 });
+  const [stats, setStats] = useState<Stats>({
+    users: 0,
+    guides: 0,
+    pending: 0,
+    bookings: 0,
+    activeBookings: 0,
+    sosActive: 0,
+    postsCount: 0,
+    commentsCount: 0,
+  });
   const [chartData, setChartData] = useState<Array<{ name: string; users: number; bookings: number }>>([]);
 
   useEffect(() => {
-    const unsubUsers = firestore.subscribe('users', {}, (items) => {
+    const unsubUsers = firestore.subscribe('users', { limitCount: 1 }, (items) => {
       setStats(prev => ({ ...prev, users: items.length }));
     });
 
-    const unsubCompanions = firestore.subscribe('companions', {}, (items) => {
+    const unsubCompanions = firestore.subscribe('companions', { limitCount: 1 }, (items) => {
       setStats(prev => ({ ...prev, guides: items.length }));
     });
 
-    const unsubBookings = firestore.subscribe('bookings', {}, (items) => {
-      setStats(prev => ({ ...prev, bookings: items.length }));
+    const unsubBookings = firestore.subscribe('bookings', { limitCount: 100 }, (items) => {
+      const active = items.filter(b => b.status === 'confirmed' || b.status === 'active').length;
+      setStats(prev => ({ ...prev, bookings: items.length, activeBookings: active }));
       const monthly = new Map<string, { users: number; bookings: number }>();
       items.forEach((booking: any) => {
         const date = booking.createdAt || booking.date;
@@ -35,8 +56,20 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
       setChartData(data);
     });
 
-    const unsubPending = firestore.subscribe('guideApplications', { where: [{ field: 'status', operator: '==', value: 'pending' }] }, (items) => {
+    const unsubPending = firestore.subscribe('guideApplications', { where: [{ field: 'status', operator: '==', value: 'pending' }], limitCount: 1 }, (items) => {
       setStats(prev => ({ ...prev, pending: items.length }));
+    });
+
+    const unsubSOS = firestore.subscribe('sosAlerts', { where: [{ field: 'status', operator: '==', value: 'active' }], limitCount: 1 }, (items) => {
+      setStats(prev => ({ ...prev, sosActive: items.length }));
+    });
+
+    const unsubPosts = firestore.subscribe('community_posts', { where: [{ field: 'status', operator: '==', value: 'published' }], limitCount: 1 }, (items) => {
+      setStats(prev => ({ ...prev, postsCount: items.length }));
+    });
+
+    const unsubComments = firestore.subscribe('comments', { limitCount: 1 }, (items) => {
+      setStats(prev => ({ ...prev, commentsCount: items.length }));
     });
 
     return () => {
@@ -44,6 +77,9 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
       unsubCompanions();
       unsubBookings();
       unsubPending();
+      unsubSOS();
+      unsubPosts();
+      unsubComments();
     };
   }, []);
 
@@ -85,6 +121,45 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
             <span className="text-sm font-medium text-gray-400">Total Bookings</span>
           </div>
           <p className="text-3xl font-bold text-white ml-2">{stats.bookings}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+        <div className="bg-background border border-border-token p-5 rounded-2xl">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-surface-elevated rounded-lg">
+              <CalendarDays className="w-4 h-4 text-green-500" />
+            </div>
+            <span className="text-sm font-medium text-gray-400">Active Bookings</span>
+          </div>
+          <p className="text-3xl font-bold text-white ml-2">{stats.activeBookings}</p>
+        </div>
+        <div className="bg-background border border-border-token p-5 rounded-2xl">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-red-900/10 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-red-500" />
+            </div>
+            <span className="text-sm font-medium text-gray-400">Active SOS</span>
+          </div>
+          <p className="text-3xl font-bold text-white ml-2">{stats.sosActive}</p>
+        </div>
+        <div className="bg-background border border-border-token p-5 rounded-2xl">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-surface-elevated rounded-lg">
+              <FileText className="w-4 h-4 text-primary-action" />
+            </div>
+            <span className="text-sm font-medium text-gray-400">Community Posts</span>
+          </div>
+          <p className="text-3xl font-bold text-white ml-2">{stats.postsCount}</p>
+        </div>
+        <div className="bg-background border border-border-token p-5 rounded-2xl">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-surface-elevated rounded-lg">
+              <MessageSquare className="w-4 h-4 text-primary-action" />
+            </div>
+            <span className="text-sm font-medium text-gray-400">Comments</span>
+          </div>
+          <p className="text-3xl font-bold text-white ml-2">{stats.commentsCount}</p>
         </div>
       </div>
 
@@ -138,7 +213,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-gray-500 text-center py-8">No data available yet. Seed Firestore to see analytics.</p>
+            <p className="text-gray-500 text-center py-8">No data available yet.</p>
           )}
         </div>
       </div>
