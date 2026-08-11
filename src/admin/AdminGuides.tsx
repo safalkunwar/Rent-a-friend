@@ -1,25 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, CheckCircle2, XCircle, Search, FileText, StickyNote } from 'lucide-react';
-import { Companion } from '../types';
-import { auditService } from '../services/audit';
+import { AdminCompanionRow, AdminGuideApplication } from './types';
 import { adminRepository } from './AdminRepository';
 
-interface GuideApplication {
-  id: string;
-  name: string;
-  email: string;
-  location: string;
-  appliedDate: string;
-  status: 'pending' | 'approved' | 'rejected';
-  idUrl?: string;
-  companionId?: string;
-  adminNotes?: string;
-}
-
 export function AdminGuides() {
-  const [selectedGuide, setSelectedGuide] = useState<GuideApplication | null>(null);
-  const [guides, setGuides] = useState<Companion[]>([]);
-  const [applications, setApplications] = useState<GuideApplication[]>([]);
+  const [selectedGuide, setSelectedGuide] = useState<AdminGuideApplication | null>(null);
+  const [guides, setGuides] = useState<AdminCompanionRow[]>([]);
+  const [applications, setApplications] = useState<AdminGuideApplication[]>([]);
   const [adminNote, setAdminNote] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -29,20 +16,20 @@ export function AdminGuides() {
         adminRepository.listCompanions(100),
         adminRepository.listGuideApplications(100),
       ]);
-      setGuides(companionsData as Companion[]);
-      setApplications(appsData as GuideApplication[]);
+      setGuides(companionsData as AdminCompanionRow[]);
+      setApplications(appsData as AdminGuideApplication[]);
       setLoading(false);
     };
     load();
   }, []);
 
-  const handleApprove = async (app: GuideApplication) => {
+  const handleApprove = async (app: AdminGuideApplication) => {
     await adminRepository.approveGuideApplication(app.id, app.companionId);
     setSelectedGuide(null);
     setAdminNote('');
   };
 
-  const handleReject = async (app: GuideApplication) => {
+  const handleReject = async (app: AdminGuideApplication) => {
     await adminRepository.rejectGuideApplication(app.id);
     setSelectedGuide(null);
     setAdminNote('');

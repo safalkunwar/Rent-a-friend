@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ShieldCheck, ShieldAlert } from 'lucide-react';
-import { Companion } from '../types';
+import { AdminCompanionRow } from './types';
 import { adminRepository } from './AdminRepository';
 
 export function AdminCompanions() {
-  const [companions, setCompanions] = useState<Companion[]>([]);
+  const [companions, setCompanions] = useState<AdminCompanionRow[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       const data = await adminRepository.listCompanions(100);
-      setCompanions(data as Companion[]);
+      setCompanions(data as AdminCompanionRow[]);
       setLoading(false);
     };
     load();

@@ -1,22 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Bell, Star } from 'lucide-react';
-import { Notification } from '../types';
+import { AdminNotificationRow, AdminFeedbackItem } from './types';
 import { adminRepository } from './AdminRepository';
 
-interface FeedbackItem {
-  id: string;
-  user: string;
-  type: 'feedback' | 'bug' | 'guide_feedback';
-  message: string;
-  date: string;
-  rating?: number;
-  status: 'new' | 'read' | 'resolved';
-  userId: string;
-}
-
 export function AdminFeedback() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
+  const [notifications, setNotifications] = useState<AdminNotificationRow[]>([]);
+  const [feedbackItems, setFeedbackItems] = useState<AdminFeedbackItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,8 +14,8 @@ export function AdminFeedback() {
         adminRepository.listNotifications(100),
         adminRepository.listFeedback(100),
       ]);
-      setNotifications(notifs as Notification[]);
-      setFeedbackItems(feedback.items as FeedbackItem[]);
+      setNotifications(notifs as AdminNotificationRow[]);
+      setFeedbackItems(feedback.items as AdminFeedbackItem[]);
       setLoading(false);
     };
     load();

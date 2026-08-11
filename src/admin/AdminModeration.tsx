@@ -1,27 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, ShieldAlert, MessageSquare, FileText } from 'lucide-react';
+import { AdminPostRow, AdminCommentRow } from './types';
 import { adminRepository } from './AdminRepository';
 
-interface Post {
-  id: string;
-  title: string;
-  content: string;
-  author: string;
-  createdAt: string;
-  status: string;
-}
-
-interface Comment {
-  id: string;
-  content: string;
-  author: string;
-  postId: string;
-  createdAt: string;
-}
-
 export function AdminModeration() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [posts, setPosts] = useState<AdminPostRow[]>([]);
+  const [comments, setComments] = useState<AdminCommentRow[]>([]);
   const [tab, setTab] = useState<'posts' | 'comments'>('posts');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -32,8 +16,8 @@ export function AdminModeration() {
         adminRepository.listCommunityPosts(100),
         adminRepository.listComments(100),
       ]);
-      setPosts(postsData as Post[]);
-      setComments(commentsData as Comment[]);
+      setPosts(postsData as AdminPostRow[]);
+      setComments(commentsData as AdminCommentRow[]);
       setLoading(false);
     };
     load();
@@ -80,12 +64,12 @@ export function AdminModeration() {
           {filtered.map((item, idx) => (
             <div key={`${item.id || tab}-${idx}`} className="p-4 bg-surface rounded-xl border border-border-token flex items-center justify-between hover:border-primary-action/50 transition-colors">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text-primary truncate">
-                  {tab === 'posts' ? (item as Post).title : (item as Comment).content}
-                </p>
+                 <p className="text-sm font-medium text-text-primary truncate">
+                   {tab === 'posts' ? (item as AdminPostRow).title : (item as AdminCommentRow).content}
+                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                   by {item.author} • {new Date(item.createdAt).toLocaleDateString()}
-                  {tab === 'posts' && ` • ${(item as Post).status}`}
+                  {tab === 'posts' && ` • ${(item as AdminPostRow).status}`}
                 </p>
               </div>
               <div className="flex items-center gap-2 ml-4">

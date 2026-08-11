@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Filter, Eye } from 'lucide-react';
-import { AdminBookingRow } from './AdminRepository';
+import { AdminBookingRow } from './types';
 import { adminRepository } from './AdminRepository';
 import { useAdminPagination } from './useAdminPagination';
 

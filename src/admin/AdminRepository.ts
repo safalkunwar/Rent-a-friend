@@ -1,36 +1,7 @@
 import { firestore } from '../services/firestore';
-import { auditService, AuditLogEntry } from '../services/audit';
+import { auditService } from '../services/audit';
 import { adminService, type AdminRole } from '../services/admin';
-
-export interface AdminUserRow {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  role: string;
-}
-
-export interface AdminBookingRow {
-  id: string;
-  userId: string;
-  companionId: string;
-  status: string;
-  totalPrice: number;
-  date: string;
-  time: string;
-  meetingPoint?: string;
-  duration?: number;
-  participants?: number;
-}
-
-export interface AdminReportRow {
-  id: string;
-  reporterId: string;
-  targetId: string;
-  reason: string;
-  status: string;
-  createdAt: string;
-}
+import { AdminUserRow, AdminBookingRow, AdminReportRow, AdminCompanionRow, AdminNotificationRow, AdminContentRow, AdminPostRow, AdminCommentRow, AdminGuideApplication } from './types';
 
 export class AdminRepository {
   async listUsers(limitCount = 20, startAfter?: unknown[]) {

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Search, ShieldCheck } from 'lucide-react';
-import { User } from '../types';
-import { auditService } from '../services/audit';
+import { AdminUserRow } from './types';
 import { adminRepository } from './AdminRepository';
 import { useAdminPagination } from './useAdminPagination';
 
@@ -12,10 +11,10 @@ export function AdminUsers() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkRole, setBulkRole] = useState<string>('');
 
-  const { items: users, loading, hasMore, nextPage, error } = useAdminPagination<User>(
+  const { items: users, loading, hasMore, nextPage, error } = useAdminPagination<AdminUserRow>(
     async ({ startAfter, limitCount }) => {
       const result = await adminRepository.listUsers(limitCount, startAfter);
-      return { items: result.items as User[], lastVisible: result.lastVisible, hasMore: result.hasMore };
+      return { items: result.items as AdminUserRow[], lastVisible: result.lastVisible, hasMore: result.hasMore };
     },
     PAGE_SIZE
   );
@@ -80,7 +79,7 @@ export function AdminUsers() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <select value={user.role} onChange={(e) => handleRoleChange(user.id, e.target.value as User['role'])} className="bg-surface-elevated border border-border-token text-text-primary text-xs rounded-lg px-3 py-1.5 outline-none">
+              <select value={user.role} onChange={(e) => handleRoleChange(user.id, e.target.value)} className="bg-surface-elevated border border-border-token text-text-primary text-xs rounded-lg px-3 py-1.5 outline-none">
                 <option value="customer">Customer</option>
                 <option value="companion">Companion</option>
                 <option value="admin">Admin</option>

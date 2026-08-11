@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
-import { Activity, Event } from '../types';
+import { AdminContentRow } from './types';
 import { useToast } from '../components/ui/Toast';
 import { adminRepository } from './AdminRepository';
 
 export function AdminContent() {
   const { showToast } = useToast();
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
+  const [activities, setActivities] = useState<AdminContentRow[]>([]);
+  const [events, setEvents] = useState<AdminContentRow[]>([]);
   const [tab, setTab] = useState<'activities' | 'events'>('activities');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -18,8 +18,8 @@ export function AdminContent() {
         adminRepository.listActivities(100),
         adminRepository.listEvents(100),
       ]);
-      setActivities(acts as Activity[]);
-      setEvents(evts as Event[]);
+      setActivities(acts as AdminContentRow[]);
+      setEvents(evts as AdminContentRow[]);
       setLoading(false);
     };
     load();
@@ -61,7 +61,7 @@ export function AdminContent() {
             <div key={`${item.id || tab}-${idx}`} className="p-4 bg-surface rounded-xl border border-border-token flex items-center justify-between hover:border-primary-action/50 transition-colors">
               <div>
                 <p className="text-sm font-medium text-text-primary">{item.title}</p>
-                <p className="text-xs text-text-secondary">{tab === 'activities' ? `${(item as Activity).duration} • NPR ${(item as Activity).avgPrice}/hr` : `${item.date} • ${item.location}`}</p>
+                <p className="text-xs text-text-secondary">{tab === 'activities' ? `${(item as AdminContentRow).duration} • NPR ${(item as AdminContentRow).avgPrice}/hr` : `${item.date} • ${item.location}`}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => showToast('Edit feature coming soon', 'info')} className="p-1.5 rounded-lg text-primary-action hover:bg-primary-action/10 transition-colors"><Pencil className="w-4 h-4" /></button>
