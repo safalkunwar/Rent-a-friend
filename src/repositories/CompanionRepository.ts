@@ -16,6 +16,14 @@ export class CompanionRepository extends BaseRepository {
     );
   }
 
+  async getCompanionById(id: string): Promise<Companion | null> {
+    return this.executeWithRetry(
+      () => firestore.getDocument<Companion>(`companions/${id}`),
+      OperationType.GET,
+      `companions/${id}`
+    );
+  }
+
   async createCompanionProfile(companion: Omit<Companion, 'id'>, customId?: string): Promise<string> {
     const id = customId || `comp-${Date.now()}`;
     const timestamp = new Date().toISOString();

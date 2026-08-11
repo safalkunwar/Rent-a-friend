@@ -19,6 +19,14 @@ export class BookingRepository extends BaseRepository {
     );
   }
 
+  async getBookingById(id: string): Promise<Booking | null> {
+    return this.executeWithRetry(
+      () => firestore.getDocument<Booking>(`bookings/${id}`),
+      OperationType.GET,
+      `bookings/${id}`
+    );
+  }
+
   async createBooking(booking: Booking): Promise<string> {
     const timestamp = new Date().toISOString();
     const newBooking = {
