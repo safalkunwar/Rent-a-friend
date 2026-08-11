@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogIn, UserCircle, Briefcase, Settings, LogOut, Menu, X, Sun, Moon, LayoutDashboard, Search, Bell } from 'lucide-react';
+import { User, LogIn, UserCircle, Briefcase, Settings, LogOut, Menu, X, Sun, Moon, LayoutDashboard, Search, Bell, Shield } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useToast } from './ui/Toast';
 import { saveStoredPreferences } from '../services/preferences';
@@ -110,17 +110,22 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
                />
             </div>
             
-             <div className="flex items-center space-x-7 text-[15px] font-medium ml-6">
-               <button onClick={() => setActiveTab('explore')} className={`transition-colors ${activeTab === 'explore' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Discover</button>
-               <button onClick={() => setActiveTab('about')} className={`transition-colors ${activeTab === 'about' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Experiences</button>
-               {currentUser && (
-                 <>
-                   <button onClick={() => setActiveTab('bookings')} className={`transition-colors ${activeTab === 'bookings' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Bookings</button>
-                   <button onClick={() => setActiveTab('messages')} className={`transition-colors ${activeTab === 'messages' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Messages</button>
-                   <button onClick={() => setActiveTab('partner')} className={`transition-colors ${activeTab === 'partner' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Partners</button>
-                 </>
-               )}
-             </div>
+              <div className="flex items-center space-x-7 text-[15px] font-medium ml-6">
+                <button onClick={() => setActiveTab('explore')} className={`transition-colors ${activeTab === 'explore' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Discover</button>
+                <button onClick={() => setActiveTab('about')} className={`transition-colors ${activeTab === 'about' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Experiences</button>
+                {currentUser && (
+                  <>
+                    <button onClick={() => setActiveTab('bookings')} className={`transition-colors ${activeTab === 'bookings' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Bookings</button>
+                    <button onClick={() => setActiveTab('messages')} className={`transition-colors ${activeTab === 'messages' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Messages</button>
+                    <button onClick={() => setActiveTab('partner')} className={`transition-colors ${activeTab === 'partner' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Partners</button>
+                    {currentUser.role === 'admin' && (
+                      <button onClick={() => window.location.href = '/admin'} className="transition-colors text-primary-action hover:text-primary-action/80 font-medium flex items-center gap-1">
+                        <Shield className="w-4 h-4" /> Admin
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
           </div>
 
           <div className="flex items-center space-x-3 md:space-x-4 relative">
@@ -220,6 +225,9 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
                  <button onClick={() => { setActiveTab('bookings'); setIsMobileMenuOpen(false); }} className={`block w-full text-left px-4 py-2 text-sm font-medium ${activeTab === 'bookings' ? 'text-primary-action bg-surface-elevated rounded-lg' : 'text-text-secondary'}`}>Bookings</button>
                  <button onClick={() => { setActiveTab('messages'); setIsMobileMenuOpen(false); }} className={`block w-full text-left px-4 py-2 text-sm font-medium ${activeTab === 'messages' ? 'text-primary-action bg-surface-elevated rounded-lg' : 'text-text-secondary'}`}>Messages</button>
                  <button onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }} className={`block w-full text-left px-4 py-2 text-sm font-medium ${activeTab === 'dashboard' ? 'text-primary-action bg-surface-elevated rounded-lg' : 'text-text-secondary'}`}>Dashboard</button>
+                 {currentUser.role === 'admin' && (
+                   <button onClick={() => { window.location.href = '/admin'; setIsMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 text-sm font-medium text-primary-action bg-surface-elevated rounded-lg">Admin Panel</button>
+                 )}
                </>
              )}
              <button onClick={() => { setActiveTab('about'); setIsMobileMenuOpen(false); }} className={`block w-full text-left px-4 py-2 text-sm font-medium ${activeTab === 'about' ? 'text-primary-action bg-surface-elevated rounded-lg' : 'text-text-secondary'}`}>About SATHI</button>
