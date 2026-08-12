@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { useCompanions } from '../../hooks/useFirestoreData';
+import { companionDashboardService } from '../../services/companionDashboard';
 import { Star, ShieldCheck, Heart, MapPin, Settings, Calendar, X, Bell } from 'lucide-react';
 import * as motion from 'motion/react-client';
 import { SafeImage } from '../ui/SafeImage';
@@ -13,11 +14,44 @@ export const DashboardTab: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(currentUser?.name || '');
   const [editEmail, setEditEmail] = useState(currentUser?.email || '');
+  const [companionStats, setCompanionStats] = useState<{
+    totalEarnings: number;
+    pendingRequests: number;
+    profileViews: number;
+    averageRating: number;
+    totalReviews: number;
+  } | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   if (!currentUser) return <div className="text-text-primary p-8">Please log in to view dashboard</div>;
 
   const favoriteCompanions = fetchedCompanions.filter(c => favorites.includes(c.id));
   const myBookings = bookings.filter(b => b.userId === currentUser.id);
+
+  useEffect(() => {
+    if (currentUser.role !== 'companion') return;
+    let cancelled = false;
+    setLoadingStats(true);
+    companionDashboardService.getStats(currentUser.id)
+      .then(stats => {
+        if (!cancelled) {
+          setCompanionStats({
+            totalEarnings: stats.totalEarnings,
+            pendingRequests: stats.pendingRequests,
+            profileViews: stats.profileViews,
+            averageRating: stats.averageRating,
+            totalReviews: stats.totalReviews,
+          });
+        }
+      })
+      .catch(err => {
+        console.error('[DashboardTab] Failed to load companion stats:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingStats(false);
+      });
+    return () => { cancelled = true; };
+  }, [currentUser.id, currentUser.role]);
   const totalSpent = myBookings.reduce((sum, b) => sum + b.totalPrice, 0);
 
   return (
@@ -185,15 +219,21 @@ export const DashboardTab: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
             <div className="bg-surface-elevated rounded-2xl p-6 border border-border-token">
               <h3 className="text-text-secondary text-sm uppercase tracking-wider mb-2">Total Earnings</h3>
-              <p className="text-3xl font-bold text-text-primary">NPR 1,250.00</p>
+              <p className="text-3xl font-bold text-text-primary">
+                {loadingStats ? '...' : `NPR ${companionStats?.totalEarnings.toFixed(2) ?? '0.00'}`}
+              </p>
             </div>
             <div className="bg-surface-elevated rounded-2xl p-6 border border-border-token">
               <h3 className="text-text-secondary text-sm uppercase tracking-wider mb-2">Pending Requests</h3>
-              <p className="text-3xl font-bold text-primary-action">3</p>
+              <p className="text-3xl font-bold text-primary-action">
+                {loadingStats ? '...' : companionStats?.pendingRequests ?? 0}
+              </p>
             </div>
             <div className="bg-surface-elevated rounded-2xl p-6 border border-border-token">
               <h3 className="text-text-secondary text-sm uppercase tracking-wider mb-2">Profile Views (30d)</h3>
-              <p className="text-3xl font-bold text-text-primary">428</p>
+              <p className="text-3xl font-bold text-text-primary">
+                {loadingStats ? '...' : companionStats?.profileViews ?? 0}
+              </p>
             </div>
           </div>
         </div>
