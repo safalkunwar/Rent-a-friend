@@ -18,25 +18,6 @@ To make your experience absolutely **seamless**, SATHI is pre-packaged with buil
 
 ---
 
-## ⚙️ Custom Environment Configuration (Optional)
-
-If you want to plug in your own custom Firebase project or Gemini API Keys, follow these steps:
-
-1. Copy the template environment file:
-   ```bash
-   cp .env.example .env
-   ```
-2. Open the new `.env` file in your code editor and fill in your custom credentials:
-   ```env
-   # Customize with your own credentials:
-   GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
-   VITE_FIREBASE_API_KEY="YOUR_API_KEY"
-   VITE_FIREBASE_PROJECT_ID="YOUR_PROJECT_ID"
-   # ...etc
-   ```
-
----
-
 
 
 ## 🌟 Key Architecture & Stack
