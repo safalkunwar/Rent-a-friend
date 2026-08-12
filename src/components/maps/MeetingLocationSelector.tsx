@@ -385,8 +385,9 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
   };
 
   const toggleLockLocation = () => {
-    setIsLocked(!isLocked);
-    showToast(isLocked ? 'Location unlocked' : 'Location locked successfully!', isLocked ? 'info' : 'success');
+    const nextLocked = !isLocked;
+    setIsLocked(nextLocked);
+    showToast(nextLocked ? 'Location locked successfully!' : 'Location unlocked', nextLocked ? 'success' : 'info');
   };
 
   return (
