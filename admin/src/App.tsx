@@ -13,12 +13,14 @@ import { AdminCompanions } from './pages/AdminCompanions';
 import { AdminContent } from './pages/AdminContent';
 import { AdminAuditLogs } from './pages/AdminAuditLogs';
 import { AdminModeration } from './pages/AdminModeration';
+import { AdminAuthGuard } from './components/AdminAuthGuard';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'guides' | 'companions' | 'bookings' | 'content' | 'security' | 'feedback' | 'moderation' | 'audit'>('overview');
 
   return (
-    <div className="min-h-screen bg-background font-sans text-text-primary flex">
+    <AdminAuthGuard>
+      <div className="min-h-screen bg-background font-sans text-text-primary flex">
       {/* Sidebar */}
       <aside className="w-64 bg-background border-r border-border-token hidden md:flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-border-token">
@@ -119,9 +121,10 @@ export default function App() {
                 {activeTab === 'feedback' && <AdminFeedback />}
                 {activeTab === 'audit' && <AdminAuditLogs />}
 
-            </motion.div>
-         </div>
-      </main>
-    </div>
+             </motion.div>
+          </div>
+       </main>
+      </div>
+    </AdminAuthGuard>
   );
 }
