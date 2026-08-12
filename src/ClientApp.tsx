@@ -25,7 +25,7 @@ import {
   Home, Compass, Users, Calendar, MessageSquare, BookOpen, Heart, 
   Wallet, Smile, ArrowRight, CheckCircle, Info, Menu, X, Bell, 
   ChevronDown, Award, Sparkles, AlertTriangle, Coins, Briefcase, ChevronRight, ChevronLeft, HelpCircle, UserCircle, SlidersHorizontal,
-  Lock, Settings, LogOut, Sun, Moon, Trash2
+  Lock, Settings, LogOut, Sun, Moon, Trash2, ShieldAlert
 } from 'lucide-react';
 import * as motion from 'motion/react-client';
 import { useAppContext } from './context/AppContext';
@@ -741,6 +741,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         {(currentUser?.role === 'companion' || currentUser?.role === 'admin') && (
                           <button onClick={() => { setActiveTab('partner'); navigate('/partner'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                             <Briefcase className="w-4 h-4 text-primary-action" /> Companion Dashboard
+                          </button>
+                        )}
+                        {currentUser?.role === 'admin' && (
+                          <button onClick={() => { window.open('http://localhost:3001', '_blank'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
+                            <ShieldAlert className="w-4 h-4 text-red-400" /> Admin Panel
                           </button>
                         )}
                       </div>
