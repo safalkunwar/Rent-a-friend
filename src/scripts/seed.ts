@@ -491,6 +491,22 @@ async function runSeed() {
     });
   }
 
+  // Generate likes for community posts
+  const postLikesList: any[] = [];
+  for (const post of postsList) {
+    const likeCount = 2 + (parseInt(post.id.replace('cp', '')) % 15);
+    post.likesCount = likeCount;
+    for (let l = 0; l < likeCount; l++) {
+      const liker = travelersList[(l + parseInt(post.id.replace('cp', ''))) % travelersList.length];
+      postLikesList.push({
+        id: `${liker.id}_${post.id}`,
+        userId: liker.id,
+        postId: post.id,
+        createdAt: new Date().toISOString()
+      });
+    }
+  }
+
   // Generate 85 Activities
   const activitiesList: any[] = [];
 
@@ -674,6 +690,19 @@ async function runSeed() {
       }
       await batch.commit();
       console.log(`  - Story likes chunk written (${i + chunk.length}/${storyLikesList.length})`);
+    }
+
+    // Write post likes composite keys
+    console.log(`[SATHI Seed] Writing post likes composite keys...`);
+    for (let i = 0; i < postLikesList.length; i += favChunkSize) {
+      const chunk = postLikesList.slice(i, i + favChunkSize);
+      const batch = writeBatch(db);
+      for (const pl of chunk) {
+        const docRef = doc(db, 'likes', pl.id);
+        batch.set(docRef, pl);
+      }
+      await batch.commit();
+      console.log(`  - Post likes chunk written (${i + chunk.length}/${postLikesList.length})`);
     }
 
     // Write Message docs
