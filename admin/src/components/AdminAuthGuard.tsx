@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAdminAuth } from '../hooks/useAdminAuth';
+import { useAdminAuth } from '../hooks/useAdmin';
 import { LoadingScreen } from './LoadingScreen';
 
 export const AdminAuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {

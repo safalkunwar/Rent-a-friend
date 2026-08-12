@@ -15,13 +15,15 @@ import { AdminAuditLogs } from './pages/AdminAuditLogs';
 import { AdminModeration } from './pages/AdminModeration';
 import { AdminReports } from './pages/AdminReports';
 import { AdminAuthGuard } from './components/AdminAuthGuard';
+import { AdminErrorBoundary } from './components/AdminErrorBoundary';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'guides' | 'companions' | 'bookings' | 'content' | 'moderation' | 'security' | 'feedback' | 'audit' | 'reports'>('overview');
 
   return (
-    <AdminAuthGuard>
-      <div className="min-h-screen bg-background font-sans text-text-primary flex">
+    <AdminErrorBoundary>
+      <AdminAuthGuard>
+        <div className="min-h-screen bg-background font-sans text-text-primary flex">
       {/* Sidebar */}
       <aside className="w-64 bg-background border-r border-border-token hidden md:flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-border-token">
@@ -132,5 +134,6 @@ export default function App() {
         </main>
        </div>
      </AdminAuthGuard>
+     </AdminErrorBoundary>
    );
  }

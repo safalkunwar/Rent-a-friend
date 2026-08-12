@@ -1,9 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
-import { adminService, hasPermission, type AdminRole, getRolePermissions } from '../services/admin';
-import { getRoleBadgeColor, getRoleLabel } from '../security/rbac';
+import React, { useState, useEffect, useCallback } from 'react';
+import { auth } from '../firebase';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { firestore } from '../services/firestore';
+import { hasPermission, getRolePermissions, type AdminRole } from '../services/admin';
 import { adminRateLimiter } from '../services/rateLimiter';
 import { aggregationService, type PlatformMetrics, type AggregatedBookingStats, type AggregatedUserStats, type AggregatedContentStats } from '../services/aggregation';
 import { healthService, type SystemHealth } from '../services/health';
+
+type AuthStatus = 'loading' | 'authenticated' | 'unauthorized';
 
 export interface AdminAuthUser {
   uid: string;
@@ -13,41 +17,54 @@ export interface AdminAuthUser {
   permissions: string[];
 }
 
-export const useAdminAuth = () => {
+export const useAdminAuth = (requiredPermission?: string) => {
+  const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<AdminAuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    const unsubscribe = adminService.onAuthStateChanged(async (authUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (cancelled) return;
-      try {
-        if (!authUser) {
-          setUser(null);
-          setLoading(false);
-          return;
-        }
+      if (!firebaseUser) {
+        setUser(null);
+        setStatus('unauthorized');
+        return;
+      }
 
-        const role = await adminService.getUserRole(authUser.uid);
+      try {
+        const claimRole = (await firebaseUser.getIdTokenResult()).claims.adminRole as AdminRole | undefined;
+        const adminDoc = claimRole 
+          ? { role: claimRole }
+          : await firestore.getDocument<{ role: AdminRole }>(`admins/${firebaseUser.uid}`);
+        const role = adminDoc?.role ?? null;
+
         if (!role) {
           setUser(null);
-          setLoading(false);
+          setStatus('unauthorized');
           return;
         }
 
         const permissions = getRolePermissions(role);
-        setUser({
-          uid: authUser.uid,
-          email: authUser.email,
-          displayName: authUser.displayName,
+        const adminUser: AdminAuthUser = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
           role,
           permissions,
-        });
-        setLoading(false);
+        };
+
+        setUser(adminUser);
+
+        if (requiredPermission && !permissions.includes(requiredPermission)) {
+          setStatus('unauthorized');
+          return;
+        }
+
+        setStatus('authenticated');
       } catch (err: any) {
         setError(err.message || 'Failed to load admin session');
-        setLoading(false);
+        setStatus('unauthorized');
       }
     });
 
@@ -55,7 +72,7 @@ export const useAdminAuth = () => {
       cancelled = true;
       unsubscribe();
     };
-  }, []);
+  }, [requiredPermission]);
 
   const hasPerm = useCallback((permission: string): boolean => {
     if (!user) return false;
@@ -72,13 +89,13 @@ export const useAdminAuth = () => {
   }, [user]);
 
   return {
+    status,
     user,
-    loading,
     error,
     hasPerm,
     canDo,
     isActionAllowed,
-    isAdmin: !!user,
+    isAdmin: status === 'authenticated',
     role: user?.role || null,
     permissions: user?.permissions || [],
   };
