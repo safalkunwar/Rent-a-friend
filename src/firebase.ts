@@ -72,16 +72,22 @@ if (hasValidConfig && !getApps().length) {
   } catch (error) {
     console.error('[SATHI] Firebase initialization failed:', error);
   }
-} else if (getApps().length) {
-  app = getApps()[0];
-  auth = getAuth(app);
-  setPersistence(auth, browserLocalPersistence)
-    .then(() => console.log('[SATHI] Firebase Auth persistence configured for reused app: LOCAL'))
-    .catch((err) => console.error('[SATHI] Failed to set Firebase Auth persistence on reuse:', err));
-  db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
-  enablePersistenceGracefully(db);
-  storage = getStorage(app);
-  console.log('[SATHI] Firebase reused existing app:', { app: !!app, auth: !!auth, db: !!db });
-}
+  } else if (getApps().length) {
+    app = getApps()[0];
+    auth = getAuth(app);
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => console.log('[SATHI] Firebase Auth persistence configured for reused app: LOCAL'))
+      .catch((err) => console.error('[SATHI] Failed to set Firebase Auth persistence on reuse:', err));
+    db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
+    enablePersistenceGracefully(db);
+    storage = getStorage(app);
+    console.log('[SATHI] Firebase reused existing app:', { app: !!app, auth: !!auth, db: !!db, storage: !!storage });
+    try {
+      messaging = getMessaging(app);
+      console.log('[SATHI] Messaging initialized for reused app:', !!messaging);
+    } catch (e) {
+      console.warn('[SATHI] FCM not available for reused app:', e);
+    }
+  }
 
 export { app, auth, db, storage, messaging, firebaseConfig };
