@@ -8,6 +8,7 @@ import { userRepository } from '../repositories/UserRepository';
 import { companionRepository } from '../repositories/CompanionRepository';
 import { bookingRepository } from '../repositories/BookingRepository';
 import { socialRepository, Comment } from '../repositories/SocialRepository';
+import { messagingService } from '../services/messaging';
 
 interface AppState {
   currentUser: User | null;
@@ -270,6 +271,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...booking,
         status: 'pending',
       });
+
+      const convoId = getConversationId(booking.userId, booking.companionId);
+      await messagingService.createConversation([booking.userId, booking.companionId]);
     } catch (err) {
       console.error('[SATHI] Failed to create booking:', err);
       setBookings(prev => prev.filter(b => b.id !== booking.id));
