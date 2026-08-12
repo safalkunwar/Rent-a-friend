@@ -10,8 +10,44 @@
 
 ## Current State
 
-- No tests exist
-- No testing configuration
+- 93 passing tests across 5 test files
+- Vitest configured with Firebase mocks and global setup
+- Test files:
+  - `src/__tests__/AppContext.test.ts` (6 tests)
+  - `src/__tests__/client-services.test.ts` (37 tests)
+  - `src/__tests__/services.test.ts` (17 tests)
+  - `src/__tests__/admin.test.ts` (15 tests)
+  - `src/__tests__/service-logic.test.ts` (18 tests)
+
+## Test Coverage
+
+### Unit Tests
+- Rate limiter (allow, deny, reset, clear, window expiry)
+- Audit service (log, list with Firestore mocks)
+- Firestore error handler (permission denied, auth info capture)
+- Preferences service (get, save, theme apply, system watcher)
+- Admin service (role permissions, hasPermission)
+
+### Integration Tests
+- Firebase Auth initialization and config validation
+- Firestore service layer (CRUD, pagination, subscriptions)
+- Social repository (likes, comments, posts with optimistic updates)
+- Booking repository (creation, transaction locks)
+- Messaging service (conversations, messages)
+- Search service (companions, activities, events)
+- Review service (creation, stats aggregation)
+- Presence service (online/offline tracking)
+- Booking reminder service
+- Offline message queue
+- Location tracking service
+- Companion dashboard stats
+- Feature flags service
+- Payment service types and validation
+
+### Component/Context Tests
+- AppContext (auth state, profile loading, logout)
+- Auth modal (login, signup, guide modes)
+- Admin guard (role checking, permission enforcement)
 
 ## Planned Test Plan
 
@@ -56,13 +92,7 @@
 - [x] Verify messages tab opens, streams real-time updates, and marks conversations as read
 - [x] Verify SOS widget activates and sends emergency coordinates to backend
 - [x] Verify responsive behavior on mobile widths
-
-## Production Multi-User Test Matrix (5-Account Verification)
-
-| Test Case | Role / User Account | Action | Expected Outcome | Verification |
-| :--- | :--- | :--- | :--- | :--- |
-| **TC-01** | **User A** (Traveler) | Log in & create a booking request for **Companion A** | Booking document created in `bookings` collection with `userId: User A` and `companionId: Companion A`. Status set to `pending`. | **PASSED** - Verified real-time write in Firestore. |
-| **TC-02** | **Companion A** (Companion) | Log in on separate session | Real-time subscription receives booking request in `bookings`. Accepts request (status -> `confirmed`). | **PASSED** - Verified status change synced instantly to **User A**. |
-| **TC-03** | **User B** (Traveler) | Log in on separate session | Attempts to access **User A**'s conversations or bookings. | **PASSED** - Blocked by `firestore.rules`. Zero leaked state on logout/login. |
-| **TC-04** | **User A** -> **Companion A** | Send real-time chat message | Message created in `messages` and updated in `conversations`. | **PASSED** - Real-time listener updates both screens without refresh. |
-| **TC-05** | **User C** (Traveler) | Likes & comments on community post by **User A** | Atomic transaction increments `likesCount` and `commentsCount` in Firestore. | **PASSED** - No 0 counts shown when 0. Real count synced. |
+- [x] Verify admin app builds independently on port 3001
+- [x] Verify admin app has auth guard redirecting non-admins to main app
+- [x] Verify main app builds independently on port 3000
+- [x] Verify both apps share same Firebase backend without conflicts

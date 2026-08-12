@@ -1,5 +1,36 @@
 # Changelog
 
+## v6.0.0 - 2026-08-12
+
+### Added
+- **Standalone Admin Application**: Extracted the admin panel from `src/admin/` into a completely standalone `/admin` application with its own `package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`, and `src/` directory.
+  - Both applications share the same production Firebase backend (`hamrosathi1`) but have completely separate entry points, routing, UI, build processes, and deployments.
+  - Admin app builds independently on port 3001; main app builds independently on port 3000.
+  - Removed `/admin` route and admin panel navigation links from the main SATHI user application.
+- **Admin Authentication Guard**: Added `AdminAuthGuard` component and `useAdminAuth` hook to the standalone admin app.
+  - Verifies Firebase Auth session and checks admin role via custom claims or `admins` Firestore collection.
+  - Redirects unauthorized users to the main app (`/`).
+  - Includes dedicated `LoadingScreen` for auth state transitions.
+- **Expanded Test Suite**: Added 18 new service logic tests in `src/__tests__/service-logic.test.ts`.
+  - Rate limiter (allow, deny, reset, clear, window expiry)
+  - Audit service (log, list with Firestore mocks)
+  - Firestore error handler (permission denied, auth info capture)
+  - Preferences service (get, save, theme apply, system watcher)
+  - Total: 93 passing tests across 5 test files.
+
+### Fixed
+- **Messages Tab Dead Buttons**: Removed non-functional Phone/Video call buttons from `MessagesTab.tsx`.
+- **Messages Tab Broken JSX**: Fixed duplicate/malformed button elements in the message input area.
+- **Wallet Top-Up Flow**: Made wallet top-up button call real `paymentService.initiatePayment()` instead of showing a fake toast.
+- **Language Navigation**: Linked language buttons in profile dropdowns to the Settings page instead of fake toasts.
+- **Guide Setup Flow**: Made "Complete Profile" button open `ProfileEditModal` instead of showing a fake success toast.
+- **Stories Navigation**: Replaced fake "Stories feed synchronized" toast with smooth scroll-to-stories behavior.
+- **Activities Navigation**: Replaced fake "Activities directory synced" toast with smooth scroll-to-activities behavior.
+- **Careers/Safety Blog Links**: Linked Careers to external URL and Safety Blog to external URL instead of fake toasts.
+- **SOS Modal Auto-Close**: Removed auto-close timer so SOS modal stays open until user dismisses it.
+- **Image Attach Button**: Removed dead image attachment button from messages input area.
+- **Firebase Messaging Mock**: Added `firebase/messaging` mock to test setup to prevent unhandled rejections during test runs.
+
 ## v5.0.0 - 2026-08-07
 
 ### Added

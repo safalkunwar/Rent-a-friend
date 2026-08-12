@@ -290,3 +290,134 @@ Fields:
 - userAvatar (string)
 - text (string)
 - createdAt (timestamp)
+
+Security Rules:
+- Read: public
+- Write: authenticated users
+
+## Collection: favorites (subcollection under users)
+
+Purpose: User-saved companion profiles
+
+Fields:
+- companionId (string, PK) - ref companions.id
+- createdAt (timestamp)
+
+Security Rules:
+- Read: owner
+- Write: owner
+
+## Collection: presence
+
+Purpose: Real-time online/offline status tracking
+
+Fields:
+- userId (string, PK) - ref users.uid
+- status (string) - online | offline | away
+- lastSeen (timestamp)
+
+Security Rules:
+- Read: public
+- Write: owner
+
+## Collection: guideApplications
+
+Purpose: Companion guide application submissions
+
+Fields:
+- id (string, PK)
+- userId (string, ref users.uid)
+- status (string) - pending | approved | rejected
+- documents (array<string>) - uploaded verification docs
+- submittedAt (timestamp)
+- reviewedAt (timestamp)
+- reviewerId (string, ref users.uid) - optional
+
+Security Rules:
+- Read: applicant or admin
+- Write: applicant (create), admin (update)
+
+## Collection: reports
+
+Purpose: User-generated content reports
+
+Fields:
+- id (string, PK)
+- reporterId (string, ref users.uid)
+- targetType (string) - user | companion | post | comment
+- targetId (string)
+- reason (string)
+- status (string) - pending | resolved | dismissed
+- createdAt (timestamp)
+
+Security Rules:
+- Read: reporter or admin
+- Write: reporter (create), admin (update)
+
+## Collection: sosAlerts
+
+Purpose: Emergency SOS alerts from users
+
+Fields:
+- id (string, PK)
+- userId (string, ref users.uid)
+- location (string)
+- coordinates (GeoPoint)
+- status (string) - active | resolved | false_alarm
+- emergencyContacts (array<string>)
+- createdAt (timestamp)
+
+Security Rules:
+- Read: admin or safety_admin
+- Write: owner or admin
+
+## Collection: suspiciousActivity
+
+Purpose: Security incident logs
+
+Fields:
+- id (string, PK)
+- userId (string, ref users.uid) - optional
+- type (string) - suspicious_login | mass_report | spam | other
+- description (string)
+- ipAddress (string) - optional
+- userAgent (string) - optional
+- severity (string) - low | medium | high | critical
+- status (string) - open | investigating | resolved
+- createdAt (timestamp)
+
+Security Rules:
+- Read: admin or safety_admin
+- Write: system or admin
+
+## Collection: admins
+
+Purpose: Admin role assignments and metadata
+
+Fields:
+- uid (string, PK) - ref users.uid
+- role (string) - admin role identifier
+- permissions (array<string>)
+- updatedAt (timestamp)
+
+Security Rules:
+- Read: admin
+- Write: super_admin only
+
+## Collection: auditLogs
+
+Purpose: Immutable audit trail of privileged admin actions
+
+Fields:
+- id (string, PK)
+- action (string)
+- actorId (string, ref users.uid)
+- actorName (string)
+- targetType (string) - user | companion | booking | guideApplication | content | security | comment
+- targetId (string) - optional
+- details (map) - optional
+- timestamp ( timestamp)
+
+Security Rules:
+- Read: admin
+- Write: admin only via server-side enforcement
