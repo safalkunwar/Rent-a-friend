@@ -124,6 +124,12 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
   - Transitioned the full frontend data-fetching hooks layer (`useCompanions`, `useStories`, `useActivities`, `useEvents`, `usePartners`, `useCommunityPosts`) to rely strictly on secure collections inside production database `hamrosathi1` with zero hardcoded seeding fallbacks or mock caches.
   - Added graceful rendering protections so empty collections render beautiful visual placeholders instead of failing.
   - Optimized compiling pipelines by excluding generated mobile paths (`/android`, `/ios`, `/dist`) in `tsconfig.json`.
+- **Admin Application Separation (2026-08-12):**
+  - Extracted the admin panel from `src/admin/` into a completely standalone `/admin` application.
+  - The admin app has its own `package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`, and `src/` directory.
+  - Both applications share the same production Firebase backend (`hamrosathi1`) but have separate entry points, routing, UI, build processes, and deployments.
+  - Removed admin routes and admin panel links from the main SATHI user application.
+  - Admin app builds independently on port 3001; main app builds independently on port 3000.
 
 - **Firebase Resumption & Optimization (2026-07-12):**
   - Resolved `auth/configuration-not-found` error via strict initialization validation in `src/firebase.ts`.
@@ -174,7 +180,7 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - `src/components/notifications/NotificationProvider.tsx` - FCM registration and permission request
 - `src/App.tsx` - React Router entry point with NotificationProvider
 - `src/main.tsx` - React entry
-- `src/admin/*.tsx` - Admin dashboards fully integrated with real Firestore data
+- `admin/` - Completely separate admin application with its own build, routing, and Firebase initialization
 - `src/scripts/seed.ts` - Firestore demo data seeder
 - `src/__tests__/*.ts` - Vitest test coverage files
 - `vitest.config.ts` - Vitest configuration

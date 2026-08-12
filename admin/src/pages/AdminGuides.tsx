@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, CheckCircle2, XCircle, Search, FileText, StickyNote } from 'lucide-react';
-import { AdminCompanionRow, AdminGuideApplication } from './types';
-import { adminRepository } from './AdminRepository';
+import { AdminCompanionRow, AdminGuideApplication } from '../types';
+import { adminRepository } from '../repositories/AdminRepository';
 
 export function AdminGuides() {
   const [selectedGuide, setSelectedGuide] = useState<AdminGuideApplication | null>(null);

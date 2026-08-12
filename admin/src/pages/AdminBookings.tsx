@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Search, Filter, Eye } from 'lucide-react';
-import { AdminBookingRow } from './types';
-import { adminRepository } from './AdminRepository';
-import { useAdminPagination } from './useAdminPagination';
+import { AdminBookingRow } from '../types';
+import { adminRepository } from '../repositories/AdminRepository';
+import { useAdminPagination } from '../hooks/useAdminPagination';
 
 const PAGE_SIZE = 20;
 

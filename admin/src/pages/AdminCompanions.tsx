@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ShieldCheck, ShieldAlert } from 'lucide-react';
-import { AdminCompanionRow } from './types';
-import { adminRepository } from './AdminRepository';
+import { AdminCompanionRow } from '../types';
+import { adminRepository } from '../repositories/AdminRepository';
 
 export function AdminCompanions() {
   const [companions, setCompanions] = useState<AdminCompanionRow[]>([]);

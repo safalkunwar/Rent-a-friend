@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, MapPin, PhoneCall, ShieldAlert, Navigation, UserPlus, Users } from 'lucide-react';
-import { adminRepository } from './AdminRepository';
+import { adminRepository } from '../repositories/AdminRepository';
 
 interface SOSAlert {
   id: string;

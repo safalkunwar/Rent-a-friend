@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Bell, Star } from 'lucide-react';
-import { AdminNotificationRow, AdminFeedbackItem } from './types';
-import { adminRepository } from './AdminRepository';
+import { AdminNotificationRow, AdminFeedbackItem } from '../types';
+import { adminRepository } from '../repositories/AdminRepository';
 
 export function AdminFeedback() {
   const [notifications, setNotifications] = useState<AdminNotificationRow[]>([]);

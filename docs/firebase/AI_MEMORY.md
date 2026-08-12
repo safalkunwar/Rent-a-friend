@@ -124,7 +124,7 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - `src/components/notifications/NotificationProvider.tsx` - FCM registration and permission request
 - `src/App.tsx` - React Router entry point with NotificationProvider
 - `src/main.tsx` - React entry
-- `src/admin/*.tsx` - Admin mock dashboards (pending real data migration)
+- `admin/` - Completely separate admin application with its own build, routing, and Firebase initialization
 - `src/scripts/seed.ts` - Firestore demo data seeder
 - `src/__tests__/AppContext.test.ts` - Initial smoke test
 - `vitest.config.ts` - Vitest configuration

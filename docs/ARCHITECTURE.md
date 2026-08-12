@@ -3,59 +3,79 @@
 ## Folder Structure
 
 ```
-src/
-├── main.tsx                 # Entry point, providers setup
-├── App.tsx                  # Hash-based router (admin vs client)
-├── ClientApp.tsx            # Main client app shell and routing
-├── context/
-│   └── AppContext.tsx        # Global state: user, bookings, messages, favorites
-├── types.ts                 # TypeScript interfaces
-├── data.ts                  # Hardcoded mock data (COMPANIONS, STORIES)
-├── index.css                # Tailwind imports and custom utilities
-├── index.html               # Vite HTML shell
-├── components/
-│   ├── ui/
-│   │   └── Toast.tsx         # Toast notification system
-│   ├── Navbar.tsx            # Top navigation bar
-│   ├── AuthModal.tsx         # Login/Signup/Guide application modal
-│   ├── BookingModal.tsx      # Duplicate/older booking modal (to be removed)
-│   ├── SafetyWidget.tsx      # SOS / safety features widget
-│   ├── modals/
-│   │   ├── CompanionProfileModal.tsx  # Full profile overlay
-│   │   └── BookingFlowModal.tsx       # Multi-step booking wizard
-│   ├── messages/
-│   │   └── MessagesTab.tsx   # Chat UI
-│   └── dashboard/
-│       └── DashboardTab.tsx  # User dashboard
-├── admin/
-│   ├── AdminApp.tsx          # Admin shell layout
-│   ├── AdminOverview.tsx     # Metrics and charts
-│   ├── AdminGuides.tsx       # KYC verification queue
-│   ├── AdminBookings.tsx     # Booking management
-│   ├── AdminSecurity.tsx     # SOS alerts and suspicious activity
-│   └── AdminFeedback.tsx     # User feedback and system notifications
-├── assets/
-│   └── ...                   # Static assets
-└── (unused directories may exist)
-
-docs/
-├── SUMMARY.md
-├── PROJECT_STATUS.md
-├── AI_MEMORY.md
-├── TASKS.md
-├── CHANGELOG.md
-├── ARCHITECTURE.md
-├── DATABASE_SCHEMA.md
-├── API.md
-├── SECURITY.md
-├── DECISIONS.md
-├── BUGS.md
-├── FEATURES.md
-├── TESTING.md
-├── DEPLOYMENT.md
-├── MEETING_NOTES.md
-└── CONTRIBUTING.md
+/
+├── src/                      # SATHI user/companion application
+│   ├── main.tsx
+│   ├── App.tsx
+│   ├── ClientApp.tsx
+│   ├── context/
+│   ├── components/
+│   ├── services/
+│   ├── hooks/
+│   ├── data/
+│   ├── scripts/
+│   └── __tests__/
+├── admin/                    # COMPLETELY SEPARATE ADMIN APPLICATION
+│   ├── src/
+│   │   ├── main.tsx
+│   │   ├── App.tsx
+│   │   ├── index.css
+│   │   ├── firebase.ts
+│   │   ├── pages/
+│   │   ├── components/
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   ├── hooks/
+│   │   ├── types/
+│   │   └── security/
+│   ├── public/
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   └── README.md
+├── docs/
+├── public/
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+├── firebase.json
+├── firestore.rules
+├── storage.rules
+├── firestore.indexes.json
+└── README.md
 ```
+
+## Application Boundaries
+
+```
+                 ┌─────────────────────┐
+                 │   Firebase/SATHI    │
+                 │   hamrosathi1       │
+                 └──────────┬──────────┘
+                            │
+              ┌─────────────┴─────────────┐
+              │                           │
+      ┌───────▼────────┐         ┌────────▼───────┐
+      │  SATHI App     │         │  Admin App     │
+      │  /src          │         │  /admin        │
+      │                │         │                │
+      │ Users          │         │ Operations     │
+      │ Companions     │         │ Moderation     │
+      │ Bookings       │         │ KYC            │
+      │ Community      │         │ Safety/SOS     │
+      │ Messages       │         │ Analytics      │
+      └────────────────┘         │ Audit Logs     │
+                                 └────────────────┘
+```
+
+Both applications share the same production Firebase backend (`hamrosathi1`) but have completely separate:
+- Entry points
+- Routing
+- UI
+- Build processes
+- Deployments
+- Environment configurations
+- Documentation
 
 ## Component Hierarchy
 
@@ -74,10 +94,9 @@ main.tsx
        │    ├── DashboardTab
        │    ├── SafetyWidget
        │    └── [Story View, Community Moments, Events, etc.]
-       └── AdminApp
-            ├── AdminOverview
-            ├── AdminGuides
-            ├── AdminBookings
+```
+
+The admin application is completely separate and does not share components with the user app.
             ├── AdminSecurity
             └── AdminFeedback
 ```

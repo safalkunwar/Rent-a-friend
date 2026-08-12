@@ -3,9 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ClientApp } from './ClientApp';
-import { AdminApp } from './admin/AdminApp';
 import { AuthGuard } from './components/guards/AuthGuard';
-import { AdminGuard } from './components/guards/AdminGuard';
 import { LoadingScreen } from './components/LoadingScreen';
 import { NotificationProvider } from './components/notifications/NotificationProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -21,14 +19,6 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<ClientApp />} />
-      <Route
-        path="/admin/*"
-        element={
-          <AdminGuard>
-            <AdminApp />
-          </AdminGuard>
-        }
-      />
       <Route
         path="/bookings"
         element={

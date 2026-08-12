@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, ShieldAlert, MessageSquare, FileText } from 'lucide-react';
-import { AdminPostRow, AdminCommentRow } from './types';
-import { adminRepository } from './AdminRepository';
+import { AdminPostRow, AdminCommentRow } from '../types';
+import { adminRepository } from '../repositories/AdminRepository';
 
 export function AdminModeration() {
   const [posts, setPosts] = useState<AdminPostRow[]>([]);

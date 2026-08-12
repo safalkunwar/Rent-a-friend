@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, ShieldAlert } from 'lucide-react';
-import { useAdminAuditLogs } from './useAdminData';
+import { useAdminAuditLogs } from '../hooks/useAdminData';
 
 export function AdminAuditLogs() {
   const { logs, loading, search } = useAdminAuditLogs(50);

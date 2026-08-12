@@ -10,7 +10,7 @@ Current Sprint:
 Sprint 5
 
 Current Focus:
-Production release readiness, final audit verification, test suite verification, and database schema synchronization.
+Production release readiness, final audit verification, test suite verification, database schema synchronization, and admin application separation.
 
 Completed
 
@@ -113,12 +113,18 @@ Completed
   - Hardened `messages` security rules by adding a lightweight substring split fallback (`conversationId.split('_')`) which ensures that even if a newly created conversation is in progress, the participant check returns `true` locally and instantly without making heavy, blockable `get()` lookup queries.
   - Successfully deployed rules to the production Firestore database `hamrosathi1` to completely resolve "Missing or insufficient permissions" errors on messaging streams and conversation actions.
 ✅ Scalability, High-Concurrency & Low-Latency Architecture Audit Pass (10,000 Concurrent Users Target):
-  - Audited all Firestore listeners and collection hooks (`useCompanions`, `useStories`, `useActivities`, `useEvents`, `usePartners`, `useCommunityPosts`, `AppContext`), applying strict `limitCount` bounds (`20`–`30` items) and index ordering to prevent unbounded memory and read usage under heavy concurrent load.
-  - Designed and deployed atomic double-booking slot locks in `BookingRepository` using Firestore transactions on isolated lock keys (`booking_locks/lock_{companionId}_{date}`).
-  - Bounded messaging history subscriptions in `MessagesTab.tsx` (`limitCount: 50`) and isolated real-time listeners strictly to active conversations.
-  - Configured `SafeImage` with native `loading="lazy"` browser rendering to optimize image payload egress under high traffic spikes.
-  - Expanded `firestore.rules` and `firestore.indexes.json` with rules and composite indexes for `booking_locks`, `comments`, `stories`, and `conversations`.
-  - Formulated comprehensive capacity modeling, workload analysis, and stress-testing strategy documented in `/docs/SCALABILITY.md`.
+   - Audited all Firestore listeners and collection hooks (`useCompanions`, `useStories`, `useActivities`, `useEvents`, `usePartners`, `useCommunityPosts`, `AppContext`), applying strict `limitCount` bounds (`20`–`30` items) and index ordering to prevent unbounded memory and read usage under heavy concurrent load.
+   - Designed and deployed atomic double-booking slot locks in `BookingRepository` using Firestore transactions on isolated lock keys (`booking_locks/lock_{companionId}_{date}`).
+   - Bounded messaging history subscriptions in `MessagesTab.tsx` (`limitCount: 50`) and isolated real-time listeners strictly to active conversations.
+   - Configured `SafeImage` with native `loading="lazy"` browser rendering to optimize image payload egress under high traffic spikes.
+   - Expanded `firestore.rules` and `firestore.indexes.json` with rules and composite indexes for `booking_locks`, `comments`, `stories`, and `conversations`.
+   - Formulated comprehensive capacity modeling, workload analysis, and stress-testing strategy documented in `/docs/SCALABILITY.md`.
+✅ Admin Application Separation:
+   - Extracted admin panel from `src/admin/` into a completely standalone `/admin` application.
+   - Created separate `package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`, and `src/` directory structure.
+   - Both applications share the same production Firebase backend (`hamrosathi1`) but have separate entry points, routing, UI, build processes, and deployments.
+   - Removed admin routes and admin panel links from the main SATHI user application.
+   - Admin app builds independently on port 3001; main app builds independently on port 3000.
 
 In Progress
 

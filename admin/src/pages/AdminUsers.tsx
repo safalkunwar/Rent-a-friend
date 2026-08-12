@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Search, ShieldCheck } from 'lucide-react';
-import { AdminUserRow } from './types';
-import { adminRepository } from './AdminRepository';
-import { useAdminPagination } from './useAdminPagination';
+import { AdminUserRow } from '../types';
+import { adminRepository } from '../repositories/AdminRepository';
+import { useAdminPagination } from '../hooks/useAdminPagination';
 
 const PAGE_SIZE = 20;
 

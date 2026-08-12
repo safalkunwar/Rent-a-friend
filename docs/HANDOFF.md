@@ -1,5 +1,13 @@
 # SATHI Project Handoff Protocol
 
+## Current Milestone Achieved (2026-08-12)
+The **SATHI Admin Application Separation** has been fully completed. This release:
+- **Completely Separate Admin Application**: Extracted the admin panel from `src/admin/` into a standalone `/admin` application with its own `package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`, and `src/` directory.
+- **Independent Builds**: Both the main SATHI app (`/src`) and admin app (`/admin`) build independently. Main app runs on port 3000; admin app runs on port 3001.
+- **Shared Firebase Backend**: Both applications use the same production Firebase project (`hamrosathi1`) but have completely separate entry points, routing, UI, build processes, and deployments.
+- **Removed Admin from Main App**: Removed `/admin` route, `AdminApp` import, and admin panel navigation links from the main SATHI user application.
+- **Security Boundary**: Admin routes and components are no longer exposed through the normal SATHI user application.
+
 ## Current Milestone Achieved (2026-08-07)
 The **SATHI Production Readiness, Database Verification & Stability Phase** has been fully completed. This release:
 - **100% Firebase Single Source of Truth**: Removed all fallback code, manual caches, and database seeding loops that would auto-populate state with hardcoded mock companion profiles, stories, activities, events, partners, and community posts when Firestore collections were empty. Everything is fetched securely and exclusively from live Firestore collections under the production `hamrosathi1` project.

@@ -1,7 +1,7 @@
-import { firestore } from './services/firestore';
-import { auditService } from './services/audit';
-import { adminService, type AdminRole } from './services/admin';
-import { AdminUserRow, AdminBookingRow, AdminReportRow, AdminCompanionRow, AdminNotificationRow, AdminContentRow, AdminPostRow, AdminCommentRow, AdminGuideApplication } from './types';
+import { firestore } from '../services/firestore';
+import { auditService } from '../services/audit';
+import { adminService, type AdminRole } from '../services/admin';
+import { AdminUserRow, AdminBookingRow, AdminReportRow, AdminCompanionRow, AdminNotificationRow, AdminContentRow, AdminPostRow, AdminCommentRow, AdminGuideApplication } from '../types';
 
 export class AdminRepository {
   async listUsers(limitCount = 20, startAfter?: unknown[]) {

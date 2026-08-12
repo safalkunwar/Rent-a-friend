@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserCheck, CalendarDays, ShieldAlert, UserPlus, FileText, AlertTriangle, MessageSquare } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { adminRepository } from './AdminRepository';
+import { adminRepository } from '../repositories/AdminRepository';
 
 interface AdminOverviewProps {
   onNavigate?: (tab: string) => void;

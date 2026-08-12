@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
-import { AdminContentRow } from './types';
-import { useToast } from './components/ui/Toast';
-import { adminRepository } from './AdminRepository';
+import { AdminContentRow } from '../types';
+import { useToast } from '../components/ui/Toast';
+import { adminRepository } from '../repositories/AdminRepository';
 
 export function AdminContent() {
   const { showToast } = useToast();

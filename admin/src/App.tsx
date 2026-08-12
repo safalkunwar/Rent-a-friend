@@ -3,18 +3,18 @@ import { useState, useEffect } from 'react';
 import { Activity, UserCheck, CalendarDays, ShieldAlert, MessageSquare, LogOut, Users, Briefcase } from 'lucide-react';
 import * as motion from 'motion/react-client';
 
-import { AdminOverview } from './AdminOverview';
-import { AdminGuides } from './AdminGuides';
-import { AdminBookings } from './AdminBookings';
-import { AdminSecurity } from './AdminSecurity';
-import { AdminFeedback } from './AdminFeedback';
-import { AdminUsers } from './AdminUsers';
-import { AdminCompanions } from './AdminCompanions';
-import { AdminContent } from './AdminContent';
-import { AdminAuditLogs } from './AdminAuditLogs';
-import { AdminModeration } from './AdminModeration';
+import { AdminOverview } from './pages/AdminOverview';
+import { AdminGuides } from './pages/AdminGuides';
+import { AdminBookings } from './pages/AdminBookings';
+import { AdminSecurity } from './pages/AdminSecurity';
+import { AdminFeedback } from './pages/AdminFeedback';
+import { AdminUsers } from './pages/AdminUsers';
+import { AdminCompanions } from './pages/AdminCompanions';
+import { AdminContent } from './pages/AdminContent';
+import { AdminAuditLogs } from './pages/AdminAuditLogs';
+import { AdminModeration } from './pages/AdminModeration';
 
-export function AdminApp() {
+export default function App() {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'guides' | 'companions' | 'bookings' | 'content' | 'security' | 'feedback' | 'moderation' | 'audit'>('overview');
 
   return (
