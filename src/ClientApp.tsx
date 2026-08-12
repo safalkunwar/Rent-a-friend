@@ -185,13 +185,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   }, [fetchedStories, currentUser]);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
     if (showSOS) {
-      timer = setTimeout(() => {
+      const timer = setTimeout(() => {
         setShowSOS(false);
       }, 5000);
+      return () => clearTimeout(timer);
     }
-    return () => clearTimeout(timer);
   }, [showSOS]);
 
   useEffect(() => {
