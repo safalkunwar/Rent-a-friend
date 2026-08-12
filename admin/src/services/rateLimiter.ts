@@ -50,4 +50,8 @@ export const adminRateLimiter = {
   checkExport(actorId: string): boolean {
     return rateLimiter.check(`admin:export:${actorId}`, 5, 60_000);
   },
+
+  clearAll() {
+    rateLimiter.clearAll();
+  },
 };
