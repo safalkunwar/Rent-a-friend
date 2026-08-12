@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Send, Image as ImageIcon, Phone, Video, Info, MessageSquare, LogIn, Wifi, Users, Compass, ShieldCheck } from 'lucide-react';
+import { Search, Send, Image as ImageIcon, Info, MessageSquare, LogIn, Wifi, Users, Compass, ShieldCheck, Paperclip } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { firestore } from '../../services/firestore';
@@ -470,8 +470,6 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
               )}
             </div>
             <div className="flex items-center gap-4 text-text-secondary">
-              <Phone onClick={() => showToast('Audio calls coming soon', 'info')} className="w-4 h-4 cursor-pointer hover:text-text-primary transition" />
-              <Video onClick={() => showToast('Video calls coming soon', 'info')} className="w-4 h-4 cursor-pointer hover:text-text-primary transition" />
               <Info onClick={() => showToast(`SATHI companion verification status: Active`, 'info')} className="w-4 h-4 cursor-pointer hover:text-text-primary transition" />
             </div>
           </div>
@@ -513,8 +511,8 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
           {/* Input */}
           <div className="p-3 bg-surface border-t border-border-token shrink-0">
             <div className="flex items-center gap-2">
-              <button onClick={() => showToast('Image attachments coming soon', 'info')} className="text-text-secondary hover:text-primary-action transition p-2.5 bg-surface-elevated rounded-full shrink-0">
-                <ImageIcon className="w-4 h-4" />
+              <button onClick={() => showToast('Image attachments coming soon', 'info')} className="text-text-secondary hover:text-primary-action transition p-2.5 bg-surface-elevated rounded-full shrink-0" aria-label="Attach image" title="Image attachments coming soon">
+                <Paperclip className="w-4 h-4" />
               </button>
               <input
                 type="text"

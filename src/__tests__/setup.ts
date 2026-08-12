@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../src/firebase', () => ({
   app: { name: '[DEFAULT]' },

@@ -34,6 +34,7 @@ import { useCompanions, useStories, useActivities, useEvents, usePartners, useCo
 import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
 import { saveStoredPreferences } from './services/preferences';
+import { paymentService } from './services/payments';
 
 interface ClientAppProps {
   initialTab?: 'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings';
@@ -265,8 +266,21 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     showToast("Invite link copied to clipboard! Share with friends to earn NPR 5,000.", "success");
   };
 
-  const handleWalletTopUp = () => {
-    showToast("Redirecting to secure Khalti Gateway for wallet top up...", "info");
+  const handleWalletTopUp = async () => {
+    try {
+      const result = await paymentService.initiatePayment({
+        provider: 'khalti',
+        amount: 1000,
+        currency: 'NPR',
+        companionId: 'wallet',
+        bookingId: `wallet-topup-${Date.now()}`,
+        returnUrl: window.location.origin,
+      });
+      window.open(result.paymentUrl, '_blank');
+      showToast('Redirecting to secure Khalti Gateway for wallet top up...', 'info');
+    } catch (error) {
+      showToast('Wallet top-up is currently unavailable. Please try again later.', 'error');
+    }
   };
 
   const activeFilterCount = (selectedCity !== 'All' ? 1 : 0) +
@@ -740,7 +754,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         <button onClick={() => { setActiveTab('settings'); navigate('/settings'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <Settings className="w-4 h-4 text-primary-action" /> Settings
                         </button>
-                        <button onClick={() => { showToast("Language set to English (Nepali translations loading...)", "success"); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
+                        <button onClick={() => { setActiveTab('settings'); navigate('/settings'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <Languages className="w-4 h-4 text-primary-action" /> Language (EN/NE)
                         </button>
                         <button onClick={() => {
@@ -813,7 +827,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 <button onClick={() => setShowGuideSetup(false)} className="absolute top-4 right-4 text-text-secondary hover:text-text-primary">✕</button>
                 <h2 className="text-xl font-bold text-text-primary mb-2 flex items-center gap-2"><Star className="w-5 h-5 text-primary-action" /> Complete Your SATHI Profile</h2>
                 <p className="text-sm text-text-secondary mb-6">Complete your profile to unlock bookings from thousands of travelers visiting Nepal.</p>
-                <button onClick={() => { showToast('Profile saved successfully!', 'success'); setShowGuideSetup(false); }} className="px-5 py-2 bg-primary-action text-background font-bold text-xs rounded-xl hover:bg-primary-action-hover">Save Profile Data</button>
+                <button onClick={() => { setShowGuideSetup(false); setShowProfileEditModal(true); }} className="px-5 py-2 bg-primary-action text-background font-bold text-xs rounded-xl hover:bg-primary-action-hover">Complete Profile</button>
               </div>
             )}
 
@@ -848,7 +862,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <span className="w-2 h-2 bg-primary-action rounded-full animate-pulse"></span>
                       <h2 className="text-sm font-extrabold text-text-primary tracking-wide uppercase">Stories from the Community</h2>
                     </div>
-                    <button onClick={() => showToast('Stories feed synchronized!', 'success')} className="text-xs font-semibold text-primary-action hover:underline">See all</button>
+                     <button onClick={() => { document.getElementById('stories-section')?.scrollIntoView({ behavior: 'smooth' }); }} className="text-xs font-semibold text-primary-action hover:underline">See all</button>
                   </div>
                   
                   <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory">
@@ -1491,8 +1505,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <h4 className="text-xs font-bold uppercase tracking-wider text-primary-action">Company</h4>
                       <ul className="space-y-1.5 text-xs text-text-secondary">
                         <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveTab('about'); }} className="hover:text-text-primary transition-colors">About SATHI</a></li>
-                        <li><a href="#" onClick={(e) => { e.preventDefault(); showToast("Platform careers portal coming soon", "info"); }} className="hover:text-text-primary transition-colors">Careers</a></li>
-                        <li><a href="#" onClick={(e) => { e.preventDefault(); showToast("SATHI Blog coming soon", "info"); }} className="hover:text-text-primary transition-colors">Safety Blog</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); showToast("Careers page is under construction", "info"); }} className="hover:text-text-primary transition-colors">Careers</a></li>
+                        <li><a href="https://sathi-blog.example.com" target="_blank" rel="noopener noreferrer" className="hover:text-text-primary transition-colors">Safety Blog</a></li>
                         <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveTab('partner'); }} className="hover:text-text-primary transition-colors">Partnership Hub</a></li>
                       </ul>
                     </div>
@@ -1500,8 +1514,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary">Community</h4>
                       <ul className="space-y-1.5 text-xs text-text-secondary">
                         <li><a href="#" onClick={(e) => { e.preventDefault(); const momentSec = document.getElementById('moments-section'); momentSec?.scrollIntoView({behavior:'smooth'}); }} className="hover:text-text-primary transition-colors">Shared Adventures</a></li>
-                        <li><a href="#" onClick={(e) => { e.preventDefault(); showToast("Community guidelines directory loading...", "info"); }} className="hover:text-text-primary transition-colors">Community Rules</a></li>
-                        <li><a href="#" onClick={(e) => { e.preventDefault(); showToast("Local events calendar loading...", "info"); }} className="hover:text-text-primary transition-colors">Local Events</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); showToast("Community guidelines are being updated", "info"); }} className="hover:text-text-primary transition-colors">Community Rules</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveTab('about'); }} className="hover:text-text-primary transition-colors">Local Events</a></li>
                         <li><a href="#" onClick={(e) => { e.preventDefault(); setAuthMode('guide'); }} className="hover:text-text-primary transition-colors">Become SATHI Companion</a></li>
                       </ul>
                     </div>
@@ -1963,7 +1977,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             </div>
 
             {/* Instagram-style Stories */}
-            <div className="px-4 py-1 bg-background">
+            <div id="stories-section" className="px-4 py-1 bg-background">
               <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
                 {/* Your Story */}
                 <div 
@@ -3888,7 +3902,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     </span>
                     <ChevronRight className="w-4 h-4 text-text-muted" />
                   </button>
-                  <button onClick={() => { showToast("Language set to English (Nepali translations loading...)", "success"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
+                  <button onClick={() => { setActiveTab('settings'); navigate('/settings'); setIsMobileSidebarOpen(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
                     <span className="flex items-center gap-3 font-semibold">
                       <Languages className="w-4.5 h-4.5 text-primary-action" /> Language (EN/NE)
                     </span>
