@@ -1,0 +1,89 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Public media paths - readable by everyone, writable by authenticated users with restrictions
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && 
+                   request.resource.size < 10 * 1024 * 1024 && // 10MB limit
+                   request.resource.contentType.matches('image/(jpeg|jpg|png|webp)') &&
+                   request.auth.uid == request.resource.data.uploadedBy;
+    }
+
+    // User avatars
+    match /avatars/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Activity and event images
+    match /activities/{activityId}/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /events/{eventId}/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Community post images
+    match /posts/{postId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == request.resource.data.uploadedBy;
+    }
+
+    // Story images
+    match /stories/{storyId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == request.resource.data.uploadedBy;
+    }
+
+    // KYC documents - PRIVATE, admin-only access
+    match /kyc/{userId}/{fileName} {
+      allow read: if isKYCReviewer();
+      allow write: if isAuthenticated() && request.auth.uid == userId && 
+                   request.resource.size < 5 * 1024 * 1024 && // 5MB limit
+                   request.resource.contentType.matches('image/(jpeg|jpg|png|pdf)');
+      allow delete: if isAdmin();
+    }
+
+    // Private user documents
+    match /private/{userId}/{fileName} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Admin-only files
+    match /admin/{allPaths=**} {
+      allow read, write: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Companion verification documents
+    match /verification/{companionId}/{fileName} {
+      allow read: if isKYCReviewer();
+      allow write: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return request.auth.token.admin == true ||
+             request.auth.token.adminRole in ['super_admin','platform_admin','safety_admin','moderation_admin','support_agent','booking_admin','finance_admin','kyc_reviewer','content_admin','analytics_admin','read_only_admin'] ||
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isKYCReviewer() {
+      return request.auth.token.adminRole in ['super_admin', 'kyc_reviewer'] ||
+             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'kyc_reviewer'];
+    }
+  }
+}

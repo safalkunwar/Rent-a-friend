@@ -24,28 +24,45 @@ service cloud.firestore {
       );
     }
 
-    function hasAdminPermission(permission) {
+    function isSuperAdmin() {
       return isAuthenticated() && (
-        request.auth.token.admin == true ||
-        request.auth.token.adminPermissions.hasAny([permission]) ||
-        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.permissions.hasAny([permission])
+        request.auth.token.adminRole == 'super_admin' ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'super_admin'
       );
     }
 
-    // Helper function to check if the user is a companion (via custom claim or role field)
-    function isCompanion() {
+    function isSafetyAdmin() {
       return isAuthenticated() && (
-        request.auth.token.role == 'companion' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'companion'
+        request.auth.token.adminRole in ['super_admin', 'safety_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'safety_admin']
       );
     }
 
-    // Helper function to check if the user is a customer (via custom claim or role field)
-    function isCustomer() {
+    function isModerationAdmin() {
       return isAuthenticated() && (
-        request.auth.token.role == 'customer' ||
-        !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'customer'
+        request.auth.token.adminRole in ['super_admin', 'moderation_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'moderation_admin']
+      );
+    }
+
+    function isBookingAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'booking_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'booking_admin']
+      );
+    }
+
+    function isKYCReviewer() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'kyc_reviewer'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'kyc_reviewer']
+      );
+    }
+
+    function isContentAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'content_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'content_admin']
       );
     }
 
@@ -55,17 +72,21 @@ service cloud.firestore {
              (!data.keys().hasAll(['updatedAt']) || data.updatedAt is string);
     }
 
+    function isValidUserUpdate(uid) {
+      return isAuthenticated() && request.auth.uid == uid && 
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+               'name', 'avatar', 'preferences', 'updatedAt', 'favorites', 'fcmToken',
+               'phone', 'bio', 'languages', 'skills', 'availability', 'interests', 'location'
+             ]);
+    }
+
     // Users Collection: /users/{userId}
     match /users/{userId} {
       // Users can read their own profile, or admins
       allow read: if isAuthenticated();
 
       // Users can update their own profile, but only specific fields (no changing role or createdAt)
-      allow update: if isAuthenticated() && request.auth.uid == userId && 
-                    request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                      'name', 'avatar', 'preferences', 'updatedAt', 'favorites', 'fcmToken',
-                      'phone', 'bio', 'languages', 'skills', 'availability', 'interests', 'location'
-                    ]);
+      allow update: if isValidUserUpdate(userId);
 
       // Admins can read and write any user profile
       allow read, write: if isAdmin();
@@ -134,7 +155,7 @@ service cloud.firestore {
     // Booking Locks Collection: /booking_locks/{lockId}
     match /booking_locks/{lockId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
     }
 
     // Reviews Collection: /reviews/{reviewId}
@@ -228,8 +249,8 @@ service cloud.firestore {
       // Publicly readable for all published posts, or if author or admin
       allow read: if true;
 
-      // Authenticated or anonymous users can create posts
-      allow create: if (isAuthenticated() || isAnonymous()) && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      // Authenticated users can create posts
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
 
       // Authors can update their own posts, or any authenticated user can update counter fields
       allow update: if isAuthenticated() && (
@@ -248,8 +269,8 @@ service cloud.firestore {
       // Anyone can read comments
       allow read: if true;
 
-      // Authenticated or anonymous users can create comments
-      allow create: if (isAuthenticated() || isAnonymous()) && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      // Authenticated users can create comments
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
 
       // Authors can update and delete their own comments
       allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
@@ -261,8 +282,8 @@ service cloud.firestore {
     // Likes Collection: /likes/{likeId}
     match /likes/{likeId} {
       allow read: if true;
-      allow create: if (isAuthenticated() || isAnonymous()) && request.auth.uid == request.resource.data.userId;
-      allow delete: if (isAuthenticated() || isAnonymous()) && request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
 
     // Story Likes Collection: /story_likes/{likeId}
