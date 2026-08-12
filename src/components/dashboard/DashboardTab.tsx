@@ -7,7 +7,7 @@ import { Star, ShieldCheck, Heart, MapPin, Settings, Calendar, X, Bell } from 'l
 import * as motion from 'motion/react-client';
 import { SafeImage } from '../ui/SafeImage';
 
-export const DashboardTab: React.FC = () => {
+export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string) => void }> = ({ onMessageCompanion }) => {
   const { currentUser, favorites, toggleFavorite, bookings, setCurrentUser, notifications } = useAppContext();
   const { showToast } = useToast();
   const { companions: fetchedCompanions } = useCompanions();
@@ -163,12 +163,20 @@ export const DashboardTab: React.FC = () => {
                           <p className="text-xs text-text-muted">{booking.duration} hour(s) x {booking.participants} people</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="block font-bold text-primary-action">NPR {booking.totalPrice.toFixed(2)}</span>
-                        <span className={`text-xs px-2 py-1 rounded-full border ${booking.status === 'confirmed' ? 'bg-success/10 border-success/50 text-success' : booking.status === 'cancelled' ? 'bg-danger/10 border-danger/50 text-danger' : 'bg-warning/10 border-warning/50 text-warning'}`}>
-                          {booking.status}
-                        </span>
-                      </div>
+                       <div className="text-right">
+                         <span className="block font-bold text-primary-action">NPR {booking.totalPrice.toFixed(2)}</span>
+                         <span className={`text-xs px-2 py-1 rounded-full border ${booking.status === 'confirmed' ? 'bg-success/10 border-success/50 text-success' : booking.status === 'cancelled' ? 'bg-danger/10 border-danger/50 text-danger' : 'bg-warning/10 border-warning/50 text-warning'}`}>
+                           {booking.status}
+                         </span>
+                         {onMessageCompanion && companion && (
+                           <button
+                             onClick={() => onMessageCompanion(booking.companionId)}
+                             className="block mt-2 text-xs text-primary-action hover:text-primary-action-hover font-semibold transition-colors"
+                           >
+                             Message Companion
+                           </button>
+                         )}
+                       </div>
                     </div>
                   );
                 })}

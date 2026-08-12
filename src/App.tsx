@@ -8,6 +8,9 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { NotificationProvider } from './components/notifications/NotificationProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { PaymentVerifyPage } from './pages/PaymentVerifyPage';
+import { EsewaVerifyPage } from './pages/EsewaVerifyPage';
+import { EsewaFailurePage } from './pages/EsewaFailurePage';
 
 function AppRoutes() {
   const { loading } = useAppContext();
@@ -63,6 +66,9 @@ function AppRoutes() {
           </AuthGuard>
         }
       />
+      <Route path="/payment/verify" element={<PaymentVerifyPage />} />
+      <Route path="/payment/esewa-verify" element={<EsewaVerifyPage />} />
+      <Route path="/payment/esewa-failure" element={<EsewaFailurePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

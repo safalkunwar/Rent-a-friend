@@ -262,13 +262,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     setBookings(prev => {
       const filtered = prev.filter(b => b.id !== booking.id);
-      return [...filtered, booking];
+      return [...filtered, { ...booking, status: 'pending' }];
     });
-    const ref = await firestore.setDocument(`bookings/${booking.id}`, {
-      ...booking,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
+
+    try {
+      await bookingRepository.createBooking({
+        ...booking,
+        status: 'pending',
+      });
+    } catch (err) {
+      console.error('[SATHI] Failed to create booking:', err);
+      setBookings(prev => prev.filter(b => b.id !== booking.id));
+      throw err;
+    }
 
     const notification: Notification = {
       id: `notif-${Date.now()}`,

@@ -1544,7 +1544,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
             {activeTab === 'dashboard' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <DashboardTab />
+                <DashboardTab onMessageCompanion={(companionId) => {
+                  setActiveChatCompanionId(companionId);
+                  setActiveTab('messages');
+                  setMobileTab('messages');
+                }} />
               </motion.div>
             )}
 
@@ -1891,7 +1895,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               <span className="text-xs font-black text-text-primary uppercase tracking-wider">My Dashboard</span>
               <div className="w-12" />
             </div>
-            <DashboardTab />
+            <DashboardTab onMessageCompanion={(companionId) => {
+              setActiveChatCompanionId(companionId);
+              setActiveTab('messages');
+              setMobileTab('messages');
+            }} />
           </div>
         ) : activeTab === 'partner' ? (
           <div className="p-4 space-y-6 pb-20">
