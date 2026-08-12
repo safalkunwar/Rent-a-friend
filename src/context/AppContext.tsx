@@ -3,6 +3,7 @@ import { User, Companion, Booking, Message, Notification, CommunityPost, Experie
 import { authService, AuthUser } from '../services/auth';
 import { firestore } from '../services/firestore';
 import { offlineStorage } from '../services/storage';
+import { offlineWriteQueue } from '../services/offlineQueue';
 import { userRepository } from '../repositories/UserRepository';
 import { companionRepository } from '../repositories/CompanionRepository';
 import { bookingRepository } from '../repositories/BookingRepository';
@@ -174,6 +175,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       cancelled = true;
       unsubscribe();
     };
+  }, []);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('[SATHI] Back online, processing offline write queue...');
+      offlineWriteQueue.processQueue().catch(err => {
+        console.warn('[SATHI] Failed to process offline write queue:', err);
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   useEffect(() => {

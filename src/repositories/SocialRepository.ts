@@ -4,6 +4,7 @@ import { OperationType } from '../services/firestore-errors';
 import { CommunityPost, ExperienceStory } from '../types';
 import { doc, runTransaction, writeBatch, collection, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { offlineWriteQueue } from '../services/offlineQueue';
 
 export interface Comment {
   id: string;
@@ -17,6 +18,12 @@ export interface Comment {
 }
 
 export class SocialRepository extends BaseRepository {
+  async queueIfOffline(collection: string, docId: string, data: Record<string, unknown>, action: 'set' | 'update' | 'delete' = 'set'): Promise<void> {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await offlineWriteQueue.enqueue({ collection, docId, data, action });
+    }
+  }
+
   // ==================== COMMUNITY POSTS ====================
 
   async getPosts(category?: string, limitCount = 10): Promise<CommunityPost[]> {
@@ -45,31 +52,46 @@ export class SocialRepository extends BaseRepository {
       createdAt: timestamp,
       updatedAt: timestamp,
     };
-    await this.executeWithRetry(
-      () => firestore.setDocument(`community_posts/${id}`, newPost as any),
-      OperationType.CREATE,
-      `community_posts/${id}`
-    );
+    try {
+      await this.executeWithRetry(
+        () => firestore.setDocument(`community_posts/${id}`, newPost as any),
+        OperationType.CREATE,
+        `community_posts/${id}`
+      );
+    } catch (err) {
+      await this.queueIfOffline('community_posts', id, newPost as unknown as Record<string, unknown>, 'set');
+      throw err;
+    }
     return id;
   }
 
   async updatePost(id: string, updates: Partial<CommunityPost>): Promise<void> {
-    await this.executeWithRetry(
-      () => firestore.updateDocument(`community_posts/${id}`, {
-        ...updates,
-        updatedAt: new Date().toISOString()
-      }),
-      OperationType.UPDATE,
-      `community_posts/${id}`
-    );
+    try {
+      await this.executeWithRetry(
+        () => firestore.updateDocument(`community_posts/${id}`, {
+          ...updates,
+          updatedAt: new Date().toISOString()
+        }),
+        OperationType.UPDATE,
+        `community_posts/${id}`
+      );
+    } catch (err) {
+      await this.queueIfOffline('community_posts', id, { ...updates, updatedAt: new Date().toISOString() }, 'update');
+      throw err;
+    }
   }
 
   async deletePost(id: string): Promise<void> {
-    await this.executeWithRetry(
-      () => firestore.deleteDocument(`community_posts/${id}`),
-      OperationType.DELETE,
-      `community_posts/${id}`
-    );
+    try {
+      await this.executeWithRetry(
+        () => firestore.deleteDocument(`community_posts/${id}`),
+        OperationType.DELETE,
+        `community_posts/${id}`
+      );
+    } catch (err) {
+      await this.queueIfOffline('community_posts', id, {}, 'delete');
+      throw err;
+    }
   }
 
   // ==================== LIKES (Scalable Design) ====================
@@ -213,40 +235,55 @@ export class SocialRepository extends BaseRepository {
   }
 
   async editComment(id: string, text: string): Promise<void> {
-    await this.executeWithRetry(
-      () => firestore.updateDocument(`comments/${id}`, { text }),
-      OperationType.UPDATE,
-      `comments/${id}`
-    );
+    try {
+      await this.executeWithRetry(
+        () => firestore.updateDocument(`comments/${id}`, { text }),
+        OperationType.UPDATE,
+        `comments/${id}`
+      );
+    } catch (err) {
+      await this.queueIfOffline('comments', id, { text }, 'update');
+      throw err;
+    }
   }
 
   async deleteComment(id: string, postId: string): Promise<void> {
     if (!db) {
-      await firestore.deleteDocument(`comments/${id}`);
+      try {
+        await firestore.deleteDocument(`comments/${id}`);
+      } catch (err) {
+        await this.queueIfOffline('comments', id, {}, 'delete');
+        throw err;
+      }
       return;
     }
 
     const postRef = doc(db, 'community_posts', postId);
 
-    await this.executeWithRetry(
-      async () => {
-        await runTransaction(db!, async (transaction) => {
-          const postDoc = await transaction.get(postRef);
-          const currentComments = postDoc.exists() ? (postDoc.data()?.commentsCount || 0) : 0;
+    try {
+      await this.executeWithRetry(
+        async () => {
+          await runTransaction(db!, async (transaction) => {
+            const postDoc = await transaction.get(postRef);
+            const currentComments = postDoc.exists() ? (postDoc.data()?.commentsCount || 0) : 0;
 
-          transaction.delete(doc(db!, 'comments', id));
+            transaction.delete(doc(db!, 'comments', id));
 
-          if (postDoc.exists() && currentComments > 0) {
-            transaction.update(postRef, {
-              commentsCount: currentComments - 1,
-              updatedAt: new Date().toISOString()
-            });
-          }
-        });
-      },
-      OperationType.WRITE,
-      `comments/${id}`
-    );
+            if (postDoc.exists() && currentComments > 0) {
+              transaction.update(postRef, {
+                commentsCount: currentComments - 1,
+                updatedAt: new Date().toISOString()
+              });
+            }
+          });
+        },
+        OperationType.WRITE,
+        `comments/${id}`
+      );
+    } catch (err) {
+      await this.queueIfOffline('comments', id, {}, 'delete');
+      throw err;
+    }
   }
 
   // ==================== STORIES ====================
