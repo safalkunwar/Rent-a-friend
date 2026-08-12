@@ -126,7 +126,11 @@ export const paymentService = {
 
     document.body.appendChild(form);
     form.submit();
-    document.body.removeChild(form);
+    setTimeout(() => {
+      if (form.parentNode) {
+        document.body.removeChild(form);
+      }
+    }, 1000);
 
     return {
       paymentUrl: form.action,

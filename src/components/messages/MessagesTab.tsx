@@ -494,6 +494,14 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                     <div className="flex flex-col max-w-[75%]">
                       <div className={`rounded-2xl px-4 py-2.5 shadow-md ${isMe ? 'bg-primary-action text-background rounded-br-sm font-medium text-xs' : 'bg-surface-elevated text-text-primary rounded-bl-sm border border-border-token text-xs'}`}>
                         <p className="leading-relaxed break-words whitespace-pre-wrap">{msg.text}</p>
+                        {isMe && msg.status === 'failed' && (
+                          <button
+                            onClick={() => handleSend(msg.text)}
+                            className="mt-1.5 text-[10px] font-bold underline opacity-80 hover:opacity-100"
+                          >
+                            Retry
+                          </button>
+                        )}
                       </div>
                       <span className={`text-[9px] mt-1 px-1 ${isMe ? 'text-right text-text-secondary' : 'text-left text-text-secondary'}`}>
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
