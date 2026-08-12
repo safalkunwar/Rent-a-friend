@@ -368,5 +368,37 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // SOS Alerts Collection: /sosAlerts/{alertId}
+    match /sosAlerts/{alertId} {
+      allow read: if isAdmin() || resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow delete: if false;
+    }
+
+    // Suspicious Activity Collection: /suspiciousActivity/{activityId}
+    match /suspiciousActivity/{activityId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Guide Applications Collection: /guideApplications/{applicationId}
+    match /guideApplications/{applicationId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Feedback Collection: /feedback/{feedbackId}
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
   }
 }
