@@ -130,6 +130,13 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
   - Both applications share the same production Firebase backend (`hamrosathi1`) but have separate entry points, routing, UI, build processes, and deployments.
   - Removed admin routes and admin panel links from the main SATHI user application.
   - Admin app builds independently on port 3001; main app builds independently on port 3000.
+- **Admin System Hardening (2026-08-12):**
+  - Unified admin auth hook into `admin/src/hooks/useAdmin.ts` with role-based permissions, rate limiting integration, and system health/metrics hooks.
+  - Added `AdminErrorBoundary` component for crash prevention across the admin app.
+  - Created `admin/src/utils/errorHandling.ts` and `admin/src/hooks/useAsyncAction.ts` for consistent error handling and async state management.
+  - Added comprehensive unit tests for RBAC (11 roles), aggregation services, health monitoring, rate limiting, and idempotency (38 tests total).
+  - Configured `admin/vitest.config.ts` with jsdom environment and setup file for proper test isolation.
+  - Fixed Firebase project ID validation in admin to prevent accidental cross-project data access.
 
 - **Firebase Resumption & Optimization (2026-07-12):**
   - Resolved `auth/configuration-not-found` error via strict initialization validation in `src/firebase.ts`.
@@ -141,7 +148,8 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 ## Current Priorities
 
 1. Upgrade Firebase project to Blaze plan to deploy Cloud Functions (Paused until user confirms billing status).
-2. Continue expanding unit and integration test assertions.
+2. Continue expanding unit and integration test assertions for both main and admin apps.
+3. Enhance client-side UX: booking flow, messaging, dashboard, and map interactions.
 
 ## Rejected Ideas
 
