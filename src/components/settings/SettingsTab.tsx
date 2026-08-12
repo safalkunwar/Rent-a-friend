@@ -102,7 +102,7 @@ export const SettingsTab: React.FC = () => {
       });
       showToast('Profile information updated in Firestore!', 'success');
     } catch (err) {
-      console.error(err);
+      console.error('[SettingsTab] Failed to update profile information:', err);
       showToast('Failed to update profile information.', 'error');
     } finally {
       setIsSavingProfile(false);
