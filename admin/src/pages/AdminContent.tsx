@@ -1,16 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Plus, Pencil, Trash2, Eye } from 'lucide-react';
 import { AdminContentRow } from '../types';
 import { useToast } from '../components/ui/Toast';
 import { adminRepository } from '../repositories/AdminRepository';
+import { useAdminAuth } from '../hooks/useAdmin';
+import { auditService } from '../services/audit';
+import { idempotencyService } from '../services/idempotency';
+import { adminRateLimiter } from '../services/rateLimiter';
 
 export function AdminContent() {
   const { showToast } = useToast();
+  const { user: adminUser, hasPerm } = useAdminAuth();
   const [activities, setActivities] = useState<AdminContentRow[]>([]);
   const [events, setEvents] = useState<AdminContentRow[]>([]);
   const [tab, setTab] = useState<'activities' | 'events'>('activities');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -25,13 +31,58 @@ export function AdminContent() {
     load();
   }, []);
 
-  const filtered = tab === 'activities'
-    ? activities.filter(a => a.title.toLowerCase().includes(search.toLowerCase()))
-    : events.filter(e => e.title.toLowerCase().includes(search.toLowerCase()));
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    if (tab === 'activities') {
+      return activities.filter(a => (a.title || '').toLowerCase().includes(q));
+    }
+    return events.filter(e => (e.title || '').toLowerCase().includes(q));
+  }, [activities, events, search, tab]);
 
-  const handleDelete = async (id: string) => {
-    await adminRepository.deleteContentItem(tab === 'activities' ? 'activities' : 'events', id);
-    showToast('Item deleted', 'success');
+  const executeDelete = async (id: string) => {
+    if (!adminUser || !hasPerm('content.write')) {
+      alert('Insufficient permissions');
+      return;
+    }
+
+    if (!adminRateLimiter.checkAction('content_delete', adminUser.uid, 10)) {
+      alert('Rate limit exceeded. Please wait before retrying.');
+      return;
+    }
+
+    const idempotencyKey = idempotencyService.generateKey('content_delete', id, adminUser.uid);
+    const existing = await idempotencyService.get(idempotencyKey);
+    if (existing) {
+      alert('This action has already been processed.');
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      await adminRepository.deleteContentItem(tab === 'activities' ? 'activities' : 'events', id);
+      await idempotencyService.set(idempotencyKey, 'content_delete', id, { success: true });
+
+      await auditService.log({
+        action: 'content_delete',
+        actorId: adminUser.uid,
+        actorName: adminUser.displayName || 'Admin',
+        targetType: 'content',
+        targetId: id,
+        details: { collection: tab },
+      });
+
+      if (tab === 'activities') {
+        setActivities(prev => prev.filter(a => a.id !== id));
+      } else {
+        setEvents(prev => prev.filter(e => e.id !== id));
+      }
+      showToast('Item deleted', 'success');
+    } catch (err: any) {
+      console.error('Failed to delete content:', err);
+      showToast('Failed to delete item', 'error');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
@@ -49,9 +100,11 @@ export function AdminContent() {
               <Search className="w-4 h-4 text-gray-500" />
               <input type="text" placeholder={`Search ${tab}...`} value={search} onChange={(e) => setSearch(e.target.value)} className="bg-transparent text-sm text-text-primary outline-none w-32 md:w-auto" />
             </div>
-            <button onClick={() => showToast('Create feature coming soon', 'info')} className="flex items-center gap-1 px-3 py-1.5 bg-primary-action text-background text-xs font-bold rounded-lg hover:bg-primary-action-hover transition-colors">
-              <Plus className="w-3 h-3" /> New
-            </button>
+            {hasPerm('content.write') && (
+              <button onClick={() => showToast('Create feature coming soon', 'info')} className="flex items-center gap-1 px-3 py-1.5 bg-primary-action text-background text-xs font-bold rounded-lg hover:bg-primary-action-hover transition-colors">
+                <Plus className="w-3 h-3" /> New
+              </button>
+            )}
           </div>
         </div>
         <div className="p-4 space-y-3 flex-1 overflow-y-auto">
@@ -64,8 +117,15 @@ export function AdminContent() {
                 <p className="text-xs text-text-secondary">{tab === 'activities' ? `${(item as AdminContentRow).duration} • NPR ${(item as AdminContentRow).avgPrice}/hr` : `${item.date} • ${item.location}`}</p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => showToast('Edit feature coming soon', 'info')} className="p-1.5 rounded-lg text-primary-action hover:bg-primary-action/10 transition-colors"><Pencil className="w-4 h-4" /></button>
-                <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                {hasPerm('content.read') && (
+                  <button className="p-1.5 rounded-lg text-primary-action hover:bg-primary-action/10 transition-colors"><Eye className="w-4 h-4" /></button>
+                )}
+                {hasPerm('content.write') && (
+                  <>
+                    <button onClick={() => showToast('Edit feature coming soon', 'info')} className="p-1.5 rounded-lg text-primary-action hover:bg-primary-action/10 transition-colors"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => executeDelete(item.id)} disabled={processing} className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+                  </>
+                )}
               </div>
             </div>
           ))}

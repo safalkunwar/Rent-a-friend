@@ -211,6 +211,10 @@ export class AdminRepository {
     await firestore.updateDocument(`feedback/${feedbackId}`, { status, updatedAt: new Date().toISOString() });
   }
 
+  async updateDocument(path: string, data: Record<string, unknown>) {
+    await firestore.updateDocument(path, data);
+  }
+
   async setAdminRole(uid: string, role: AdminRole) {
     await adminService.setUserRole(uid, role);
   }
