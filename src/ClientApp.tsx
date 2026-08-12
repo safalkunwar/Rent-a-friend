@@ -1311,14 +1311,14 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <p className="text-xs text-text-secondary mt-1">Book direct curated local adventures guided by trusted hosts.</p>
                     </div>
                     <button
-                      onClick={() => showToast('Activities directory synced!', 'success')}
+                      onClick={() => { document.getElementById('activities-section')?.scrollIntoView({ behavior: 'smooth' }); }}
                       className="text-xs font-bold text-primary-action hover:underline"
                     >
                       Explore All
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div id="activities-section" className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {activitiesLoading ? (
                       [1, 2, 3].map(i => (
                         <div key={i} className="aspect-[4/3] bg-surface border border-border-token/40 rounded-3xl animate-pulse"></div>
@@ -1504,7 +1504,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <h4 className="text-xs font-bold uppercase tracking-wider text-primary-action">Company</h4>
                       <ul className="space-y-1.5 text-xs text-text-secondary">
                         <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveTab('about'); }} className="hover:text-text-primary transition-colors">About SATHI</a></li>
-                        <li><a href="#" onClick={(e) => { e.preventDefault(); showToast("Careers page is under construction", "info"); }} className="hover:text-text-primary transition-colors">Careers</a></li>
+                        <li><a href="https://sathi.com/careers" target="_blank" rel="noopener noreferrer" className="hover:text-text-primary transition-colors">Careers</a></li>
                         <li><a href="https://sathi-blog.example.com" target="_blank" rel="noopener noreferrer" className="hover:text-text-primary transition-colors">Safety Blog</a></li>
                         <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveTab('partner'); }} className="hover:text-text-primary transition-colors">Partnership Hub</a></li>
                       </ul>

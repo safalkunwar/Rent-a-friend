@@ -511,9 +511,6 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
           {/* Input */}
           <div className="p-3 bg-surface border-t border-border-token shrink-0">
             <div className="flex items-center gap-2">
-              <button onClick={() => showToast('Image attachments coming soon', 'info')} className="text-text-secondary hover:text-primary-action transition p-2.5 bg-surface-elevated rounded-full shrink-0" aria-label="Attach image" title="Image attachments coming soon">
-                <Paperclip className="w-4 h-4" />
-              </button>
               <input
                 type="text"
                 value={inputText}
