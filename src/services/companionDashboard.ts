@@ -1,5 +1,5 @@
 import { firestore } from './firestore';
-import { Booking } from '../types';
+import { Booking, Companion } from '../types';
 
 export interface CompanionDashboardStats {
   totalEarnings: number;
@@ -28,10 +28,13 @@ export interface CompanionBookingRequest {
 
 export const companionDashboardService = {
   async getStats(companionId: string): Promise<CompanionDashboardStats> {
-    const bookings = await firestore.getDocuments<Booking>('bookings', {
-      where: [{ field: 'companionId', operator: '==', value: companionId }],
-      limitCount: 100,
-    });
+    const [bookings, companionDoc] = await Promise.all([
+      firestore.getDocuments<Booking>('bookings', {
+        where: [{ field: 'companionId', operator: '==', value: companionId }],
+        limitCount: 100,
+      }),
+      firestore.getDocument<Companion>(`companions/${companionId}`).catch(() => null),
+    ]);
 
     const completedBookings = bookings.filter(b => b.status === 'completed');
     const totalEarnings = completedBookings.reduce((sum, b) => sum + b.totalPrice, 0);
@@ -41,9 +44,9 @@ export const companionDashboardService = {
       pendingRequests: bookings.filter(b => b.status === 'pending').length,
       confirmedBookings: bookings.filter(b => b.status === 'confirmed').length,
       completedBookings: completedBookings.length,
-      profileViews: 0,
-      averageRating: 0,
-      totalReviews: 0,
+      profileViews: companionDoc?.profileViews || 0,
+      averageRating: companionDoc?.rating || 0,
+      totalReviews: companionDoc?.reviewsCount || 0,
     };
   },
 

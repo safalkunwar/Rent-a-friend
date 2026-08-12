@@ -39,13 +39,23 @@ try {
 }
 
 const firebaseConfig = {
-  apiKey: appletConfig.apiKey || process.env.VITE_FIREBASE_API_KEY || 'AIzaSyBE-RD9iszOTqSLuugWxuYCpIWIrPVIjsI',
-  authDomain: appletConfig.authDomain || process.env.VITE_FIREBASE_AUTH_DOMAIN || 'hamrosathi1.firebaseapp.com',
-  projectId: appletConfig.projectId || process.env.VITE_FIREBASE_PROJECT_ID || 'hamrosathi1',
-  storageBucket: appletConfig.storageBucket || process.env.VITE_FIREBASE_STORAGE_BUCKET || 'hamrosathi1.firebasestorage.app',
-  messagingSenderId: appletConfig.messagingSenderId || process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '932995524964',
-  appId: appletConfig.appId || process.env.VITE_FIREBASE_APP_ID || '1:932995524964:web:bae2033ae87165adbb3271',
+  apiKey: appletConfig.apiKey || process.env.VITE_FIREBASE_API_KEY,
+  authDomain: appletConfig.authDomain || process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: appletConfig.projectId || process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: appletConfig.storageBucket || process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: appletConfig.messagingSenderId || process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: appletConfig.appId || process.env.VITE_FIREBASE_APP_ID,
 };
+
+const missingFields = Object.entries(firebaseConfig)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (missingFields.length > 0) {
+  console.error('[SATHI Seed] Missing required Firebase config fields:', missingFields.join(', '));
+  console.error('[SATHI Seed] Provide them via firebase-applet-config.json or VITE_FIREBASE_* environment variables.');
+  process.exit(1);
+}
 
 const firestoreDatabaseId = process.env.VITE_FIREBASE_DATABASE_ID || appletConfig.firestoreDatabaseId || undefined;
 

@@ -186,6 +186,7 @@ describe('companion dashboard service', () => {
     vi.doMock('../services/firestore', () => ({
       firestore: {
         getDocuments: vi.fn().mockResolvedValue(bookings),
+        getDocument: vi.fn().mockResolvedValue({ rating: 4.5, reviewsCount: 12, profileViews: 100 }),
       },
     }));
     const { companionDashboardService } = await import('../services/companionDashboard');
@@ -193,6 +194,9 @@ describe('companion dashboard service', () => {
     expect(stats.totalEarnings).toBe(3000);
     expect(stats.pendingRequests).toBe(1);
     expect(stats.completedBookings).toBe(2);
+    expect(stats.averageRating).toBe(4.5);
+    expect(stats.totalReviews).toBe(12);
+    expect(stats.profileViews).toBe(100);
   });
 
   it('getBookingRequests returns mapped booking data', async () => {
