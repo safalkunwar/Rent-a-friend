@@ -119,6 +119,10 @@ export const hasPermission = (role: AdminRole | undefined | null, permission: st
   return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
 };
 
+export const getRolePermissions = (role: AdminRole): string[] => {
+  return ROLE_PERMISSIONS[role] ?? [];
+};
+
 export const adminService = {
   async setUserRole(uid: string, role: AdminRole) {
     const user = auth?.currentUser;
@@ -146,5 +150,23 @@ export const adminService = {
 
   async removeAdmin(uid: string) {
     await firestore.deleteDocument(`admins/${uid}`);
+  },
+
+  onAuthStateChanged(callback: (user: { uid: string; email: string | null; displayName: string | null } | null) => void): () => void {
+    if (!auth) {
+      callback(null);
+      return () => {};
+    }
+    return auth.onAuthStateChanged((user) => {
+      if (user) {
+        callback({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+        });
+      } else {
+        callback(null);
+      }
+    });
   },
 };

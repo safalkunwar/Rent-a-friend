@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { adminService, hasPermission, type AdminRole } from '../services/admin';
-import { can, canAny, canAll, getRoleBadgeColor, getRoleLabel, requirePermission } from '../security/rbac';
+import { adminService, hasPermission, type AdminRole, getRolePermissions } from '../services/admin';
+import { getRoleBadgeColor, getRoleLabel } from '../security/rbac';
 import { adminRateLimiter } from '../services/rateLimiter';
 import { aggregationService, type PlatformMetrics, type AggregatedBookingStats, type AggregatedUserStats, type AggregatedContentStats } from '../services/aggregation';
 import { healthService, type SystemHealth } from '../services/health';
@@ -36,7 +36,7 @@ export const useAdminAuth = () => {
           return;
         }
 
-        const permissions = adminService.getRolePermissions(role);
+        const permissions = getRolePermissions(role);
         setUser({
           uid: authUser.uid,
           email: authUser.email,

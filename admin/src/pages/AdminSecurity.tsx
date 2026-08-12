@@ -116,6 +116,11 @@ export function AdminSecurity() {
     });
   };
 
+  const handlePriorityChange = async (alertId: string, priority: string) => {
+    if (!adminUser || !hasPerm('sos.write')) return;
+    await executeSOSAction(alertId, 'priority', { priority });
+  };
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical': return 'bg-red-500/20 text-red-500 border-red-500/30';

@@ -105,24 +105,24 @@ export const aggregationService = {
     ]);
 
     return {
-      totalUsers: usersSnapshot.items.length,
-      activeUsers24h: activeUsersSnapshot.items.length,
-      newUsers24h: newUsersSnapshot.items.length,
-      activeCompanions: companionsSnapshot.items.filter((c: any) => c.isVerified).length,
-      pendingCompanionApplications: pendingAppsSnapshot.items.length,
-      pendingKYC: pendingKYCSnapshot.items.length,
-      activeBookings: activeBookingsSnapshot.items.length,
-      pendingBookings: pendingBookingsSnapshot.items.length,
-      completedBookings24h: completedBookingsSnapshot.items.length,
-      cancelledBookings24h: cancelledBookingsSnapshot.items.length,
-      totalReports: reportsSnapshot.items.length,
-      openReports: openReportsSnapshot.items.length,
-      activeSOSIncidents: sosSnapshot.items.length,
-      messagesSent24h: messagesSnapshot.items.length,
-      messageDeliveryFailures24h: failedMessagesSnapshot.items.length,
-      communityPosts24h: postsSnapshot.items.length,
-      comments24h: commentsSnapshot.items.length,
-      likes24h: likesSnapshot.items.length,
+      totalUsers: usersSnapshot.length,
+      activeUsers24h: activeUsersSnapshot.length,
+      newUsers24h: newUsersSnapshot.length,
+      activeCompanions: companionsSnapshot.filter((c: any) => c.isVerified).length,
+      pendingCompanionApplications: pendingAppsSnapshot.length,
+      pendingKYC: pendingKYCSnapshot.length,
+      activeBookings: activeBookingsSnapshot.length,
+      pendingBookings: pendingBookingsSnapshot.length,
+      completedBookings24h: completedBookingsSnapshot.length,
+      cancelledBookings24h: cancelledBookingsSnapshot.length,
+      totalReports: reportsSnapshot.length,
+      openReports: openReportsSnapshot.length,
+      activeSOSIncidents: sosSnapshot.length,
+      messagesSent24h: messagesSnapshot.length,
+      messageDeliveryFailures24h: failedMessagesSnapshot.length,
+      communityPosts24h: postsSnapshot.length,
+      comments24h: commentsSnapshot.length,
+      likes24h: likesSnapshot.length,
       storageUsageMB: 0,
       firebaseErrors24h: 0,
     };
@@ -139,7 +139,7 @@ export const aggregationService = {
     let totalRevenue = 0;
     const byHour = new Map<string, number>();
 
-    for (const booking of allBookings.items) {
+    for (const booking of allBookings) {
       byStatus[booking.status] = (byStatus[booking.status] || 0) + 1;
       if (booking.status === 'completed') {
         totalRevenue += booking.totalPrice || 0;
@@ -151,9 +151,9 @@ export const aggregationService = {
 
     return {
       totalRevenue,
-      averageBookingValue: allBookings.items.length > 0 ? totalRevenue / allBookings.items.filter((b) => b.status === 'completed').length : 0,
-      cancellationRate: allBookings.items.length > 0 ? (byStatus['cancelled'] || 0) / allBookings.items.length : 0,
-      completionRate: allBookings.items.length > 0 ? (byStatus['completed'] || 0) / allBookings.items.length : 0,
+      averageBookingValue: allBookings.length > 0 ? totalRevenue / allBookings.filter((b) => b.status === 'completed').length : 0,
+      cancellationRate: allBookings.length > 0 ? (byStatus['cancelled'] || 0) / allBookings.length : 0,
+      completionRate: allBookings.length > 0 ? (byStatus['completed'] || 0) / allBookings.length : 0,
       byStatus,
       byHour: Array.from(byHour.entries()).map(([timestamp, value]) => ({ timestamp, value })),
     };
@@ -170,7 +170,7 @@ export const aggregationService = {
     const byDay = new Map<string, number>();
     const activeByRole: Record<string, number> = {};
 
-    for (const user of users.items) {
+    for (const user of users) {
       const day = new Date(user.createdAt).toISOString().split('T')[0];
       byDay.set(day, (byDay.get(day) || 0) + 1);
       activeByRole[user.role] = (activeByRole[user.role] || 0) + 1;
@@ -183,9 +183,9 @@ export const aggregationService = {
     const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
-    const total = users.items.length;
-    const retention7d = total > 0 ? users.items.filter((u) => new Date(u.lastActive || u.createdAt).getTime() >= sevenDaysAgo).length / total : 0;
-    const retention30d = total > 0 ? users.items.filter((u) => new Date(u.lastActive || u.createdAt).getTime() >= thirtyDaysAgo).length / total : 0;
+    const total = users.length;
+    const retention7d = total > 0 ? users.filter((u) => new Date(u.lastActive || u.createdAt).getTime() >= sevenDaysAgo).length / total : 0;
+    const retention30d = total > 0 ? users.filter((u) => new Date(u.lastActive || u.createdAt).getTime() >= thirtyDaysAgo).length / total : 0;
 
     return {
       totalRegistrations: total,
@@ -206,12 +206,12 @@ export const aggregationService = {
     ]);
 
     return {
-      postsCount: posts.items.length,
-      commentsCount: comments.items.length,
-      likesCount: likes.items.length,
-      storiesCount: stories.items.length,
-      reportsCount: reports.items.length,
-      engagementRate: posts.items.length > 0 ? (comments.items.length + likes.items.length) / posts.items.length : 0,
+      postsCount: posts.length,
+      commentsCount: comments.length,
+      likesCount: likes.length,
+      storiesCount: stories.length,
+      reportsCount: reports.length,
+      engagementRate: posts.length > 0 ? (comments.length + likes.length) / posts.length : 0,
     };
   },
 };

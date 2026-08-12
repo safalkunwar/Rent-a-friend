@@ -1,12 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Filter, AlertTriangle, Eye, Flag, MessageSquare, ShieldAlert, CalendarDays } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Filter, AlertTriangle, Eye, Flag, MessageSquare, ShieldAlert, CalendarDays, Users, UserCheck } from 'lucide-react';
 import { adminRepository } from '../repositories/AdminRepository';
-import { useAdminPagination } from '../hooks/useAdminPagination';
 import { useAdminAuth } from '../hooks/useAdmin';
-import { VirtualizedTable } from '../components/VirtualizedTable';
 import { auditService } from '../services/audit';
 import { idempotencyService } from '../services/idempotency';
 import { adminRateLimiter } from '../services/rateLimiter';
+import { AdminReportRow } from '../types';
 
 const PAGE_SIZE = 50;
 const ROW_HEIGHT = 80;
@@ -16,29 +15,54 @@ type ReportType = 'user' | 'companion' | 'post' | 'comment' | 'message' | 'booki
 
 export function AdminReports() {
   const { user: adminUser, hasPerm } = useAdminAuth();
+  const [reports, setReports] = useState<AdminReportRow[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReportStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<ReportType | 'all'>('all');
+  const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [page, setPage] = useState(1);
 
-  const { items: reports, loading, hasMore, nextPage } = useAdminPagination<any>(
-    async ({ startAfter, limitCount }) => {
-      const result = await adminRepository.listReports(limitCount);
-      return { items: result as any[], lastVisible: result[result.length - 1] || null, hasMore: result.length >= limitCount };
-    },
-    PAGE_SIZE
-  );
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await adminRepository.listReports(PAGE_SIZE);
+        setReports(data as AdminReportRow[]);
+      } catch (err) {
+        console.error('Failed to load reports:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return reports;
-    const q = search.toLowerCase();
-    return reports.filter(r => 
-      (r.id || '').toLowerCase().includes(q) ||
-      (r.targetId || '').toLowerCase().includes(q) ||
-      (r.reason || '').toLowerCase().includes(q) ||
-      (r.targetType || '').toLowerCase().includes(q)
-    );
-  }, [reports, search]);
+    let result = reports;
+    if (statusFilter !== 'all') {
+      result = result.filter(r => r.status === statusFilter);
+    }
+    if (typeFilter !== 'all') {
+      result = result.filter(r => r.targetType === typeFilter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(r => 
+        (r.id || '').toLowerCase().includes(q) ||
+        (r.targetId || '').toLowerCase().includes(q) ||
+        (r.reason || '').toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [reports, search, statusFilter, typeFilter]);
+
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
   const executeReportAction = async (reportId: string, action: string) => {
     if (!adminUser || !hasPerm('content.write')) {
@@ -71,6 +95,8 @@ export function AdminReports() {
         targetId: reportId,
         details: { action },
       });
+
+      setReports(prev => prev.map(r => r.id === reportId ? { ...r, status: action } : r));
     } catch (err: any) {
       console.error(`Failed to ${action} report:`, err);
       alert(`Failed to ${action} report: ${err.message || 'Unknown error'}`);
@@ -117,7 +143,7 @@ export function AdminReports() {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 bg-surface-elevated px-2 py-1.5 rounded-lg border border-border-token">
             <Filter className="w-3.5 h-3.5 text-gray-500" />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as ReportStatus | 'all')} className="bg-transparent text-xs text-text-primary outline-none">
+            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as ReportStatus | 'all'); setPage(1); }} className="bg-transparent text-xs text-text-primary outline-none">
               <option value="all">All Status</option>
               <option value="open">Open</option>
               <option value="triaged">Triaged</option>
@@ -129,26 +155,19 @@ export function AdminReports() {
           </div>
           <div className="flex items-center gap-2 bg-surface-elevated px-3 py-1.5 rounded-lg border border-border-token">
             <Search className="w-4 h-4 text-gray-500" />
-            <input type="text" placeholder="Search reports..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-transparent text-sm text-text-primary outline-none w-32 md:w-auto" />
+            <input type="text" placeholder="Search reports..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="bg-transparent text-sm text-text-primary outline-none w-32 md:w-auto" />
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {loading && reports.length === 0 && (
-          <p className="text-gray-500 text-sm text-center py-8">Loading reports...</p>
-        )}
-        {!loading && filtered.length === 0 && (
-          <p className="text-gray-500 text-sm text-center py-8">No reports found.</p>
-        )}
+        {loading && <p className="text-gray-500 text-sm text-center py-8">Loading reports...</p>}
+        {!loading && filtered.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No reports found.</p>}
 
-        {filtered.length > 0 && (
-          <VirtualizedTable
-            items={filtered}
-            rowHeight={ROW_HEIGHT}
-            containerHeight={Math.min(600, filtered.length * ROW_HEIGHT)}
-            renderRow={(report) => (
-              <div className="px-5 py-3 flex items-center justify-between hover:bg-surface-elevated/50 transition-colors border-b border-border-token/50">
+        {!loading && paginated.length > 0 && (
+          <div className="divide-y divide-border-token">
+            {paginated.map((report, idx) => (
+              <div key={`${report.id || 'r'}-${idx}`} className="px-5 py-3 flex items-center justify-between hover:bg-surface-elevated/50 transition-colors">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-mono text-gray-500">{report.id}</span>
@@ -183,15 +202,19 @@ export function AdminReports() {
                   )}
                 </div>
               </div>
-            )}
-          />
+            ))}
+          </div>
         )}
       </div>
 
-      {hasMore && (
-        <div className="p-4 border-t border-border-token flex justify-center">
-          <button onClick={nextPage} disabled={loading} className="px-6 py-2 bg-primary-action text-background text-xs font-bold rounded-lg hover:bg-primary-action-hover transition-colors disabled:opacity-50">
-            {loading ? 'Loading...' : 'Load More'}
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-border-token flex items-center justify-between">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1 || loading} className="px-4 py-2 bg-surface-elevated text-text-secondary border border-border-token text-xs rounded-lg hover:text-text-primary transition-colors disabled:opacity-50">
+            Previous
+          </button>
+          <span className="text-xs text-gray-500">Page {page} of {totalPages}</span>
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages || loading} className="px-4 py-2 bg-surface-elevated text-text-secondary border border-border-token text-xs rounded-lg hover:text-text-primary transition-colors disabled:opacity-50">
+            Next
           </button>
         </div>
       )}

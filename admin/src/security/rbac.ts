@@ -1,19 +1,6 @@
-import { adminService, hasPermission, type AdminRole } from '../services/admin';
+import { hasPermission, type AdminRole } from '../services/admin';
 
 export type Permission = string;
-
-export const requirePermission = (permission: Permission): boolean => {
-  const role = adminService.getUserRoleSync?.() ?? null;
-  return hasPermission(role, permission);
-};
-
-export const can = (permission: Permission): boolean => requirePermission(permission);
-
-export const canAny = (permissions: Permission[]): boolean =>
-  permissions.some(requirePermission);
-
-export const canAll = (permissions: Permission[]): boolean =>
-  permissions.every(requirePermission);
 
 export const getRoleBadgeColor = (role: AdminRole): string => {
   switch (role) {

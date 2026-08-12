@@ -23,6 +23,7 @@ export interface AdminReportRow {
   id: string;
   reporterId: string;
   targetId: string;
+  targetType: string;
   reason: string;
   status: string;
   createdAt: string;
@@ -38,6 +39,8 @@ export interface AdminCompanionRow {
   hourlyRate: number;
   imageUrl?: string;
   languages?: string[];
+  email?: string;
+  status?: string;
 }
 
 export interface AdminNotificationRow {
