@@ -3,36 +3,49 @@ import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'fir
 import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getMessaging, type Messaging } from 'firebase/messaging';
+import appletConfig from '../../firebase-applet-config.json';
+
+const EXPECTED_PROJECT_ID = 'hamrosathi1';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || appletConfig.apiKey,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || appletConfig.authDomain,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || appletConfig.projectId,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || appletConfig.storageBucket,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || appletConfig.messagingSenderId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || appletConfig.appId,
 };
 
-const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID;
+const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || appletConfig.firestoreDatabaseId || undefined;
+
+const missingFields = Object.entries(firebaseConfig)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (missingFields.length > 0) {
+  console.error('[SATHI Admin] FATAL: Missing required Firebase config fields:', missingFields.join(', '));
+  console.error('[SATHI Admin] Provide them via firebase-applet-config.json or VITE_FIREBASE_* environment variables.');
+  throw new Error(`Missing Firebase config: ${missingFields.join(', ')}`);
+}
+
+if (firebaseConfig.projectId !== EXPECTED_PROJECT_ID) {
+  console.error(`[SATHI Admin] FATAL: Wrong Firebase project detected: ${firebaseConfig.projectId}`);
+  console.error(`[SATHI Admin] Expected project: ${EXPECTED_PROJECT_ID}`);
+  console.error('[SATHI Admin] Do NOT silently switch databases. Fix your configuration.');
+  throw new Error(`Wrong Firebase project: ${firebaseConfig.projectId}. Expected: ${EXPECTED_PROJECT_ID}`);
+}
+
+console.log('[SATHI Admin] Firebase config validated:', {
+  projectId: firebaseConfig.projectId,
+  firestoreDatabaseId,
+  authDomain: firebaseConfig.authDomain,
+});
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
 let messaging: Messaging | null = null;
-
-const hasValidConfig = Boolean(
-  firebaseConfig.apiKey &&
-  firebaseConfig.projectId &&
-  firebaseConfig.authDomain &&
-  firebaseConfig.appId
-);
-
-console.log('[SATHI Admin] Firebase config loaded:', {
-  hasValidConfig,
-  projectId: firebaseConfig.projectId || 'none',
-  firestoreDatabaseId,
-});
 
 const enablePersistenceGracefully = (firestoreDb: Firestore) => {
   if (typeof window !== 'undefined') {
@@ -50,35 +63,42 @@ const enablePersistenceGracefully = (firestoreDb: Firestore) => {
   }
 };
 
-if (hasValidConfig && !getApps().length) {
-  try {
+try {
+  if (!getApps().length) {
     app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    setPersistence(auth, browserLocalPersistence)
-      .then(() => console.log('[SATHI Admin] Firebase Auth persistence configured: LOCAL'))
-      .catch((err) => console.error('[SATHI Admin] Failed to set Firebase Auth persistence:', err));
-    db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
-    enablePersistenceGracefully(db);
-    storage = getStorage(app);
-    console.log('[SATHI Admin] Firebase initialized:', { app: !!app, auth: !!auth, db: !!db, storage: !!storage });
-    try {
-      messaging = getMessaging(app);
-      console.log('[SATHI Admin] Messaging initialized:', !!messaging);
-    } catch (e) {
-      console.warn('[SATHI Admin] FCM not available:', e);
-    }
-  } catch (error) {
-    console.error('[SATHI Admin] Firebase initialization failed:', error);
+    console.log('[SATHI Admin] Firebase app initialized');
+  } else {
+    app = getApps()[0];
+    console.log('[SATHI Admin] Firebase app reused');
   }
-} else if (getApps().length) {
-  app = getApps()[0];
+
   auth = getAuth(app);
   setPersistence(auth, browserLocalPersistence)
-    .then(() => console.log('[SATHI Admin] Firebase Auth persistence configured for reused app: LOCAL'))
-    .catch((err) => console.error('[SATHI Admin] Failed to set Firebase Auth persistence on reuse:', err));
+    .then(() => console.log('[SATHI Admin] Firebase Auth persistence configured: LOCAL'))
+    .catch((err) => console.error('[SATHI Admin] Failed to set Firebase Auth persistence:', err));
+
   db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
   enablePersistenceGracefully(db);
+
   storage = getStorage(app);
+
+  try {
+    messaging = getMessaging(app);
+    console.log('[SATHI Admin] Messaging initialized:', !!messaging);
+  } catch (e) {
+    console.warn('[SATHI Admin] FCM not available:', e);
+  }
+
+  console.log('[SATHI Admin] Firebase initialized successfully:', {
+    app: !!app,
+    auth: !!auth,
+    db: !!db,
+    storage: !!storage,
+    messaging: !!messaging,
+  });
+} catch (error) {
+  console.error('[SATHI Admin] FATAL: Firebase initialization failed:', error);
+  throw error;
 }
 
 export { app, auth, db, storage, messaging };
