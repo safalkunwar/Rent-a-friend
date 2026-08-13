@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AdminAuthProvider, useAdminAuth } from './contexts/AdminAuthContext';
 import { AdminAuthGuard } from './components/AdminAuthGuard';
 import { AdminErrorBoundary } from './components/AdminErrorBoundary';
+import { ToastProvider } from './components/ui/Toast';
 import { AdminLogin } from './pages/AdminLogin';
 import { AdminUnauthorized } from './pages/AdminUnauthorized';
 import { AdminOverview } from './pages/AdminOverview';
@@ -171,7 +172,9 @@ export default function App() {
     <AdminErrorBoundary>
       <BrowserRouter>
         <AdminAuthProvider>
-          <AdminAppRoutes />
+          <ToastProvider>
+            <AdminAppRoutes />
+          </ToastProvider>
         </AdminAuthProvider>
       </BrowserRouter>
     </AdminErrorBoundary>
