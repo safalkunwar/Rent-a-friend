@@ -1,17 +1,26 @@
 import React from 'react';
-import { useAdminAuth } from '../hooks/useAdmin';
+import { useAdminAuth } from '../contexts/AdminAuthContext';
 import { LoadingScreen } from './LoadingScreen';
+import { AdminUnauthorized } from '../pages/AdminUnauthorized';
 
-export const AdminAuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { status } = useAdminAuth('users.read');
+interface AdminAuthGuardProps {
+  children: React.ReactNode;
+  requiredPermission?: string;
+}
+
+export const AdminAuthGuard: React.FC<AdminAuthGuardProps> = ({ children, requiredPermission }) => {
+  const { status, session, hasPermission } = useAdminAuth();
 
   if (status === 'loading') {
     return <LoadingScreen />;
   }
 
-  if (status === 'unauthorized') {
-    window.location.replace('/');
-    return null;
+  if (status === 'unauthorized' || status === 'access_restricted') {
+    return <AdminUnauthorized />;
+  }
+
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    return <AdminUnauthorized />;
   }
 
   return <>{children}</>;

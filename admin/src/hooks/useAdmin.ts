@@ -1,13 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { auth } from '../firebase';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { firestore } from '../services/firestore';
-import { hasPermission, getRolePermissions, type AdminRole } from '../services/admin';
-import { adminRateLimiter } from '../services/rateLimiter';
+import { useAdminAuth as useAdminSession } from '../contexts/AdminAuthContext';
+import { type AdminRole } from '../services/admin';
 import { aggregationService, type PlatformMetrics, type AggregatedBookingStats, type AggregatedUserStats, type AggregatedContentStats } from '../services/aggregation';
 import { healthService, type SystemHealth } from '../services/health';
-
-type AuthStatus = 'loading' | 'authenticated' | 'unauthorized';
 
 export interface AdminAuthUser {
   uid: string;
@@ -18,86 +13,38 @@ export interface AdminAuthUser {
 }
 
 export const useAdminAuth = (requiredPermission?: string) => {
-  const [status, setStatus] = useState<AuthStatus>('loading');
-  const [user, setUser] = useState<AdminAuthUser | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { session, status, error, hasPermission, isActionAllowed } = useAdminSession();
+  
+  const mappedUser: AdminAuthUser | null = session ? {
+    uid: session.uid,
+    email: session.email,
+    displayName: session.displayName,
+    role: session.role,
+    permissions: session.permissions,
+  } : null;
 
-  useEffect(() => {
-    let cancelled = false;
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (cancelled) return;
-      if (!firebaseUser) {
-        setUser(null);
-        setStatus('unauthorized');
-        return;
-      }
-
-      try {
-        const claimRole = (await firebaseUser.getIdTokenResult()).claims.adminRole as AdminRole | undefined;
-        const adminDoc = claimRole 
-          ? { role: claimRole }
-          : await firestore.getDocument<{ role: AdminRole }>(`admins/${firebaseUser.uid}`);
-        const role = adminDoc?.role ?? null;
-
-        if (!role) {
-          setUser(null);
-          setStatus('unauthorized');
-          return;
-        }
-
-        const permissions = getRolePermissions(role);
-        const adminUser: AdminAuthUser = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          role,
-          permissions,
-        };
-
-        setUser(adminUser);
-
-        if (requiredPermission && !permissions.includes(requiredPermission)) {
-          setStatus('unauthorized');
-          return;
-        }
-
-        setStatus('authenticated');
-      } catch (err: any) {
-        setError(err.message || 'Failed to load admin session');
-        setStatus('unauthorized');
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, [requiredPermission]);
+  const effectiveStatus = requiredPermission && status === 'authenticated' && !hasPermission(requiredPermission)
+    ? 'unauthorized'
+    : status;
 
   const hasPerm = useCallback((permission: string): boolean => {
-    if (!user) return false;
-    return user.permissions.includes(permission);
-  }, [user]);
+    return hasPermission(permission);
+  }, [hasPermission]);
 
   const canDo = useCallback((permission: string): boolean => {
-    return hasPerm(permission);
-  }, [hasPerm]);
-
-  const isActionAllowed = useCallback((action: string): boolean => {
-    if (!user) return false;
-    return adminRateLimiter.checkAction(action, user.uid);
-  }, [user]);
+    return hasPermission(permission);
+  }, [hasPermission]);
 
   return {
-    status,
-    user,
-    error,
+    status: effectiveStatus,
+    user: mappedUser,
+    error: error || null,
     hasPerm,
     canDo,
     isActionAllowed,
-    isAdmin: status === 'authenticated',
-    role: user?.role || null,
-    permissions: user?.permissions || [],
+    isAdmin: effectiveStatus === 'authenticated',
+    role: mappedUser?.role || null,
+    permissions: mappedUser?.permissions || [],
   };
 };
 
