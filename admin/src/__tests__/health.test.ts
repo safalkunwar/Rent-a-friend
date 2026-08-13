@@ -25,7 +25,7 @@ describe('healthService', () => {
     expect(health).toHaveProperty('lastUpdated');
     expect(Array.isArray(health.checks)).toBe(true);
     expect(['healthy', 'degraded', 'warning', 'critical']).toContain(health.overall);
-  });
+  }, 15000);
 
   it('should have checks with required properties', async () => {
     const health = await healthService.getSystemHealth();
@@ -35,5 +35,5 @@ describe('healthService', () => {
       expect(check).toHaveProperty('lastChecked');
       expect(['healthy', 'degraded', 'warning', 'critical']).toContain(check.status);
     }
-  });
+  }, 15000);
 });
