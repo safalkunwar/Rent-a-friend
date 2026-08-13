@@ -16,7 +16,7 @@ export const AdminLogin: React.FC = () => {
 
   useEffect(() => {
     if (session) {
-      navigate('/dashboard', { replace: true });
+      navigate('/', { replace: true });
     }
   }, [session, navigate]);
 
@@ -26,7 +26,7 @@ export const AdminLogin: React.FC = () => {
     try {
       await login(email, password);
       showToast('Welcome to SATHI Admin Console', 'success');
-      navigate('/dashboard', { replace: true });
+      navigate('/', { replace: true });
     } catch (err: any) {
       showToast(err.message || 'Authentication failed', 'error');
     } finally {
