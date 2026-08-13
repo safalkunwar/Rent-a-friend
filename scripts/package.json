@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "grant-admin": "npx tsx scripts/grant-admin-role.ts"
+    "grant-admin": "npx tsx grant-admin-role.ts"
   }
 }

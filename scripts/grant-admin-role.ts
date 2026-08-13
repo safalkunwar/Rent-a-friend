@@ -6,8 +6,11 @@ let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
 
+const FIREBASE_PROJECT_ID = 'hamrosathi1';
+
 try {
-  app = !getApps().length ? initializeApp() : getApps()[0];
+  const appOptions = { projectId: FIREBASE_PROJECT_ID };
+  app = !getApps().length ? initializeApp(appOptions) : getApps()[0];
   auth = getAuth(app);
   db = getFirestore(app);
 } catch (err) {
@@ -24,6 +27,12 @@ const printBanner = () => {
 ║  The user must already exist in Firebase Authentication ║
 ╚══════════════════════════════════════════════════════════╝
 `);
+
+  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.FIREBASE_TOKEN) {
+    console.log('⚠️  No Google credentials detected.');
+    console.log('   Set GOOGLE_APPLICATION_CREDENTIALS to a service account JSON,');
+    console.log('   or run: firebase login && firebase use --add\n');
+  }
 };
 
 const prompt = (question: string): string => {
@@ -51,14 +60,9 @@ const lookupUser = async (identifier: string) => {
 const grantAdminRole = async () => {
   printBanner();
 
-  const identifier = await prompt('Enter user email or UID: ');
-  if (!identifier) {
-    console.error('❌ Email/UID is required.');
-    process.exit(1);
-  }
-
-  const roleInput = await prompt('Enter admin role (SUPER_ADMIN, PLATFORM_ADMIN, SAFETY_ADMIN, MODERATION_ADMIN, SUPPORT_AGENT, BOOKING_ADMIN, FINANCE_ADMIN, KYC_REVIEWER, CONTENT_ADMIN, ANALYTICS_ADMIN, READ_ONLY_ADMIN) [SUPER_ADMIN]: ');
-  const role = roleInput || 'SUPER_ADMIN';
+const args = process.argv.slice(2);
+const identifier = args[0] || (await prompt('Enter user email or UID: '));
+const role = args[1] || (await prompt('Enter admin role (SUPER_ADMIN, PLATFORM_ADMIN, SAFETY_ADMIN, MODERATION_ADMIN, SUPPORT_AGENT, BOOKING_ADMIN, FINANCE_ADMIN, KYC_REVIEWER, CONTENT_ADMIN, ANALYTICS_ADMIN, READ_ONLY_ADMIN) [SUPER_ADMIN]: ')) || 'SUPER_ADMIN';
 
   try {
     const userRecord = await lookupUser(identifier);

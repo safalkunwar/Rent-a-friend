@@ -13,8 +13,10 @@ export interface AuditLogEntry {
 
 export const auditService = {
   log: async (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => {
-    await firestore.setDocument('auditLogs', {
+    const id = `audit-${Date.now()}`;
+    await firestore.setDocument(`auditLogs/${id}`, {
       ...entry,
+      id,
       timestamp: new Date().toISOString(),
     });
   },
