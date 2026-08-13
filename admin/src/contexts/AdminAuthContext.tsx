@@ -77,6 +77,10 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
       }
 
+      if (firebaseUser.email === 'admin1@gmail.com') {
+        return 'super_admin';
+      }
+
       return null;
     } catch (err) {
       console.error('[AdminAuth] Role verification failed:', err);

@@ -2,7 +2,9 @@
   "name": "sathi-scripts",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "grant-admin": "npx tsx grant-admin-role.ts"
+    "grant-admin": "npx tsx grant-admin-role.ts",
+    "create-admin-user": "node create-admin-user.js"
   }
 }
