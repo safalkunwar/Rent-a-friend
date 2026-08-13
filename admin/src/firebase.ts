@@ -16,7 +16,7 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || appletConfig.appId,
 };
 
-const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || appletConfig.firestoreDatabaseId || undefined;
+const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || (appletConfig as any).firestoreDatabaseId || undefined;
 
 const missingFields = Object.entries(firebaseConfig)
   .filter(([, value]) => !value)
