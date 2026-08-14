@@ -1,11 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { MapPin, AlertTriangle, Navigation, CheckCircle2, X } from 'lucide-react';
 import * as motion from 'motion/react-client';
+import { sosService } from '../services/sos';
+import { auth } from '../firebase';
 
-export const SafetyWidget: React.FC<{ isVisible?: boolean, onClose?: () => void }> = ({ isVisible = true, onClose }) => {
+export const SafetyWidget: React.FC<{ isVisible?: boolean, onClose?: () => void, bookingId?: string }> = ({ isVisible = true, onClose, bookingId }) => {
   const [sosActive, setSosActive] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // If we want to hide it automatically, we can do it in the parent
+  const handleSOS = useCallback(async () => {
+    if (sosActive) {
+      setSosActive(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+      });
+
+      await sosService.createAlert({
+        bookingId,
+        location: {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          address: 'Current location',
+        },
+        message: 'Emergency SOS triggered from SATHI app',
+        severity: 'critical',
+      });
+
+      setSosActive(true);
+    } catch (error) {
+      console.error('SOS activation failed:', error);
+      alert('Failed to activate SOS. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [sosActive, bookingId]);
+
   if (!isVisible) return null;
 
   return (
@@ -50,15 +84,21 @@ export const SafetyWidget: React.FC<{ isVisible?: boolean, onClose?: () => void 
         </div>
 
         <button 
-          onClick={() => setSosActive(!sosActive)}
-          className={`w-full flex items-center justify-center gap-2 py-2 font-medium text-sm rounded-lg transition-colors ${
+          onClick={handleSOS}
+          disabled={loading}
+          className={`w-full flex items-center justify-center gap-2 py-2 font-medium text-sm rounded-lg transition-colors disabled:opacity-50 ${
             sosActive 
               ? 'bg-red-600 hover:bg-red-700 text-white border border-red-500'
               : 'bg-red-900/30 border border-red-500/30 hover:bg-red-900/50 text-red-500'
           }`}
         >
-          {sosActive ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-          {sosActive ? 'Cancel SOS' : 'Emergency SOS'}
+          {loading ? (
+            'Activating...'
+          ) : sosActive ? (
+            <><CheckCircle2 className="w-4 h-4" /> Cancel SOS</>
+          ) : (
+            <><AlertTriangle className="w-4 h-4" /> Emergency SOS</>
+          )}
         </button>
       </div>
     </motion.div>

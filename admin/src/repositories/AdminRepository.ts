@@ -226,6 +226,195 @@ export class AdminRepository {
   async removeAdmin(uid: string) {
     await adminService.removeAdmin(uid);
   }
+
+  async listStories(limitCount = 100) {
+    return firestore.getDocuments<any>('stories', {
+      orderByField: 'createdAt',
+      orderDirection: 'desc',
+      limitCount,
+    });
+  }
+
+  async updateStory(storyId: string, data: Record<string, unknown>) {
+    await firestore.updateDocument(`stories/${storyId}`, { ...data, updatedAt: new Date().toISOString() });
+  }
+
+  async deleteStory(storyId: string) {
+    await firestore.deleteDocument(`stories/${storyId}`);
+  }
+
+  async listPayments(limitCount = 100) {
+    return firestore.getDocuments<any>('payments', {
+      orderByField: 'createdAt',
+      orderDirection: 'desc',
+      limitCount,
+    });
+  }
+
+  async updatePaymentStatus(paymentId: string, status: string) {
+    await firestore.updateDocument(`payments/${paymentId}`, { status, updatedAt: new Date().toISOString() });
+  }
+
+  async listMessages(limitCount = 100) {
+    return firestore.getDocuments<any>('messages', {
+      orderByField: 'timestamp',
+      orderDirection: 'desc',
+      limitCount,
+    });
+  }
+
+  async listConversations(limitCount = 100) {
+    return firestore.getDocuments<any>('conversations', {
+      orderByField: 'updatedAt',
+      orderDirection: 'desc',
+      limitCount,
+    });
+  }
+
+  async listSupportTickets(limitCount = 100) {
+    return firestore.getDocuments<any>('support_tickets', {
+      orderByField: 'createdAt',
+      orderDirection: 'desc',
+      limitCount,
+    });
+  }
+
+  async updateSupportTicketStatus(ticketId: string, status: string) {
+    await firestore.updateDocument(`support_tickets/${ticketId}`, { status, updatedAt: new Date().toISOString() });
+  }
+
+  async listPartners(limitCount = 100) {
+    return firestore.getDocuments<any>('partners', { limitCount });
+  }
+
+  async deletePartner(partnerId: string) {
+    await firestore.deleteDocument(`partners/${partnerId}`);
+  }
+
+  async listCities(limitCount = 100) {
+    return firestore.getDocuments<any>('cities', { limitCount });
+  }
+
+  async createCity(data: Record<string, unknown>) {
+    return firestore.setDocument(`cities/${data.id}`, data);
+  }
+
+  async updateCity(cityId: string, data: Record<string, unknown>) {
+    return firestore.updateDocument(`cities/${cityId}`, data);
+  }
+
+  async deleteCity(cityId: string) {
+    return firestore.deleteDocument(`cities/${cityId}`);
+  }
+
+  async listHotels(limitCount = 100) {
+    return firestore.getDocuments<any>('hotels', { limitCount });
+  }
+
+  async createHotel(data: Record<string, unknown>) {
+    return firestore.setDocument(`hotels/${data.id}`, data);
+  }
+
+  async updateHotel(hotelId: string, data: Record<string, unknown>) {
+    return firestore.updateDocument(`hotels/${hotelId}`, data);
+  }
+
+  async deleteHotel(hotelId: string) {
+    return firestore.deleteDocument(`hotels/${hotelId}`);
+  }
+
+  async listRestaurants(limitCount = 100) {
+    return firestore.getDocuments<any>('restaurants', { limitCount });
+  }
+
+  async createRestaurant(data: Record<string, unknown>) {
+    return firestore.setDocument(`restaurants/${data.id}`, data);
+  }
+
+  async updateRestaurant(restaurantId: string, data: Record<string, unknown>) {
+    return firestore.updateDocument(`restaurants/${restaurantId}`, data);
+  }
+
+  async deleteRestaurant(restaurantId: string) {
+    return firestore.deleteDocument(`restaurants/${restaurantId}`);
+  }
+
+  async listCafes(limitCount = 100) {
+    return firestore.getDocuments<any>('cafes', { limitCount });
+  }
+
+  async createCafe(data: Record<string, unknown>) {
+    return firestore.setDocument(`cafes/${data.id}`, data);
+  }
+
+  async updateCafe(cafeId: string, data: Record<string, unknown>) {
+    return firestore.updateDocument(`cafes/${cafeId}`, data);
+  }
+
+  async deleteCafe(cafeId: string) {
+    return firestore.deleteDocument(`cafes/${cafeId}`);
+  }
+
+  async listLikes(limitCount = 100) {
+    return firestore.getDocuments<any>('likes', {
+      orderByField: 'createdAt',
+      orderDirection: 'desc',
+      limitCount,
+    });
+  }
+
+  async listStoryLikes(limitCount = 100) {
+    return firestore.getDocuments<any>('story_likes', {
+      orderByField: 'createdAt',
+      orderDirection: 'desc',
+      limitCount,
+    });
+  }
+
+  async getAggregatedStats() {
+    const [
+      usersCount,
+      companionsCount,
+      bookingsCount,
+      postsCount,
+      commentsCount,
+      likesCount,
+      storyLikesCount,
+      storiesCount,
+      sosAlertsCount,
+      reportsCount,
+      paymentsCompleted,
+      paymentsPending,
+    ] = await Promise.all([
+      firestore.getDocuments<any>('users', { limitCount: 1 }),
+      firestore.getDocuments<any>('companions', { limitCount: 1 }),
+      firestore.getDocuments<any>('bookings', { limitCount: 1 }),
+      firestore.getDocuments<any>('community_posts', { limitCount: 1 }),
+      firestore.getDocuments<any>('comments', { limitCount: 1 }),
+      firestore.getDocuments<any>('likes', { limitCount: 1 }),
+      firestore.getDocuments<any>('story_likes', { limitCount: 1 }),
+      firestore.getDocuments<any>('stories', { limitCount: 1 }),
+      firestore.getDocuments<any>('sosAlerts', { limitCount: 1 }),
+      firestore.getDocuments<any>('reports', { limitCount: 1 }),
+      firestore.getDocuments<any>('payments', { where: [{ field: 'status', operator: '==', value: 'completed' }], limitCount: 1 }),
+      firestore.getDocuments<any>('payments', { where: [{ field: 'status', operator: '==', value: 'pending' }], limitCount: 1 }),
+    ]);
+
+    return {
+      users: usersCount.length,
+      companions: companionsCount.length,
+      bookings: bookingsCount.length,
+      posts: postsCount.length,
+      comments: commentsCount.length,
+      likes: likesCount.length,
+      storyLikes: storyLikesCount.length,
+      stories: storiesCount.length,
+      sosAlerts: sosAlertsCount.length,
+      reports: reportsCount.length,
+      paymentsCompleted: paymentsCompleted.length,
+      paymentsPending: paymentsPending.length,
+    };
+  }
 }
 
 export const adminRepository = new AdminRepository();

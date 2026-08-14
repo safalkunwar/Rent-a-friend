@@ -18,6 +18,8 @@ import {
   applyThemeMode, 
   ThemeMode 
 } from '../../services/preferences';
+import { SupportModal } from '../modals/SupportModal';
+import { FeedbackModal } from '../modals/FeedbackModal';
 import * as motion from 'motion/react-client';
 
 type ActiveSection = 'appearance' | 'account' | 'privacy' | 'notifications' | 'security' | 'about';
@@ -39,6 +41,10 @@ export const SettingsTab: React.FC = () => {
   
   // Security state
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  
+  // Support and feedback modals
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Sync state if currentUser changes
   useEffect(() => {
@@ -630,11 +636,13 @@ export const SettingsTab: React.FC = () => {
                     { title: 'Terms & Conditions', desc: 'Read SATHI code of conduct guidelines and hourly service rates rules.', icon: <FileText className="w-4 h-4 text-primary-action" /> },
                     { title: 'Privacy Policy', desc: 'How we securely isolate location tracking and KYC identification details.', icon: <FileText className="w-4 h-4 text-primary-action" /> },
                     { title: 'Community Guidelines', desc: 'Our absolute zero-tolerance standard for dating or commercial harassment.', icon: <Heart className="w-4 h-4 text-red-500" /> },
-                    { title: 'Open Source Licenses', desc: 'View complete list of compiled NPM dependencies, Vite and Tailwind plugins.', icon: <Globe className="w-4 h-4 text-primary-action" /> }
+                    { title: 'Open Source Licenses', desc: 'View complete list of compiled NPM dependencies, Vite and Tailwind plugins.', icon: <Globe className="w-4 h-4 text-primary-action" /> },
+                    { title: 'Contact Support', desc: 'Create a support ticket for booking, payment, or account issues.', icon: <MessageSquare className="w-4 h-4 text-primary-action" />, action: () => setShowSupportModal(true) },
+                    { title: 'Send Feedback', desc: 'Share your experience and help us improve SATHI.', icon: <Sparkles className="w-4 h-4 text-yellow-500" />, action: () => setShowFeedbackModal(true) }
                   ].map((docItem, index) => (
                     <button
                       key={index}
-                      onClick={() => showToast(`Opening ${docItem.title} document...`, 'info')}
+                      onClick={docItem.action || (() => showToast(`Opening ${docItem.title} document...`, 'info'))}
                       className="flex items-start gap-3 p-4 rounded-2xl border border-white/5 bg-surface-elevated/10 hover:bg-white/5 transition-all text-left cursor-pointer"
                     >
                       <div className="p-2 bg-black/20 rounded-xl mt-0.5">
@@ -659,6 +667,9 @@ export const SettingsTab: React.FC = () => {
           )}
         </div>
       </div>
+      
+      <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
+      <FeedbackModal isOpen={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} />
     </div>
   );
 };

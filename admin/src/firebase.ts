@@ -16,8 +16,6 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || appletConfig.appId,
 };
 
-const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || (appletConfig as any).firestoreDatabaseId || undefined;
-
 const missingFields = Object.entries(firebaseConfig)
   .filter(([, value]) => !value)
   .map(([key]) => key);
@@ -37,7 +35,6 @@ if (firebaseConfig.projectId !== EXPECTED_PROJECT_ID) {
 
 console.log('[SATHI Admin] Firebase config validated:', {
   projectId: firebaseConfig.projectId,
-  firestoreDatabaseId,
   authDomain: firebaseConfig.authDomain,
 });
 
@@ -77,7 +74,7 @@ try {
     .then(() => console.log('[SATHI Admin] Firebase Auth persistence configured: LOCAL'))
     .catch((err) => console.error('[SATHI Admin] Failed to set Firebase Auth persistence:', err));
 
-  db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
+  db = getFirestore(app);
   enablePersistenceGracefully(db);
 
   storage = getStorage(app);

@@ -21,8 +21,8 @@ SATHI is a fully integrated, multi-user full-stack application built with React 
 ## Completed Multi-User Hardening Milestones
 
 1. **Firebase Single Source of Truth:**
-   - Single authoritative configuration (`hamrosathi1` / `ai-studio-ccc6f8a5-34d2-4bfc-a68f-689d7d401cb4`).
-   - Clean environment variable loading with startup checks.
+    - Single authoritative configuration (`hamrosathi1` / default database `(default)`).
+    - Clean environment variable loading with startup checks.
 
 2. **User Account Isolation:**
    - Complete purging of local cached user state on logout.

@@ -57,11 +57,9 @@ if (missingFields.length > 0) {
   process.exit(1);
 }
 
-const firestoreDatabaseId = process.env.VITE_FIREBASE_DATABASE_ID || appletConfig.firestoreDatabaseId || undefined;
-
-console.log('[SATHI Seed] Initializing Firebase with Project ID:', firebaseConfig.projectId, 'Database ID:', firestoreDatabaseId);
+console.log('[SATHI Seed] Initializing Firebase with Project ID:', firebaseConfig.projectId);
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-const db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
+const db = getFirestore(app);
 const authInstance = getAuth(app);
 
 // Batch writer utility with chunks

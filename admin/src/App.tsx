@@ -17,7 +17,18 @@ import { AdminContent } from './pages/AdminContent';
 import { AdminAuditLogs } from './pages/AdminAuditLogs';
 import { AdminModeration } from './pages/AdminModeration';
 import { AdminReports } from './pages/AdminReports';
-import { Activity, UserCheck, CalendarDays, ShieldAlert, MessageSquare, LogOut, Users, Briefcase, Flag } from 'lucide-react';
+import { AdminStories } from './pages/AdminStories';
+import { AdminPayments } from './pages/AdminPayments';
+import { AdminMessages } from './pages/AdminMessages';
+import { AdminPartners } from './pages/AdminPartners';
+import { AdminSupport } from './pages/AdminSupport';
+import { AdminCities } from './pages/AdminCities';
+import { AdminHotels } from './pages/AdminHotels';
+import { AdminRestaurants } from './pages/AdminRestaurants';
+import { AdminCafes } from './pages/AdminCafes';
+import { AdminLikes } from './pages/AdminLikes';
+import { AdminAnalytics } from './pages/AdminAnalytics';
+import { Activity, UserCheck, CalendarDays, ShieldAlert, MessageSquare, LogOut, Users, Briefcase, Flag, Image, CreditCard, MessageCircle, Store, MapPin, Hotel, Utensils, Coffee, Heart, BarChart3 } from 'lucide-react';
 import * as motion from 'motion/react-client';
 
 const AdminLayout: React.FC<{ activeTab: string; onTabChange: (tab: string) => void; children: React.ReactNode }> = ({ 
@@ -48,6 +59,39 @@ const AdminLayout: React.FC<{ activeTab: string; onTabChange: (tab: string) => v
           </button>
           <button onClick={() => onTabChange('content')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'content' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
             <Briefcase className="w-4 h-4" /> Content
+          </button>
+          <button onClick={() => onTabChange('stories')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'stories' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <Image className="w-4 h-4" /> Stories
+          </button>
+          <button onClick={() => onTabChange('partners')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'partners' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <Store className="w-4 h-4" /> Partners
+          </button>
+          <button onClick={() => onTabChange('cities')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'cities' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <MapPin className="w-4 h-4" /> Cities
+          </button>
+          <button onClick={() => onTabChange('hotels')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'hotels' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <Hotel className="w-4 h-4" /> Hotels
+          </button>
+          <button onClick={() => onTabChange('restaurants')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'restaurants' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <Utensils className="w-4 h-4" /> Restaurants
+          </button>
+          <button onClick={() => onTabChange('cafes')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'cafes' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <Coffee className="w-4 h-4" /> Cafes
+          </button>
+          <button onClick={() => onTabChange('likes')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'likes' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <Heart className="w-4 h-4" /> Likes
+          </button>
+          <button onClick={() => onTabChange('analytics')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'analytics' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <BarChart3 className="w-4 h-4" /> Analytics
+          </button>
+          <button onClick={() => onTabChange('payments')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'payments' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <CreditCard className="w-4 h-4" /> Payments
+          </button>
+          <button onClick={() => onTabChange('messages')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'messages' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <MessageCircle className="w-4 h-4" /> Messages
+          </button>
+          <button onClick={() => onTabChange('support')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'support' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <MessageSquare className="w-4 h-4" /> Support
           </button>
           <button onClick={() => onTabChange('moderation')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'moderation' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
             <ShieldAlert className="w-4 h-4" /> Moderation
@@ -87,6 +131,17 @@ const AdminLayout: React.FC<{ activeTab: string; onTabChange: (tab: string) => v
                   {activeTab === 'companions' && 'Manage companion profiles and verifications.'}
                   {activeTab === 'bookings' && 'Manage all platform transactions.'}
                   {activeTab === 'content' && 'Manage activities and events.'}
+                  {activeTab === 'stories' && 'Moderate user stories and story likes.'}
+                  {activeTab === 'partners' && 'Manage business partners.'}
+                  {activeTab === 'cities' && 'Manage city locations and coordinates.'}
+                  {activeTab === 'hotels' && 'Manage hotel listings.'}
+                  {activeTab === 'restaurants' && 'Manage restaurant listings.'}
+                  {activeTab === 'cafes' && 'Manage cafe listings.'}
+                  {activeTab === 'likes' && 'Inspect post and story likes.'}
+                  {activeTab === 'analytics' && 'Platform metrics and engagement analytics.'}
+                  {activeTab === 'payments' && 'View and manage payment transactions.'}
+                  {activeTab === 'messages' && 'Monitor conversations and support messages.'}
+                  {activeTab === 'support' && 'Manage user support tickets.'}
                   {activeTab === 'moderation' && 'Review and moderate community content and comments.'}
                   {activeTab === 'security' && 'Monitor suspicious activities and SOS alerts.'}
                   {activeTab === 'feedback' && 'Review user feedback and system notifications.'}
@@ -121,6 +176,28 @@ const AdminDashboard: React.FC = () => {
         return <AdminBookings />;
       case 'content':
         return <AdminContent />;
+      case 'stories':
+        return <AdminStories />;
+      case 'partners':
+        return <AdminPartners />;
+      case 'cities':
+        return <AdminCities />;
+      case 'hotels':
+        return <AdminHotels type="hotels" />;
+      case 'restaurants':
+        return <AdminRestaurants type="restaurants" />;
+      case 'cafes':
+        return <AdminCafes type="cafes" />;
+      case 'likes':
+        return <AdminLikes />;
+      case 'analytics':
+        return <AdminAnalytics />;
+      case 'payments':
+        return <AdminPayments />;
+      case 'messages':
+        return <AdminMessages />;
+      case 'support':
+        return <AdminSupport />;
       case 'moderation':
         return <AdminModeration />;
       case 'security':

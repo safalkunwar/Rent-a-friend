@@ -8,6 +8,7 @@ import { CommunityPost } from '../../types';
 import { SafeImage } from '../ui/SafeImage';
 import { uploadImageToStorage } from '../../services/storage';
 import { firestore } from '../../services/firestore';
+import { ReportModal } from '../modals/ReportModal';
 
 export const CommunityFeed: React.FC = () => {
   const { currentUser, createPost, likePost, unlikePost, createComment, deleteComment, checkUserLikedPost, openAuthModal, signInAnonymously } = useAppContext();
@@ -125,8 +126,10 @@ export const CommunityFeed: React.FC = () => {
     showToast('Post content copied to clipboard! Ready to share.', 'success');
   };
 
+  const [reportingPostId, setReportingPostId] = useState<string | null>(null);
+
   const handleReportPost = (postId: string) => {
-    showToast('Thank you for keeping SATHI safe. Our safety moderators will review this post.', 'success');
+    setReportingPostId(postId);
   };
 
   const handleDeletePost = async (postId: string) => {
@@ -665,6 +668,16 @@ export const CommunityFeed: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+      
+      {reportingPostId && (
+        <ReportModal
+          isOpen={!!reportingPostId}
+          onClose={() => setReportingPostId(null)}
+          targetType="post"
+          targetId={reportingPostId}
+          targetName={posts.find(p => p.id === reportingPostId)?.title}
+        />
       )}
     </div>
   );

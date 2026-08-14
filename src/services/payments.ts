@@ -28,13 +28,24 @@ const ESEWA_SCRIPT_URL = 'https://rc.esewa.com.np/esepg/epi/verify?av=v2&';
 
 export const paymentService = {
   initiatePayment: async (request: PaymentRequest): Promise<{ paymentUrl: string; token: string }> => {
+    let result: { paymentUrl: string; token: string };
+    
     if (request.provider === 'khalti') {
-      return paymentService.initiateKhalti(request);
+      result = await paymentService.initiateKhalti(request);
+    } else if (request.provider === 'esewa') {
+      result = await paymentService.initiateEsewa(request);
+    } else {
+      throw new Error('Unsupported payment provider');
     }
-    if (request.provider === 'esewa') {
-      return paymentService.initiateEsewa(request);
-    }
-    throw new Error('Unsupported payment provider');
+
+    await paymentService.recordPayment({
+      ...request,
+      token: result.token,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
+
+    return result;
   },
 
   initiateKhalti: async (request: PaymentRequest): Promise<{ paymentUrl: string; token: string }> => {
@@ -140,6 +151,40 @@ export const paymentService = {
 
   verifyPayment: async (_provider: PaymentProvider, _token: string): Promise<PaymentVerification> => {
     throw new Error('Payment verification must be handled by server-side Cloud Function or payment gateway webhook.');
+  },
+
+  recordPayment: async (data: {
+    amount: number;
+    currency: string;
+    provider: PaymentProvider;
+    companionId: string;
+    bookingId: string;
+    token: string;
+    status: 'pending' | 'completed' | 'failed';
+    customerInfo?: {
+      name: string;
+      email: string;
+      phone: string;
+    };
+    createdAt: string;
+  }): Promise<void> => {
+    const user = auth.currentUser;
+    if (!user) throw new Error('Must be logged in to record payment');
+
+    const paymentId = `payment_${data.bookingId}_${Date.now()}`;
+    await firestore.setDocument(`payments/${paymentId}`, {
+      id: paymentId,
+      userId: user.uid,
+      ...data,
+    });
+  },
+
+  updatePaymentStatus: async (paymentId: string, status: 'pending' | 'completed' | 'failed', transactionId?: string): Promise<void> => {
+    await firestore.updateDocument(`payments/${paymentId}`, {
+      status,
+      transactionId,
+      updatedAt: new Date().toISOString(),
+    });
   },
 };
 

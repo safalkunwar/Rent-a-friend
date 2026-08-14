@@ -25,6 +25,19 @@ service cloud.firestore {
       );
     }
 
+    function isCompanion() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['companion'] ||
+        exists(/databases/$(database)/documents/companions/$(request.auth.uid))
+      );
+    }
+
+    function isCustomer() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['customer', 'guest']
+      );
+    }
+
     function isSuperAdmin() {
       return isAuthenticated() && (
         request.auth.token.adminRole == 'super_admin' ||
@@ -156,7 +169,7 @@ service cloud.firestore {
     // Booking Locks Collection: /booking_locks/{lockId}
     match /booking_locks/{lockId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isAuthenticated() || isAdmin();
     }
 
     // Reviews Collection: /reviews/{reviewId}
@@ -233,7 +246,7 @@ service cloud.firestore {
     // Notifications Collection: /notifications/{notificationId}
     match /notifications/{notificationId} {
       allow read, update: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.userId || isAuthenticated()) && isValidData(request.resource.data);
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
       allow delete: if isAdmin();
     }
 
@@ -420,6 +433,46 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
       allow update: if isAdmin();
       allow delete: if false;
+    }
+
+    // Booking Locations Collection: /booking_locations/{bookingId}
+    match /booking_locations/{bookingId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.companionId ||
+        isAdmin()
+      );
+      allow create, update: if isAuthenticated() && (
+        request.auth.uid == resource.data.companionId ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+      
+      match /locations/{locationId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid == get(/databases/$(database)/documents/booking_locations/$(bookingId)).data.userId ||
+          request.auth.uid == get(/databases/$(database)/documents/booking_locations/$(bookingId)).data.companionId ||
+          isAdmin()
+        );
+        allow create: if isAuthenticated() && request.auth.uid == get(/databases/$(database)/documents/booking_locations/$(bookingId)).data.companionId;
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Presence Collection: /presence/{userId}
+    match /presence/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Booking Reminders Collection: /booking_reminders/{reminderId}
+    match /booking_reminders/{reminderId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.companionId ||
+        isAdmin()
+      );
+      allow create, update, delete: if isAdmin();
     }
 
   }

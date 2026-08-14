@@ -14,8 +14,6 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || appletConfig.appId || '1:932995524964:web:bae2033ae87165adbb3271',
 };
 
-const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || (appletConfig as any).firestoreDatabaseId || undefined;
-
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
@@ -33,7 +31,6 @@ console.log('[SATHI] Firebase config loaded:', {
   hasValidConfig,
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY ? 'yes' : 'no',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId || 'none',
-  firestoreDatabaseId,
 });
 
 const enablePersistenceGracefully = (firestoreDb: Firestore) => {
@@ -59,7 +56,7 @@ if (hasValidConfig && !getApps().length) {
     setPersistence(auth, browserLocalPersistence)
       .then(() => console.log('[SATHI] Firebase Auth persistence configured: LOCAL'))
       .catch((err) => console.error('[SATHI] Failed to set Firebase Auth persistence:', err));
-    db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
+    db = getFirestore(app);
     enablePersistenceGracefully(db);
     storage = getStorage(app);
     console.log('[SATHI] Firebase initialized:', { app: !!app, auth: !!auth, db: !!db, storage: !!storage });
@@ -78,7 +75,7 @@ if (hasValidConfig && !getApps().length) {
     setPersistence(auth, browserLocalPersistence)
       .then(() => console.log('[SATHI] Firebase Auth persistence configured for reused app: LOCAL'))
       .catch((err) => console.error('[SATHI] Failed to set Firebase Auth persistence on reuse:', err));
-    db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
+    db = getFirestore(app);
     enablePersistenceGracefully(db);
     storage = getStorage(app);
     console.log('[SATHI] Firebase reused existing app:', { app: !!app, auth: !!auth, db: !!db, storage: !!storage });
