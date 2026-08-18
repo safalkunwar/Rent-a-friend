@@ -16,6 +16,7 @@ import { SafetyWidget } from './components/SafetyWidget';
 import { CommunityFeed } from './components/social/CommunityFeed';
 import { DiscoveryFeed } from './components/discovery/DiscoveryFeed';
 import { CompanionCard } from './components/companions/CompanionCard';
+import { CategoryHeader } from './components/discovery/CategoryHeader';
 import { ProfileEditModal } from './components/modals/ProfileEditModal';
 import { DocumentModal } from './components/modals/DocumentModal';
 import { MapPreview } from './components/maps/MapPreview';
@@ -2224,43 +2225,34 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   {sortedActiveCats.map(cat => {
                     const catsList = companionCategoryMap[cat];
                     const displayName = categoryDisplayNames[cat] || cat;
-                    return (
-                      <div key={cat} className="px-4 py-1 space-y-3 text-left">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-base" role="img" aria-label={cat}>{categoryEmojis[cat] || '✨'}</span>
-                            <h3 className="text-xs font-black uppercase tracking-wider text-text-primary">
-                              {displayName} ({catsList.length})
-                            </h3>
-                          </div>
-                          <span 
-                            className="text-xs font-bold text-primary-action cursor-pointer" 
-                            onClick={() => {
-                              setSelectedCategory(cat);
-                              setMobileTab('search');
-                              showToast(`Viewing all ${cat} guides`, 'success');
-                            }}
-                          >
-                            View More
-                          </span>
-                        </div>
-                        
-                        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
-                          {catsList.map((comp, compIdx) => (
-                            <div key={`${cat}-${comp.id}-${compIdx}`}>
-                              <CompanionCard
-                                companion={comp}
-                                isFav={favorites.includes(comp.id)}
-                                onToggleFavorite={toggleFavorite}
-                                onViewCompanion={handleViewCompanion}
-                                onShowToast={showToast}
-                                layout="compact"
-                              />
-                            </div>
-                          ))}
-                        </div>
+              return (
+                <div key={cat} className="space-y-3 text-left">
+                  <CategoryHeader
+                    title={displayName}
+                    count={catsList.length}
+                    emoji={categoryEmojis[cat] || '✨'}
+                    onViewMore={() => {
+                      setSelectedCategory(cat);
+                      setMobileTab('search');
+                      showToast(`Viewing all ${cat} guides`, 'success');
+                    }}
+                  />
+                  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
+                    {catsList.map((comp, compIdx) => (
+                      <div key={`${cat}-${comp.id}-${compIdx}`}>
+                        <CompanionCard
+                          companion={comp}
+                          isFav={favorites.includes(comp.id)}
+                          onToggleFavorite={toggleFavorite}
+                          onViewCompanion={handleViewCompanion}
+                          onShowToast={showToast}
+                          layout="compact"
+                        />
                       </div>
-                    );
+                    ))}
+                  </div>
+                </div>
+              );
                   })}
                 </div>
               );

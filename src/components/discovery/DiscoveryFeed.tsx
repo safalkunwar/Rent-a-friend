@@ -4,6 +4,8 @@ import { generateDiscoveryFeed, type FeedItem } from '../../services/feedGenerat
 import { CompanionCard } from '../companions/CompanionCard';
 import { SocialPostCard } from '../social/SocialPostCard';
 import { SafeImage } from '../ui/SafeImage';
+import { CategoryHeader } from './CategoryHeader';
+import { DiscoveryContentContainer } from './DiscoveryContentContainer';
 import { Heart, MapPin, Star, ArrowRight, ChevronRight, Search } from 'lucide-react';
 
 interface DiscoveryFeedProps {
@@ -45,6 +47,13 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   'Language Exchange Partner': '🗣️',
 };
 
+interface CompanionGroup {
+  title: string;
+  category: string;
+  emoji?: string;
+  companions: Companion[];
+}
+
 export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   companions,
   activities,
@@ -78,6 +87,29 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   }, [companions, activities, events, stories, posts, currentUser?.location, currentUser?.interests, favorites]);
 
   const visibleItems = useMemo(() => feedItems.slice(0, visibleCount), [feedItems, visibleCount]);
+
+  const companionGroups = useMemo<CompanionGroup[]>(() => {
+    const groups: CompanionGroup[] = [];
+    let currentGroup: CompanionGroup | null = null;
+
+    visibleItems.forEach((item) => {
+      if (item.type === 'companion') {
+        const category = (item.data as any).category || 'Companions';
+        const emoji = CATEGORY_EMOJIS[category];
+        const title = item.section || category;
+
+        if (!currentGroup || currentGroup.category !== category) {
+          currentGroup = { title, category, emoji, companions: [] };
+          groups.push(currentGroup);
+        }
+        currentGroup.companions.push(item.data as Companion);
+      } else {
+        currentGroup = null;
+      }
+    });
+
+    return groups;
+  }, [visibleItems]);
 
   React.useEffect(() => {
     setVisibleCount(BATCH_SIZE);
@@ -133,158 +165,31 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
     }
   };
 
-  // Group consecutive companion items by category for context headers
-  const renderFeed = () => {
-    const elements: React.ReactNode[] = [];
-    let companionBuffer: { item: FeedItem; idx: number }[] = [];
-    let currentCategory: string | null = null;
-
-    const flushCompanionBuffer = () => {
-      if (companionBuffer.length === 0) return;
-      
-      const category = (companionBuffer[0].item as any).category || 'Companions';
-      const emoji = CATEGORY_EMOJIS[category] || '✨';
-      
-      elements.push(
-        <div key={`companion-group-${category}-${companionBuffer[0].idx}`} className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xl" role="img" aria-label={category}>{emoji}</span>
-              <h3 className="text-lg font-bold text-text-primary tracking-tight">{category}</h3>
-              <span className="text-[10px] bg-surface-elevated text-text-secondary px-2 py-0.5 rounded-full border border-white/5">
-                {companionBuffer.length} {companionBuffer.length === 1 ? 'guide' : 'guides'}
-              </span>
+  const renderCompanionSection = (group: CompanionGroup, index: number) => {
+    return (
+      <div key={`${group.category}-${index}`} className="space-y-3">
+        <CategoryHeader
+          title={group.title}
+          count={group.companions.length}
+          emoji={group.emoji}
+          onViewMore={() => onNavigateExplore(group.category)}
+        />
+        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory">
+          {group.companions.map((companion, idx) => (
+            <div key={`${companion.id}-${idx}`}>
+              <CompanionCard
+                companion={companion}
+                isFav={favorites.includes(companion.id)}
+                onToggleFavorite={onToggleFavorite}
+                onViewCompanion={onViewCompanion}
+                onShowToast={onShowToast}
+                layout="default"
+              />
             </div>
-            <button
-              onClick={() => onNavigateExplore(category)}
-              className="text-xs font-bold text-primary-action hover:underline flex items-center gap-1"
-            >
-              View More <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-          <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory">
-            {companionBuffer.map(({ item, idx }) => (
-              <div key={`${item.data.id}-${idx}`}>
-                <CompanionCard
-                  companion={item.data as Companion}
-                  isFav={favorites.includes(item.data.id)}
-                  onToggleFavorite={onToggleFavorite}
-                  onViewCompanion={onViewCompanion}
-                  onShowToast={onShowToast}
-                  layout="default"
-                />
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
-      );
-      companionBuffer = [];
-    };
-
-    visibleItems.forEach((item, idx) => {
-      if (item.type === 'companion') {
-        const cat = item.category || null;
-        if (currentCategory && cat !== currentCategory && companionBuffer.length > 0) {
-          flushCompanionBuffer();
-        }
-        currentCategory = cat;
-        companionBuffer.push({ item, idx });
-      } else {
-        flushCompanionBuffer();
-        currentCategory = null;
-        
-        if (item.type === 'story') {
-          elements.push(
-            <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
-              <SocialPostCard
-                post={item.data as ExperienceStory}
-                type="story"
-                onLike={(id) => onShowToast('Liked!', 'success')}
-                onComment={(id) => onShowToast('Comments coming soon', 'info')}
-                onShare={(id) => onShowToast('Shared!', 'success')}
-                onSave={(id) => onShowToast('Saved!', 'success')}
-                onViewProfile={(userId) => onShowToast('View profile coming soon', 'info')}
-                onOpenMediaViewer={openLightbox}
-              />
-            </div>
-          );
-        } else if (item.type === 'post') {
-          elements.push(
-            <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
-              <SocialPostCard
-                post={item.data as CommunityPost}
-                type="post"
-                onLike={(id) => onShowToast('Liked!', 'success')}
-                onComment={(id) => onShowToast('Comments coming soon', 'info')}
-                onShare={(id) => onShowToast('Shared!', 'success')}
-                onSave={(id) => onShowToast('Saved!', 'success')}
-                onViewProfile={(userId) => onShowToast('View profile coming soon', 'info')}
-                onOpenMediaViewer={openLightbox}
-              />
-            </div>
-          );
-        } else if (item.type === 'activity') {
-          elements.push(
-            <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
-              <div
-                onClick={() => onNavigateExplore((item.data as Activity).category || 'All')}
-                className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer hover:border-primary-action/30 transition-all"
-              >
-                <div className="relative h-48 bg-surface-elevated">
-                  <SafeImage src={(item.data as Activity).imageUrl || (item.data as Activity).image} className="w-full h-full object-cover" alt={(item.data as Activity).title} />
-                  <span className="absolute top-3 left-3 bg-primary-action text-background text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
-                    {(item.data as Activity).category || 'EXPERIENCE'}
-                  </span>
-                </div>
-                <div className="p-4 space-y-2 text-left">
-                  <h4 className="text-sm font-bold text-text-primary">{(item.data as Activity).title}</h4>
-                  <p className="text-xs text-text-secondary flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-primary-action" />
-                    {(item.data as Activity).location || 'Nepal'} • {(item.data as Activity).duration}
-                  </p>
-                  <div className="flex justify-between items-center pt-2 border-t border-white/5">
-                    <span className="text-sm font-black text-primary-action">NPR {(item.data as Activity).avgPrice || (item.data as Activity).price || '1,500'}</span>
-                    <div className="flex items-center gap-0.5 text-xs text-primary-action font-bold">
-                      <Star className="w-3 h-3 fill-current" />
-                      <span>4.8</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        } else if (item.type === 'event') {
-          elements.push(
-            <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
-              <div
-                onClick={() => onShowToast(`Event: ${(item.data as Event).title} • spots left: ${(item.data as Event).spots}`, 'info')}
-                className="bg-surface border border-white/5 rounded-2xl p-4 flex gap-4 cursor-pointer active:scale-98 transition-all"
-              >
-                <div className="w-20 h-20 rounded-xl overflow-hidden bg-surface-elevated shrink-0">
-                  <SafeImage src={(item.data as Event).imageUrl} className="w-full h-full object-cover" alt={(item.data as Event).title} fallbackType="thumbnail" />
-                </div>
-                <div className="flex-1 min-w-0 flex flex-col justify-between">
-                  <div>
-                    <h4 className="text-sm font-extrabold text-text-primary truncate leading-tight">{(item.data as Event).title}</h4>
-                    <p className="text-xs text-text-secondary mt-1 truncate font-light flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-primary-action" />
-                      {(item.data as Event).location}
-                    </p>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-primary-action font-bold font-mono">{(item.data as Event).date}</span>
-                    <span className="text-[10px] bg-red-500/10 text-red-400 px-2 py-0.5 rounded font-bold uppercase tracking-wider">{(item.data as Event).spots} Left</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        }
-      }
-    });
-
-    flushCompanionBuffer();
-    return elements;
+      </div>
+    );
   };
 
   return (
@@ -325,7 +230,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
       </div>
 
       {/* Stories */}
-      <div className="px-4">
+      <DiscoveryContentContainer>
         <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 snap-x">
           <div
             onClick={onCreateStory}
@@ -358,12 +263,121 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
             </div>
           ))}
         </div>
-      </div>
+      </DiscoveryContentContainer>
 
       {/* Continuous Mixed Discovery Feed */}
-      <div className="px-4 space-y-8">
-        {renderFeed()}
-      </div>
+      <DiscoveryContentContainer>
+        <div className="space-y-8">
+          {visibleItems.map((item, idx) => {
+            if (item.type === 'companion') {
+              return null;
+            }
+            
+            if (item.type === 'story') {
+              return (
+                <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
+                  <SocialPostCard
+                    post={item.data as ExperienceStory}
+                    type="story"
+                    onLike={(id) => onShowToast('Liked!', 'success')}
+                    onComment={(id) => onShowToast('Comments coming soon', 'info')}
+                    onShare={(id) => onShowToast('Shared!', 'success')}
+                    onSave={(id) => onShowToast('Saved!', 'success')}
+                    onViewProfile={(userId) => onShowToast('View profile coming soon', 'info')}
+                    onOpenMediaViewer={openLightbox}
+                  />
+                </div>
+              );
+            }
+            
+            if (item.type === 'post') {
+              return (
+                <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
+                  <SocialPostCard
+                    post={item.data as CommunityPost}
+                    type="post"
+                    onLike={(id) => onShowToast('Liked!', 'success')}
+                    onComment={(id) => onShowToast('Comments coming soon', 'info')}
+                    onShare={(id) => onShowToast('Shared!', 'success')}
+                    onSave={(id) => onShowToast('Saved!', 'success')}
+                    onViewProfile={(userId) => onShowToast('View profile coming soon', 'info')}
+                    onOpenMediaViewer={openLightbox}
+                  />
+                </div>
+              );
+            }
+            
+            if (item.type === 'activity') {
+              return (
+                <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
+                  <div
+                    onClick={() => onNavigateExplore((item.data as Activity).category || 'All')}
+                    className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer hover:border-primary-action/30 transition-all"
+                  >
+                    <div className="relative h-48 bg-surface-elevated">
+                      <SafeImage src={(item.data as Activity).imageUrl || (item.data as Activity).image} className="w-full h-full object-cover" alt={(item.data as Activity).title} />
+                      <span className="absolute top-3 left-3 bg-primary-action text-background text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
+                        {(item.data as Activity).category || 'EXPERIENCE'}
+                      </span>
+                    </div>
+                    <div className="p-4 space-y-2 text-left">
+                      <h4 className="text-sm font-bold text-text-primary">{(item.data as Activity).title}</h4>
+                      <p className="text-xs text-text-secondary flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-primary-action" />
+                        {(item.data as Activity).location || 'Nepal'} • {(item.data as Activity).duration}
+                      </p>
+                      <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                        <span className="text-sm font-black text-primary-action">NPR {(item.data as Activity).avgPrice || (item.data as Activity).price || '1,500'}</span>
+                        <div className="flex items-center gap-0.5 text-xs text-primary-action font-bold">
+                          <Star className="w-3 h-3 fill-current" />
+                          <span>4.8</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            
+            if (item.type === 'event') {
+              return (
+                <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
+                  <div
+                    onClick={() => onShowToast(`Event: ${(item.data as Event).title} • spots left: ${(item.data as Event).spots}`, 'info')}
+                    className="bg-surface border border-white/5 rounded-2xl p-4 flex gap-4 cursor-pointer active:scale-98 transition-all"
+                  >
+                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-surface-elevated shrink-0">
+                      <SafeImage src={(item.data as Event).imageUrl} className="w-full h-full object-cover" alt={(item.data as Event).title} fallbackType="thumbnail" />
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-sm font-extrabold text-text-primary truncate leading-tight">{(item.data as Event).title}</h4>
+                        <p className="text-xs text-text-secondary mt-1 truncate font-light flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-primary-action" />
+                          {(item.data as Event).location}
+                        </p>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-primary-action font-bold font-mono">{(item.data as Event).date}</span>
+                        <span className="text-[10px] bg-red-500/10 text-red-400 px-2 py-0.5 rounded font-bold uppercase tracking-wider">{(item.data as Event).spots} Left</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            
+            return null;
+          })}
+        </div>
+      </DiscoveryContentContainer>
+
+      {/* Companion Categories - rendered separately for intelligent composition */}
+      <DiscoveryContentContainer>
+        <div className="space-y-8">
+          {companionGroups.map((group, idx) => renderCompanionSection(group, idx))}
+        </div>
+      </DiscoveryContentContainer>
 
       {/* Progressive loading sentinel */}
       {visibleCount < feedItems.length && (
@@ -373,22 +387,24 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
       )}
 
       {/* Become a Companion */}
-      <div className="px-4 py-1 pb-6">
-        <div className="relative rounded-[24px] overflow-hidden min-h-[160px] border border-white/5 flex flex-col justify-end p-5 text-left bg-surface">
-          <img src="https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover brightness-[0.4]" alt="Become a Companion" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent"></div>
-          <div className="relative z-10 space-y-2.5">
-            <h3 className="text-sm font-extrabold text-text-primary leading-tight">Become a SATHI Companion</h3>
-            <p className="text-[10px] text-gray-300 leading-relaxed max-w-[240px]">Share your favorite local spots, guide travelers, and earn up to <span className="text-text-primary font-bold">NPR 15,000/week</span> on your own schedule.</p>
-            <button
-              onClick={onCreateStory}
-              className="w-max px-4 py-2 bg-primary-action hover:bg-primary-action-hover active:scale-95 text-background rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
-            >
-              Apply Now
-            </button>
+      <DiscoveryContentContainer>
+        <div className="py-1 pb-6">
+          <div className="relative rounded-[24px] overflow-hidden min-h-[160px] border border-white/5 flex flex-col justify-end p-5 text-left bg-surface">
+            <img src="https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover brightness-[0.4]" alt="Become a Companion" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent"></div>
+            <div className="relative z-10 space-y-2.5">
+              <h3 className="text-sm font-extrabold text-text-primary leading-tight">Become a SATHI Companion</h3>
+              <p className="text-[10px] text-gray-300 leading-relaxed max-w-[240px]">Share your favorite local spots, guide travelers, and earn up to <span className="text-text-primary font-bold">NPR 15,000/week</span> on your own schedule.</p>
+              <button
+                onClick={onCreateStory}
+                className="w-max px-4 py-2 bg-primary-action hover:bg-primary-action-hover active:scale-95 text-background rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              >
+                Apply Now
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </DiscoveryContentContainer>
 
       {/* Media Lightbox */}
       {lightboxImages && (

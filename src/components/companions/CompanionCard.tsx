@@ -34,9 +34,9 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
     return (
       <div
         onClick={handleCardClick}
-        className="shrink-0 w-40 bg-surface rounded-2xl border border-white/5 overflow-hidden shadow-lg flex flex-col snap-start cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-200 text-left"
+        className="shrink-0 w-44 bg-surface rounded-2xl border border-white/5 overflow-hidden shadow-lg flex flex-col snap-start cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-200 text-left"
       >
-        <div className="relative h-36 bg-surface-elevated">
+        <div className="relative h-40 bg-surface-elevated">
           <SafeImage src={companion.imageUrl} className="w-full h-full object-cover" alt={companion.name} fallbackType="thumbnail" />
           {companion.isVerified && (
             <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded text-[7px] text-primary-action font-extrabold flex items-center gap-0.5 border border-primary-action/20">
@@ -84,9 +84,9 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
     return (
       <div
         onClick={handleCardClick}
-        className="shrink-0 w-72 bg-surface rounded-3xl border border-white/5 overflow-hidden shadow-xl flex flex-col snap-start cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-200 text-left"
+        className="shrink-0 w-80 bg-surface rounded-3xl border border-white/5 overflow-hidden shadow-xl flex flex-col snap-start cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-200 text-left"
       >
-        <div className="relative h-52 bg-surface-elevated">
+        <div className="relative h-56 bg-surface-elevated">
           <SafeImage src={companion.imageUrl} className="w-full h-full object-cover" alt={companion.name} fallbackType="thumbnail" />
           {companion.isVerified && (
             <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[8px] text-primary-action font-extrabold flex items-center gap-0.5 border border-primary-action/20">
@@ -133,9 +133,9 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className="shrink-0 w-44 bg-surface rounded-[24px] border border-white/5 overflow-hidden shadow-xl flex flex-col snap-start cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-200 text-left"
+      className="shrink-0 w-48 bg-surface rounded-[24px] border border-white/5 overflow-hidden shadow-xl flex flex-col snap-start cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-200 text-left"
     >
-      <div className="relative h-44 bg-surface-elevated">
+      <div className="relative h-48 bg-surface-elevated">
         <SafeImage src={companion.imageUrl} className="w-full h-full object-cover" alt={companion.name} fallbackType="thumbnail" />
         {companion.isVerified && (
           <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[8px] text-primary-action font-extrabold flex items-center gap-0.5 border border-primary-action/20">
