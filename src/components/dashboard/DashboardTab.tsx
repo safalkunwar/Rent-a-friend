@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { useCompanions } from '../../hooks/useFirestoreData';
+import { useEvents } from '../../hooks/useFirestoreData';
 import { companionDashboardService } from '../../services/companionDashboard';
+import { eventParticipantsService } from '../../services/eventParticipants';
 import { Star, ShieldCheck, Heart, MapPin, Settings, Calendar, X, Bell } from 'lucide-react';
 import * as motion from 'motion/react-client';
 import { SafeImage } from '../ui/SafeImage';
@@ -11,6 +13,7 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
   const { currentUser, favorites, toggleFavorite, bookings, setCurrentUser, notifications } = useAppContext();
   const { showToast } = useToast();
   const { companions: fetchedCompanions } = useCompanions();
+  const { events: fetchedEvents } = useEvents();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(currentUser?.name || '');
   const [editEmail, setEditEmail] = useState(currentUser?.email || '');
@@ -53,6 +56,34 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
     return () => { cancelled = true; };
   }, [currentUser.id, currentUser.role]);
   const totalSpent = myBookings.reduce((sum, b) => sum + b.totalPrice, 0);
+
+  const [joinedEvents, setJoinedEvents] = useState<Array<{ id: string; title: string; date: string; time: string; location: string }>>([]);
+  const [loadingJoined, setLoadingJoined] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'customer') return;
+    let cancelled = false;
+    setLoadingJoined(true);
+    eventParticipantsService.getUserJoinedEvents(currentUser.id)
+      .then(registrations => {
+        if (!cancelled) {
+          const eventsMap = new Map((fetchedEvents || []).map(e => [e.id, e]));
+          setJoinedEvents(registrations.map(r => {
+            const ev = eventsMap.get(r.eventId);
+            return {
+              id: r.eventId,
+              title: ev?.title || r.eventId,
+              date: ev?.date || r.joinedAt,
+              time: ev?.time || '',
+              location: ev?.location || ''
+            };
+          }));
+        }
+      })
+      .catch(err => console.error('[DashboardTab] Failed to load joined events:', err))
+      .finally(() => { if (!cancelled) setLoadingJoined(false); });
+    return () => { cancelled = true; };
+  }, [currentUser?.id, currentUser?.role, fetchedEvents]);
 
   return (
     <div className="space-y-8">
@@ -185,6 +216,39 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
               <div className="bg-surface border border-border-token rounded-2xl p-8 text-center text-text-secondary">
                 <Calendar className="w-12 h-12 mx-auto mb-4 opacity-20" />
                 <p>No bookings yet. Explore companions to book your first experience!</p>
+              </div>
+            )}
+          </div>
+
+          {/* Joined Events */}
+          <div>
+            <h2 className="text-2xl font-bold text-text-primary mb-6">Joined Events</h2>
+            {loadingJoined ? (
+              <div className="space-y-4">
+                {[1, 2].map(i => (
+                  <div key={i} className="bg-surface border border-border-token rounded-2xl p-5 animate-pulse">
+                    <div className="h-4 bg-surface-elevated rounded w-1/3 mb-3"></div>
+                    <div className="h-3 bg-surface-elevated rounded w-1/2"></div>
+                  </div>
+                ))}
+              </div>
+            ) : joinedEvents.length > 0 ? (
+              <div className="space-y-4">
+                {joinedEvents.slice(0, 5).map(ev => (
+                  <div key={ev.id} className="bg-surface border border-border-token rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-text-primary mb-1">{ev.title}</h3>
+                      <p className="text-sm text-text-secondary flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {ev.location || 'Nepal'}</p>
+                      <p className="text-xs text-text-muted mt-1">{ev.date ? new Date(ev.date).toLocaleDateString() : ''}</p>
+                    </div>
+                    <span className="text-xs px-3 py-1 bg-success/10 border border-success/50 text-success rounded-full font-bold">Joined</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-surface border border-border-token rounded-2xl p-8 text-center text-text-secondary">
+                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                <p>No joined events yet. Explore events to join!</p>
               </div>
             )}
           </div>

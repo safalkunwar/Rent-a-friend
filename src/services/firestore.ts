@@ -1,4 +1,4 @@
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter, onSnapshot, writeBatch, type Unsubscribe, type Query, type DocumentData, type Firestore } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter, onSnapshot, writeBatch, runTransaction as firebaseRunTransaction, type Unsubscribe, type Query, type DocumentData, type Firestore } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from './firestore-errors';
 
@@ -172,6 +172,16 @@ export const firestore = {
       await batch.commit();
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'batch');
+      throw error;
+    }
+  },
+
+  runTransaction: async <T = DocumentData>(fn: (tx: any) => Promise<T>): Promise<T> => {
+    if (!db) throw new Error('Firebase is not configured. Set your VITE_FIREBASE_* environment variables.');
+    try {
+      return await firebaseRunTransaction(db, fn);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'transaction');
       throw error;
     }
   },

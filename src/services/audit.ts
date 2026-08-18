@@ -12,9 +12,11 @@ export interface AuditLogEntry {
 }
 
 export const auditService = {
-  log: async (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => {
-    await firestore.setDocument('auditLogs', {
+  async log(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) {
+    const id = `audit_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    await firestore.setDocument(`auditLogs/${id}`, {
       ...entry,
+      id,
       timestamp: new Date().toISOString(),
     });
   },

@@ -20,8 +20,7 @@ service cloud.firestore {
         request.auth.token.role == 'admin' ||
         request.auth.token.adminRole in ['super_admin','platform_admin','safety_admin','moderation_admin','support_agent','booking_admin','finance_admin','kyc_reviewer','content_admin','analytics_admin','read_only_admin'] ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email == 'admin1@gmail.com'
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
 
@@ -97,7 +96,7 @@ service cloud.firestore {
     // Users Collection: /users/{userId}
     match /users/{userId} {
       // Users can read their own profile, or admins
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
 
       // Users can update their own profile, but only specific fields (no changing role or createdAt)
       allow update: if isValidUserUpdate(userId);
@@ -117,11 +116,14 @@ service cloud.firestore {
 
     // Companions Collection: /companions/{companionId}
     match /companions/{companionId} {
-      // Anyone can read companion profiles
-      allow read: if true;
+      // Authenticated users can read companion profiles (PII protected by field-level rules)
+      allow read: if isAuthenticated();
 
-      // Companions can update their own profile
-      allow update: if isAuthenticated() && request.auth.uid == companionId && 
+      // Companion user can create their own profile
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+
+      // Companion user can update their own profile
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && 
                     request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                       'name', 'bio', 'location', 'hourlyRate', 'gender', 'languages', 'interests', 'images', 'availableDays', 'updatedAt'
                     ]);
@@ -158,7 +160,7 @@ service cloud.firestore {
       // Users can request cancellation, companions can confirm/complete, admins can update all
       allow update: if isAuthenticated() && (
         (request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
-        (isCompanion() && request.auth.uid == resource.data.companionId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+        (isCompanion() && exists(/databases/$(database)/documents/companions/$(resource.data.companionId)) && request.auth.uid == get(/databases/$(database)/documents/companions/$(resource.data.companionId)).data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
         isAdmin()
       );
 
@@ -169,7 +171,7 @@ service cloud.firestore {
     // Booking Locks Collection: /booking_locks/{lockId}
     match /booking_locks/{lockId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated() || isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     // Reviews Collection: /reviews/{reviewId}
@@ -330,6 +332,21 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
+
+      match /participants/{userId} {
+        allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+        allow create: if isAuthenticated() && request.auth.uid == userId;
+        allow update: if isAuthenticated() && request.auth.uid == userId || isAdmin();
+        allow delete: if isAuthenticated() && request.auth.uid == userId || isAdmin();
+      }
+    }
+
+    // Event Participants Collection: /event_participants/{registrationId}
+    match /event_participants/{registrationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId || isAdmin();
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId || isAdmin();
     }
 
     // Partners Collection: /partners/{partnerId}

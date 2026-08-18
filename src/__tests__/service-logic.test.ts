@@ -72,7 +72,7 @@ describe('audit service', () => {
     });
     expect(setDocument).toHaveBeenCalledTimes(1);
     const callArgs = setDocument.mock.calls[0];
-    expect(callArgs[0]).toBe('auditLogs');
+    expect(callArgs[0]).toMatch(/^auditLogs\/audit_\d+_[a-z0-9]+$/);
     expect(callArgs[1].action).toBe('test_action');
     expect(callArgs[1].timestamp).toBeDefined();
   });

@@ -8,8 +8,7 @@ service firebase.storage {
       allow read: if true;
       allow write: if isAuthenticated() && 
                    request.resource.size < 10 * 1024 * 1024 && // 10MB limit
-                   request.resource.contentType.matches('image/(jpeg|jpg|png|webp)') &&
-                   request.auth.uid == request.resource.data.uploadedBy;
+                   request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
     }
 
     // User avatars
@@ -32,13 +31,13 @@ service firebase.storage {
     // Community post images
     match /posts/{postId}/{fileName} {
       allow read: if true;
-      allow write: if isAuthenticated() && request.auth.uid == request.resource.data.uploadedBy;
+      allow write: if isAuthenticated();
     }
 
     // Story images
     match /stories/{storyId}/{fileName} {
       allow read: if true;
-      allow write: if isAuthenticated() && request.auth.uid == request.resource.data.uploadedBy;
+      allow write: if isAuthenticated();
     }
 
     // KYC documents - PRIVATE, admin-only access

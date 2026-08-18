@@ -14,6 +14,8 @@ import { PartnerDashboard } from './components/dashboard/PartnerDashboard';
 import { SettingsTab } from './components/settings/SettingsTab';
 import { SafetyWidget } from './components/SafetyWidget';
 import { CommunityFeed } from './components/social/CommunityFeed';
+import { DiscoveryFeed } from './components/discovery/DiscoveryFeed';
+import { CompanionCard } from './components/companions/CompanionCard';
 import { ProfileEditModal } from './components/modals/ProfileEditModal';
 import { DocumentModal } from './components/modals/DocumentModal';
 import { MapPreview } from './components/maps/MapPreview';
@@ -35,9 +37,10 @@ import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
 import { saveStoredPreferences } from './services/preferences';
 import { paymentService } from './services/payments';
+import { eventParticipantsService } from './services/eventParticipants';
 
 interface ClientAppProps {
-  initialTab?: 'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings';
+  initialTab?: 'home' | 'explore' | 'companions' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings';
 }
 
 export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
@@ -53,6 +56,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       setActiveTab('bookings');
       setMobileTab('bookings');
     } else if (path === '/companions') {
+      setActiveTab('companions');
+      setMobileTab('search');
+    } else if (path === '/explore') {
       setActiveTab('explore');
       setMobileTab('explore');
     } else if (path === '/messages') {
@@ -66,7 +72,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     } else if (path === '/settings') {
       setActiveTab('settings');
     } else if (path === '/') {
-      setActiveTab('explore');
+      setActiveTab('home');
+      setMobileTab('home');
     }
   }, [location.pathname]);
   
@@ -77,10 +84,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const { partners, loading: partnersLoading } = usePartners();
   const { posts, loading: postsLoading } = useCommunityPosts();
   
-  const [activeTab, setActiveTab] = useState<'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings'>(initialTab || 'explore');
+  const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'companions' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings'>(initialTab || 'home');
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingStory, setViewingStory] = useState<ExperienceStory | null>(null);
+  const [joinedEvents, setJoinedEvents] = useState<Record<string, boolean>>({});
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [storyLiked, setStoryLiked] = useState<Record<string, boolean>>({});
   const [storyLikesCount, setStoryLikesCount] = useState<Record<string, number>>({});
@@ -98,6 +106,64 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       }
     }
   }, [viewingStory, currentUser]);
+
+  useEffect(() => {
+    if (!currentUser || !events || events.length === 0) return;
+    let cancelled = false;
+    const checkJoined = async () => {
+      const joined: Record<string, boolean> = {};
+      for (const event of events) {
+        try {
+          const isJoined = await eventParticipantsService.isUserJoined(event.id, currentUser.id);
+          if (!cancelled) joined[event.id] = isJoined;
+        } catch {
+          // ignore
+        }
+      }
+      if (!cancelled) setJoinedEvents(joined);
+    };
+    checkJoined();
+    return () => { cancelled = true; };
+  }, [currentUser, events]);
+
+  const handleJoinEvent = async (eventId: string) => {
+    if (!currentUser) {
+      setAuthMode('login');
+      return;
+    }
+    try {
+      await eventParticipantsService.joinEvent(eventId);
+      setJoinedEvents(prev => ({ ...prev, [eventId]: true }));
+      showToast('Successfully joined event!', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to join event', 'error');
+    }
+  };
+
+  const handleLeaveEvent = async (eventId: string) => {
+    if (!currentUser) return;
+    try {
+      await eventParticipantsService.leaveEvent(eventId);
+      setJoinedEvents(prev => ({ ...prev, [eventId]: false }));
+      showToast('Left event', 'info');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to leave event', 'error');
+    }
+  };
+
+  const isEventFull = (event: any) => {
+    const currentParticipants = event.participants?.length || event.participants || 0;
+    return currentParticipants >= event.spots;
+  };
+
+  const getEventButtonState = (event: any) => {
+    if (!currentUser) return { text: 'Join', disabled: false, action: 'join' };
+    const isJoined = joinedEvents[event.id];
+    if (isJoined) return { text: 'Joined', disabled: false, action: 'leave' };
+    if (isEventFull(event)) return { text: 'Full', disabled: true, action: 'none' };
+    return { text: 'Join', disabled: false, action: 'join' };
+  };
+
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'guide' | null>(null);
   const [isGuide, setIsGuide] = useState(false);
   const [showGuideSetup, setShowGuideSetup] = useState(true);
@@ -393,8 +459,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               <Home className="w-4 h-4" /> Home
             </button>
             <button 
-              onClick={() => { navigate('/'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} 
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/' && selectedCategory === 'All' && !showSavedOnly ? 'bg-surface-elevated/50 text-text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
+              onClick={() => { navigate('/explore'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} 
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/explore' ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
             >
               <Compass className="w-4 h-4" /> Explore
             </button>
@@ -836,27 +902,111 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             )}
 
             {/* Render dynamically based on Tab */}
+            {activeTab === 'home' && (
+              <DiscoveryFeed
+                companions={companions}
+                activities={activities}
+                events={events}
+                stories={stories}
+                posts={posts}
+                currentUser={currentUser}
+                favorites={favorites}
+                onToggleFavorite={toggleFavorite}
+                onViewCompanion={handleViewCompanion}
+                onShowToast={showToast}
+                onNavigateExplore={(category) => { setMobileTab('explore'); if (category) setSelectedCategory(category); }}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)}
+                onCreateStory={() => setShowCreateStoryModal(true)}
+                onViewStory={setViewingStory}
+              />
+            )}
+
             {activeTab === 'explore' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
                 
-                {/* Mobile-only Search Bar */}
-                <div className="block sm:hidden relative mt-1">
-                  <Search className="w-4 h-4 text-text-secondary absolute left-4 top-1/2 transform -translate-y-1/2" />
-                  <input 
-                    type="text" 
-                    placeholder="Search companions, local skills, activities..." 
-                    className="w-full bg-surface-elevated/90 border border-border-token/50 rounded-full h-11 pl-11 pr-10 text-xs text-text-primary placeholder-text-secondary focus:outline-none focus:border-primary-action focus:bg-surface transition-all"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  {searchQuery && (
-                    <button 
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-[10px] uppercase font-bold text-primary-action hover:underline"
-                    >
-                      Clear
-                    </button>
-                  )}
+                {/* Desktop Interactive Map */}
+                <div className="hidden lg:block px-4">
+                  <div className="bg-surface border border-white/10 rounded-3xl overflow-hidden relative shadow-2xl shadow-black/40">
+                    <div className="p-4 bg-surface-elevated/40 border-b border-white/5 flex justify-between items-center text-left">
+                      <span className="text-xs uppercase font-black tracking-wider text-text-secondary flex items-center gap-2">
+                        <Compass className="w-4 h-4 text-primary-action animate-spin" /> Interactive Guide Map
+                      </span>
+                      <span className="text-[10px] text-text-secondary">Click pins to view details</span>
+                    </div>
+                    
+                    {/* Map Component */}
+                    <div className="relative">
+                      {(() => {
+                        const getCoords = (item: any) => {
+                          if (!item?.coordinates) return null;
+                          const lat = item.coordinates.latitude ?? item.coordinates._lat ?? item.coordinates.lat;
+                          const lng = item.coordinates.longitude ?? item.coordinates._long ?? item.coordinates.lng;
+                          if (typeof lat === 'number' && typeof lng === 'number') {
+                            return { lat, lng };
+                          }
+                          return null;
+                        };
+
+                        const mapMarkers = [
+                          ...(companions || []).map(c => {
+                            const coords = getCoords(c);
+                            return coords ? {
+                              id: c.id,
+                              position: { lat: coords.lat, lng: coords.lng },
+                              title: c.name,
+                              subtitle: `${c.interests[0] || 'Buddy'} • NPR ${c.hourlyRate}/h`,
+                              type: 'companion' as const
+                            } : null;
+                          }).filter(Boolean),
+                          ...(activities || []).map(act => {
+                            const coords = getCoords(act);
+                            return coords ? {
+                              id: act.id,
+                              position: { lat: coords.lat, lng: coords.lng },
+                              title: act.title,
+                              subtitle: act.location || 'Nepal',
+                              type: 'activity' as const
+                            } : null;
+                          }).filter(Boolean),
+                          ...(events || []).map(evt => {
+                            const coords = getCoords(evt);
+                            return coords ? {
+                              id: evt.id,
+                              position: { lat: coords.lat, lng: coords.lng },
+                              title: evt.title,
+                              subtitle: evt.location || 'Nepal',
+                              type: 'event' as const
+                            } : null;
+                          }).filter(Boolean)
+                        ] as any[];
+
+                        return (
+                          <MapPreview 
+                            center={{ lat: 27.7172, lng: 85.3240 }}
+                            zoom={12}
+                            height="400px"
+                            markers={mapMarkers}
+                            onMarkerClick={(id) => {
+                              const comp = companions.find(c => c.id === id);
+                              if (comp) {
+                                handleViewCompanion(comp);
+                                showToast(`Opening ${comp.name}'s profile`, 'info');
+                              } else {
+                                const act = activities.find(a => a.id === id);
+                                if (act) {
+                                  showToast(`Experience: ${act.title}`, 'info');
+                                } else {
+                                  showToast('Marker selected on map', 'info');
+                                }
+                              }
+                            }}
+                          />
+                        );
+                      })()}
+                    </div>
+                  </div>
                 </div>
 
                 {/* 1. COMMUNITY STORIES SECTION (Horizontal Scroll - Classic Circular Bubbles) */}
@@ -1143,71 +1293,17 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   ) : (
                     /* High-fidelity Companion grid */
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {filteredCompanions.map((comp, compIdx) => {
-                        const isFav = favorites && favorites.includes(comp.id);
-                        return (
-                          <div 
-                            key={`${comp.id || 'comp'}-${compIdx}`}
-                            onClick={() => handleViewCompanion(comp)}
-                            className="group relative flex flex-col rounded-[24px] overflow-hidden border border-border-token-light bg-card hover:border-primary-action/40 hover:shadow-xl transition-all duration-300 cursor-pointer snap-start focus-visible:ring-2 focus-visible:ring-primary-action"
-                          >
-                            {/* Card Image Container */}
-                            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-[24px]">
-                              <SafeImage 
-                                src={comp.imageUrl} 
-                                alt={comp.name} 
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                                fallbackType="thumbnail"
-                                loading="lazy"
-                              />
-                              
-                              {/* Top left category tag & Top right save button */}
-                              <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10">
-                                <span className="bg-background/80 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-bold text-primary-action border border-border-token-light uppercase tracking-widest">
-                                  {comp.interests[0] || 'Local Companion'}
-                                </span>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); toggleFavorite(comp.id); }}
-                                  className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-md flex items-center justify-center border border-border-token-light text-text-primary hover:text-red-500 hover:scale-110 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-primary-action"
-                                  aria-label="Save companion"
-                                >
-                                  <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Bottom Details (Clean background, NO dark overlays!) */}
-                            <div className="p-4 flex-1 flex flex-col justify-between space-y-3 bg-card rounded-b-[24px]">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-text-primary font-bold text-base">
-                                  {comp.name}, {comp.age}
-                                  {comp.isVerified && <ShieldCheck className="w-4 h-4 text-verified shrink-0" />}
-                                </div>
-                                <p className="text-text-secondary text-xs flex items-center gap-1">
-                                  <MapPin className="w-3.5 h-3.5 text-text-secondary" /> {comp.location}, Nepal
-                                </p>
-                              </div>
-
-                              <div className="flex items-center justify-between pt-2 border-t border-border-token-light">
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center gap-1 text-xs font-bold text-rating">
-                                    <Star className="w-3.5 h-3.5 fill-current text-rating" /> {comp.rating}
-                                    <span className="text-text-secondary font-normal text-[10px]">({comp.reviewsCount || 120})</span>
-                                  </div>
-                                  <span className="text-[10px] text-text-secondary block">From <span className="font-bold text-text-primary">NPR {comp.hourlyRate}</span>/hr</span>
-                                </div>
-
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleViewCompanion(comp); }}
-                                  className="px-4 py-1.5 bg-primary-action hover:bg-primary-action-hover text-background rounded-xl text-xs font-bold transition-all active:scale-95 shadow-xs"
-                                >
-                                  Book
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {filteredCompanions.map((comp, idx) => (
+                        <CompanionCard
+                          key={`${comp.id}-${idx}`}
+                          companion={comp}
+                          isFav={favorites.includes(comp.id)}
+                          onToggleFavorite={toggleFavorite}
+                          onViewCompanion={handleViewCompanion}
+                          onShowToast={showToast}
+                          layout="featured"
+                        />
+                      ))}
                     </div>
                   )}
                 </section>
@@ -1270,26 +1366,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         Explore Nepal <br/>
                         Through <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C8A25E] via-[#E4D1AC] to-[#B69150]">Real People</span>
                       </h1>
-
-                      {/* Integrated cinematic Search Bar */}
-                      <div className="relative max-w-md shadow-2xl pt-2">
-                        <Search className="w-5 h-5 text-primary-action absolute left-5 top-1/2 transform -translate-y-1/2 mt-1" />
-                        <input 
-                          type="text" 
-                          placeholder="Where are you going?" 
-                          className="w-full bg-black/55 backdrop-blur-md border border-white/10 hover:border-primary-action/40 focus:border-primary-action rounded-full h-12 pl-12 pr-10 text-xs text-text-primary placeholder-white/60 focus:outline-none transition-all focus-visible:ring-2 focus-visible:ring-primary-action"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                        {searchQuery && (
-                          <button 
-                            onClick={() => setSearchQuery('')}
-                            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-[10px] uppercase font-bold text-primary-action hover:underline mt-1"
-                          >
-                            Reset
-                          </button>
-                        )}
-                      </div>
                     </div>
                   </div>
  
@@ -1557,6 +1633,51 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </motion.div>
             )}
 
+            {activeTab === 'companions' && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border-token/40 pb-4">
+                  <div>
+                    <h2 className="text-xl md:text-3xl font-extrabold text-text-primary flex items-center gap-2">
+                      Discover Companions <span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">KYC Verified</span>
+                    </h2>
+                    <p className="text-xs text-text-secondary mt-1">Browse verified local companions by category, location, and interest.</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsFilterDrawerOpen(true)}
+                    className="flex items-center gap-2 px-3.5 py-2 bg-surface-elevated hover:bg-border-token border border-border-token hover:border-primary-action rounded-xl text-xs font-bold text-text-primary transition-all shadow-sm"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-primary-action" />
+                    <span>Filters</span>
+                    {activeFilterCount > 0 && (
+                      <span className="w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">{activeFilterCount}</span>
+                    )}
+                  </button>
+                </div>
+
+                {/* Results Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filteredCompanions.map((comp, idx) => (
+                    <CompanionCard
+                      key={`${comp.id}-${idx}`}
+                      companion={comp}
+                      isFav={favorites.includes(comp.id)}
+                      onToggleFavorite={toggleFavorite}
+                      onViewCompanion={handleViewCompanion}
+                      onShowToast={showToast}
+                      layout="featured"
+                    />
+                  ))}
+                </div>
+                {filteredCompanions.length === 0 && (
+                  <div className="text-center py-20">
+                    <Users className="w-12 h-12 text-text-muted mx-auto mb-3" />
+                    <p className="text-sm font-bold text-text-secondary">No companions found</p>
+                    <p className="text-[10px] text-text-muted mt-1">Try adjusting your search or filters</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
             {activeTab === 'partner' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <PartnerDashboard />
@@ -1692,15 +1813,21 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                             
                             <div className="flex items-center justify-between pt-2">
                               <span className="text-[9px] text-text-secondary"><span className="text-text-primary font-semibold">{event.spots}</span> spots left</span>
-                              <button 
-                                onClick={() => {
-                                  if (!currentUser) setAuthMode('login');
-                                  else showToast(`Successfully reserved spot in ${event.title}!`, 'success');
-                                }} 
-                                className="px-2.5 py-1 bg-surface-elevated text-text-primary border border-border-token/60 text-[9px] font-bold rounded-lg hover:bg-primary-action hover:text-background hover:border-primary-action transition-colors"
-                              >
-                                Join
-                              </button>
+                              {(() => {
+                                const btn = getEventButtonState(event);
+                                return (
+                                  <button 
+                                    onClick={() => {
+                                      if (btn.action === 'join') handleJoinEvent(event.id);
+                                      else if (btn.action === 'leave') handleLeaveEvent(event.id);
+                                    }}
+                                    disabled={btn.disabled}
+                                    className="px-2.5 py-1 bg-surface-elevated text-text-primary border border-border-token/60 text-[9px] font-bold rounded-lg hover:bg-primary-action hover:text-background hover:border-primary-action transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {btn.text}
+                                  </button>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -1794,18 +1921,24 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                           <p className="text-[10px] text-text-secondary flex items-center gap-1 truncate"><MapPin className="w-3 h-3 text-primary-action" /> {event.location}</p>
                           <p className="text-[10px] text-text-secondary flex items-center gap-1"><Clock className="w-3 h-3" /> {event.time}</p>
                           
-                          <div className="flex items-center justify-between pt-2">
-                            <span className="text-[9px] text-text-secondary"><span className="text-text-primary font-semibold">{event.spots}</span> spots left</span>
-                            <button 
-                              onClick={() => {
-                                if (!currentUser) setAuthMode('login');
-                                else showToast(`Successfully reserved spot in ${event.title}!`, 'success');
-                              }} 
-                              className="px-2.5 py-1 bg-surface-elevated text-text-primary border border-border-token/60 text-[9px] font-bold rounded-lg hover:bg-primary-action hover:text-background hover:border-primary-action transition-colors"
-                            >
-                              Join
-                            </button>
-                          </div>
+                           <div className="flex items-center justify-between pt-2">
+                             <span className="text-[9px] text-text-secondary"><span className="text-text-primary font-semibold">{event.spots}</span> spots left</span>
+                             {(() => {
+                               const btn = getEventButtonState(event);
+                               return (
+                                 <button 
+                                   onClick={() => {
+                                     if (btn.action === 'join') handleJoinEvent(event.id);
+                                     else if (btn.action === 'leave') handleLeaveEvent(event.id);
+                                   }}
+                                   disabled={btn.disabled}
+                                   className="px-2.5 py-1 bg-surface-elevated text-text-primary border border-border-token/60 text-[9px] font-bold rounded-lg hover:bg-primary-action hover:text-background hover:border-primary-action transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                 >
+                                   {btn.text}
+                                 </button>
+                               );
+                             })()}
+                           </div>
                         </div>
                       </div>
                     );
@@ -2108,64 +2241,23 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                               showToast(`Viewing all ${cat} guides`, 'success');
                             }}
                           >
-                            See all
+                            View More
                           </span>
                         </div>
                         
                         <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
-                          {catsList.map((comp, compIdx) => {
-                            const isFav = favorites && favorites.includes(comp.id);
-                            return (
-                              <div 
-                                key={`${cat}-${comp.id}-${compIdx}`} 
-                                onClick={() => handleViewCompanion(comp)}
-                                className="shrink-0 w-44 bg-surface rounded-[24px] border border-white/5 overflow-hidden shadow-xl flex flex-col snap-start cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-200 text-left"
-                              >
-                                <div className="relative h-44 bg-surface-elevated">
-                                  <SafeImage src={comp.imageUrl} className="w-full h-full object-cover" alt={comp.name} fallbackType="thumbnail" />
-                                  {comp.isVerified && (
-                                    <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[8px] text-primary-action font-extrabold flex items-center gap-0.5 border border-primary-action/20">
-                                      VERIFIED
-                                    </span>
-                                  )}
-                                  <button 
-                                    onClick={(e) => { 
-                                      e.stopPropagation(); 
-                                      toggleFavorite(comp.id); 
-                                      showToast(isFav ? "Removed from saved" : "Saved companion!", "success"); 
-                                    }}
-                                    className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-text-primary hover:bg-black/60 transition-colors"
-                                  >
-                                    <Heart className={`w-4 h-4 ${isFav ? 'text-red-500 fill-current' : 'text-text-primary'}`} />
-                                  </button>
-                                </div>
-                                <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
-                                  <div className="space-y-1">
-                                    <h4 className="text-sm font-extrabold text-text-primary truncate flex items-center gap-1">
-                                      {comp.name}, {comp.age}
-                                    </h4>
-                                    <div className="flex items-center gap-1 text-[10px] text-text-secondary">
-                                      <MapPin className="w-3 h-3 text-primary-action" />
-                                      <span className="truncate">{comp.location}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[10px] text-primary-action font-bold">
-                                      <Star className="w-3 h-3 fill-current" />
-                                      <span>{comp.rating} ({comp.reviewsCount || 0})</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-between items-center pt-2 border-t border-white/5">
-                                    <div>
-                                      <p className="text-[8px] text-text-secondary uppercase font-bold leading-none">Rate</p>
-                                      <p className="text-xs font-black text-primary-action mt-0.5">NPR {comp.hourlyRate}/hr</p>
-                                    </div>
-                                    <div className="w-7 h-7 rounded-full bg-primary-action flex items-center justify-center text-background shadow-md">
-                                      <ArrowRight className="w-4 h-4" />
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+                          {catsList.map((comp, compIdx) => (
+                            <div key={`${cat}-${comp.id}-${compIdx}`}>
+                              <CompanionCard
+                                companion={comp}
+                                isFav={favorites.includes(comp.id)}
+                                onToggleFavorite={toggleFavorite}
+                                onViewCompanion={handleViewCompanion}
+                                onShowToast={showToast}
+                                layout="compact"
+                              />
+                            </div>
+                          ))}
                         </div>
                       </div>
                     );
@@ -2279,12 +2371,17 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                           <span className="text-[8px] text-primary-action font-bold">{attendeesCount} buddies attending</span>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => showToast(`Successfully joined "${ev.title}"!`, 'success')}
-                        className="px-3 py-1.5 bg-primary-action hover:bg-primary-action-hover text-background text-[9px] font-black rounded-lg uppercase tracking-wider transition-colors"
-                      >
-                        Join
-                      </button>
+                       <button 
+                         onClick={() => {
+                           const btn = getEventButtonState(ev);
+                           if (btn.action === 'join') handleJoinEvent(ev.id);
+                           else if (btn.action === 'leave') handleLeaveEvent(ev.id);
+                         }}
+                         disabled={getEventButtonState(ev).disabled}
+                         className="px-3 py-1.5 bg-primary-action hover:bg-primary-action-hover text-background text-[9px] font-black rounded-lg uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                       >
+                         {getEventButtonState(ev).text}
+                       </button>
                     </div>
                   );
                 })}
@@ -2676,12 +2773,15 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     </div>
                   </div>
                 </div>
-                <button 
-                  onClick={() => showToast('Hiking Adventure spot reserved!', 'success')}
-                  className="px-3.5 py-1.5 bg-primary-action text-background text-[9px] font-black rounded-xl uppercase tracking-wider"
-                >
-                  Join
-                </button>
+                 <button 
+                   onClick={() => {
+                     if (!currentUser) { setAuthMode('login'); return; }
+                     showToast('Explore events tab to join real events', 'info');
+                   }}
+                   className="px-3.5 py-1.5 bg-primary-action text-background text-[9px] font-black rounded-xl uppercase tracking-wider"
+                 >
+                   Join
+                 </button>
               </div>
             </div>
 
@@ -2865,19 +2965,15 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   {fetchedCompanions.filter(c => favorites.includes(c.id)).length > 0 ? (
                     <div className="grid grid-cols-2 gap-3">
                       {fetchedCompanions.filter(c => favorites.includes(c.id)).map((comp, idx) => (
-                        <div key={`${comp.id || 'c'}-${idx}`} className="bg-surface border border-white/5 rounded-2xl overflow-hidden flex flex-col relative">
-                          <SafeImage src={comp.imageUrl} className="w-full h-24 object-cover" alt={comp.name} fallbackType="thumbnail" />
-                          <button 
-                            onClick={() => toggleFavorite(comp.id)}
-                            className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10"
-                          >
-                            <Heart className="w-3 h-3 fill-primary-action text-primary-action" />
-                          </button>
-                          <div className="p-2.5 space-y-1">
-                            <h5 className="font-bold text-xs text-text-primary truncate">{comp.name}</h5>
-                            <p className="text-[9px] text-text-secondary flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5" /> {comp.location}</p>
-                          </div>
-                        </div>
+                        <CompanionCard
+                          key={`${comp.id}-${idx}`}
+                          companion={comp}
+                          isFav={favorites.includes(comp.id)}
+                          onToggleFavorite={toggleFavorite}
+                          onViewCompanion={handleViewCompanion}
+                          onShowToast={showToast}
+                          layout="compact"
+                        />
                       ))}
                     </div>
                   ) : (
@@ -3125,55 +3221,17 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-3">
-                      {filteredCompanions.map((comp, compIdx) => {
-                        const isFav = favorites && favorites.includes(comp.id);
-                        return (
-                          <div 
-                            key={`${comp.id || 'comp'}-${compIdx}`}
-                            onClick={() => handleViewCompanion(comp)}
-                            className="bg-surface border border-white/5 rounded-2xl overflow-hidden flex flex-col relative cursor-pointer hover:border-primary-action/30 active:scale-98 transition-all text-left group"
-                          >
-                            <div className="relative w-full aspect-[4/3] overflow-hidden bg-surface-elevated">
-                              <SafeImage 
-                                src={comp.imageUrl} 
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                                alt={comp.name} 
-                                fallbackType="thumbnail" 
-                              />
-                              <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded-md flex items-center gap-0.5 text-primary-action text-[9px] font-bold">
-                                <Star className="w-2.5 h-2.5 fill-current" /> {comp.rating}
-                              </div>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); toggleFavorite(comp.id); }}
-                                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center border border-white/10 text-text-primary hover:text-red-500 active:scale-90 transition-all"
-                              >
-                                <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
-                              </button>
-                            </div>
-
-                            <div className="p-3 flex flex-col flex-1 justify-between space-y-1 bg-gradient-to-b from-surface to-background">
-                              <div>
-                                <h4 className="text-xs font-bold text-text-primary truncate flex items-center gap-0.5">
-                                  {comp.name}, {comp.age}
-                                  {comp.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-primary-action shrink-0" />}
-                                </h4>
-                                <p className="text-[9px] text-text-secondary truncate mt-0.5 flex items-center gap-0.5">
-                                  <MapPin className="w-2.5 h-2.5 text-primary-action" /> {comp.location}
-                                </p>
-                              </div>
-                              
-                              <div className="flex items-center justify-between pt-1 border-t border-white/5 mt-1">
-                                <span className="text-[8px] bg-white/5 text-text-secondary px-1 py-0.5 rounded uppercase font-bold truncate max-w-[50px]">
-                                  {comp.interests[0] || 'Guide'}
-                                </span>
-                                <span className="text-[10px] font-black text-primary-action font-mono truncate">
-                                  NPR {comp.hourlyRate}/h
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {filteredCompanions.map((comp, idx) => (
+                        <CompanionCard
+                          key={`${comp.id}-${idx}`}
+                          companion={comp}
+                          isFav={favorites.includes(comp.id)}
+                          onToggleFavorite={toggleFavorite}
+                          onViewCompanion={handleViewCompanion}
+                          onShowToast={showToast}
+                          layout="compact"
+                        />
+                      ))}
                     </div>
                   )}
                 </div>

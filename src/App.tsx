@@ -21,7 +21,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<ClientApp />} />
+      <Route path="/" element={<ClientApp initialTab="home" />} />
+      <Route path="/explore" element={<ClientApp initialTab="explore" />} />
+      <Route
+        path="/companions"
+        element={<ClientApp initialTab="companions" />}
+      />
       <Route
         path="/bookings"
         element={
@@ -29,10 +34,6 @@ function AppRoutes() {
             <ClientApp initialTab="bookings" />
           </AuthGuard>
         }
-      />
-      <Route
-        path="/companions"
-        element={<ClientApp initialTab="explore" />}
       />
       <Route
         path="/messages"
