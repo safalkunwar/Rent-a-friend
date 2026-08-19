@@ -178,7 +178,7 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
               className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${liked ? 'text-red-500' : 'text-text-secondary hover:text-red-500'}`}
             >
               <Heart className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
-              <span>{likes + (liked ? 1 : 0)}</span>
+              <span>{likes}</span>
             </button>
             <button
               onClick={() => onComment?.(post.id)}

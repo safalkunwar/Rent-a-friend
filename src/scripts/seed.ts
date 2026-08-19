@@ -516,6 +516,37 @@ async function runSeed() {
     }
   }
 
+  // Generate comments for community posts
+  const commentsList: any[] = [];
+  const commentTexts = [
+    "Great post! Really helpful insights for my upcoming trip.",
+    "Thanks for sharing this! Nepal is absolutely beautiful.",
+    "I had a similar experience last month. SATHI companions are amazing!",
+    "Can't wait to try this out. Any recommendations for beginners?",
+    "This is exactly what I needed to know before my trip.",
+    "Amazing photography! The mountains look incredible.",
+    "Local insights like this are what make SATHI special.",
+    "Booking my companion through SATHI was the best decision.",
+    "The food recommendations here are spot on!",
+    "Safety tips are so important when traveling in Nepal."
+  ];
+  for (const post of postsList) {
+    const commentCount = 1 + (parseInt(post.id.replace('cp', '')) % 5);
+    post.commentsCount = commentCount;
+    for (let c = 0; c < commentCount; c++) {
+      const commenter = travelersList[(c + parseInt(post.id.replace('cp', ''))) % travelersList.length];
+      commentsList.push({
+        id: `comment-${post.id}-${c}`,
+        postId: post.id,
+        userId: commenter.id,
+        userName: commenter.name,
+        userAvatar: commenter.avatar,
+        text: commentTexts[(c + parseInt(post.id.replace('cp', ''))) % commentTexts.length],
+        createdAt: new Date(Date.now() - (commentCount - c) * 3600000).toISOString(),
+      });
+    }
+  }
+
   // Generate 85 Activities
   const activitiesList: any[] = [];
 
@@ -668,6 +699,7 @@ async function runSeed() {
     await writeAllInChunks('reviews', reviewsList);
     await writeAllInChunks('stories', storiesList);
     await writeAllInChunks('community_posts', postsList);
+    await writeAllInChunks('comments', commentsList);
     await writeAllInChunks('activities', activitiesList);
     await writeAllInChunks('events', eventsList);
     await writeAllInChunks('partners', partnersList);

@@ -5,6 +5,7 @@ import { SafeImage } from '../ui/SafeImage';
 import { SocialPostCard } from '../social/SocialPostCard';
 import { DiscoveryContentContainer } from './DiscoveryContentContainer';
 import { Heart, MapPin, Star, ArrowRight, ChevronRight, Search } from 'lucide-react';
+import { useAppContext } from '../../context/AppContext';
 
 interface DiscoveryFeedProps {
   companions: Companion[];
@@ -49,6 +50,56 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [lightboxImages, setLightboxImages] = useState<string[] | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const { currentUser: ctxCurrentUser, likePost, unlikePost, createComment, deleteComment, openAuthModal } = useAppContext();
+  const currentUserId = ctxCurrentUser?.id;
+
+  const handleLike = async (id: string) => {
+    if (!currentUserId) {
+      openAuthModal();
+      return;
+    }
+    try {
+      await likePost(id);
+    } catch (err) {
+      onShowToast('Failed to sync like with Firebase. Try again.', 'error');
+    }
+  };
+
+  const handleUnlike = async (id: string) => {
+    if (!currentUserId) return;
+    try {
+      await unlikePost(id);
+    } catch (err) {
+      onShowToast('Failed to sync unlike with Firebase. Try again.', 'error');
+    }
+  };
+
+  const handleComment = async (postId: string, text: string) => {
+    if (!currentUserId) {
+      openAuthModal();
+      return;
+    }
+    try {
+      await createComment({
+        postId,
+        userId: currentUserId,
+        userName: ctxCurrentUser.name || 'User',
+        userAvatar: ctxCurrentUser.avatar || '',
+        text,
+      });
+    } catch (err) {
+      onShowToast('Failed to post comment. Try again.', 'error');
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string, postId: string) => {
+    try {
+      await deleteComment(commentId, postId);
+    } catch (err) {
+      onShowToast('Failed to delete comment. Try again.', 'error');
+    }
+  };
 
   const feedItems = useMemo(() => {
     const items = generateDiscoveryFeed(companions, activities, events, stories, posts, {
@@ -269,7 +320,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                   <SocialPostCard
                     post={item.data as ExperienceStory}
                     type="story"
-                    onLike={(id) => onShowToast('Liked!', 'success')}
+                    onLike={handleLike}
                     onComment={(id) => onShowToast('Comments coming soon', 'info')}
                     onShare={(id) => onShowToast('Shared!', 'success')}
                     onSave={(id) => onShowToast('Saved!', 'success')}
@@ -279,14 +330,14 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                 </div>
               );
             }
-
+            
             if (item.type === 'post') {
               return (
                 <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
                   <SocialPostCard
                     post={item.data as CommunityPost}
                     type="post"
-                    onLike={(id) => onShowToast('Liked!', 'success')}
+                    onLike={handleLike}
                     onComment={(id) => onShowToast('Comments coming soon', 'info')}
                     onShare={(id) => onShowToast('Shared!', 'success')}
                     onSave={(id) => onShowToast('Saved!', 'success')}

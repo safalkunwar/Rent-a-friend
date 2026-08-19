@@ -310,6 +310,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
     // Optimistic UI update
     setMomentLiked(prev => ({ ...prev, [storyId]: !isLiked }));
+    setStoryLikesCount(prev => ({
+      ...prev,
+      [storyId]: Math.max(0, (prev[storyId] || 0) + (isLiked ? -1 : 1))
+    }));
 
     try {
       if (isLiked) {
@@ -320,6 +324,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     } catch (err) {
       // Revert optimistic state
       setMomentLiked(prev => ({ ...prev, [storyId]: isLiked }));
+      setStoryLikesCount(prev => ({
+        ...prev,
+        [storyId]: Math.max(0, (prev[storyId] || 0) + (isLiked ? 1 : -1))
+      }));
       showToast('Failed to sync like with Firebase. Try again.', 'error');
     }
   };

@@ -283,10 +283,11 @@ service cloud.firestore {
       // Admins can create, update, and delete any post
       allow create, update, delete: if isAdmin();
 
-      // Authors can update their own posts, or any authenticated user can update counter fields
-      allow update: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'category', 'tags', 'imageUrl', 'updatedAt', 'status'])
-      );
+      // Authors can update their own posts
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'category', 'tags', 'imageUrl', 'updatedAt', 'status']);
+
+      // Any authenticated user can update counter fields
+      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'updatedAt']);
     }
 
     // Comments Collection: /comments/{commentId}
@@ -333,10 +334,11 @@ service cloud.firestore {
       // Admins can create, update, and delete stories
       allow create, update, delete: if isAdmin();
 
-      // Users can edit their own stories, and any authenticated user can increment/decrement likes
-      allow update: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'imageUrl', 'updatedAt'])
-      );
+      // Users can edit their own stories
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'imageUrl', 'updatedAt']);
+
+      // Any authenticated user can update like counters
+      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likesCount', 'updatedAt']);
     }
 
     // Events Collection: /events/{eventId}
