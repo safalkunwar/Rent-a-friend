@@ -17,6 +17,7 @@ import { CommunityFeed } from './components/social/CommunityFeed';
 import { DiscoveryFeed } from './components/discovery/DiscoveryFeed';
 import { CompanionCard } from './components/companions/CompanionCard';
 import { CategoryHeader } from './components/discovery/CategoryHeader';
+import { PageContainer, SectionHeader } from './components/layout';
 import { ProfileEditModal } from './components/modals/ProfileEditModal';
 import { DocumentModal } from './components/modals/DocumentModal';
 import { MapPreview } from './components/maps/MapPreview';
@@ -34,6 +35,7 @@ import * as motion from 'motion/react-client';
 import { useAppContext } from './context/AppContext';
 import { useToast } from './components/ui/Toast';
 import { useCompanions, useStories, useActivities, useEvents, usePartners, useCommunityPosts } from './hooks/useFirestoreData';
+import { useCompanionCategories } from './hooks/useCompanionCategories';
 import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
 import { saveStoredPreferences } from './services/preferences';
@@ -928,7 +930,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
                 
                 {/* Desktop Interactive Map */}
-                <div className="hidden lg:block px-4">
+                <div className="hidden lg:block">
                   <div className="bg-surface border border-white/10 rounded-3xl overflow-hidden relative shadow-2xl shadow-black/40">
                     <div className="p-4 bg-surface-elevated/40 border-b border-white/5 flex justify-between items-center text-left">
                       <span className="text-xs uppercase font-black tracking-wider text-text-secondary flex items-center gap-2">
@@ -1010,85 +1012,18 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   </div>
                 </div>
 
-                {/* 4. COMPANION MARKETPLACE FEED (VISUAL CENTERPIECE) */}
-                <section id="marketplace-section" className="space-y-6">
-                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border-token/40 pb-4">
-                    <div>
-                      <h2 className="text-xl md:text-3xl font-extrabold text-text-primary flex items-center gap-2">
-                        Top Companions for You <span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">KYC Verified</span>
-                      </h2>
-                      <p className="text-xs text-text-secondary mt-1">Book safely. Hourly rates listed in NPR. Zero commission or matching fee.</p>
+                  {/* Companion Marketplace Feed */}
+                  <section id="marketplace-section" className="space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border-token/40 pb-4">
+                      <div>
+                        <h2 className="text-xl md:text-3xl font-extrabold text-text-primary flex items-center gap-2">
+                          Top Companions for You <span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">KYC Verified</span>
+                        </h2>
+                        <p className="text-xs text-text-secondary mt-1">Book safely. Hourly rates listed in NPR. Zero commission or matching fee.</p>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => setIsFilterDrawerOpen(true)}
-                        className="flex items-center gap-2 px-3.5 py-2 bg-surface-elevated hover:bg-border-token border border-border-token hover:border-primary-action rounded-xl text-xs font-bold text-text-primary transition-all shadow-sm"
-                      >
-                        <SlidersHorizontal className="w-3.5 h-3.5 text-primary-action" />
-                        <span>Filters</span>
-                        {activeFilterCount > 0 && (
-                          <span className="w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">
-                            {activeFilterCount}
-                          </span>
-                        )}
-                      </button>
-
-                      {activeFilterCount > 0 && (
-                        <button 
-                          onClick={() => {
-                            setSelectedCategory('All');
-                            setSelectedCity('All');
-                            setSelectedLanguage('All');
-                            setMaxHourlyRate(3000);
-                            setMinRatingFilter(0);
-                            setShowSavedOnly(false);
-                            setSearchQuery('');
-                            setSortBy('recommended');
-                            showToast("All filters cleared", "info");
-                          }} 
-                          className="text-xs font-bold text-primary-action hover:underline px-2 py-1"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Search + Category Filter */}
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <Search className="w-4 h-4 text-text-secondary absolute left-3 top-1/2 transform -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Search companions by name, skill, or location..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-10 pl-9 pr-4 bg-surface-elevated border border-border-token/50 rounded-xl text-xs text-text-primary placeholder-text-secondary focus:outline-none focus:border-primary-action focus:bg-surface transition-all"
-                      />
-                      {searchQuery && (
-                        <button
-                          onClick={() => setSearchQuery('')}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-primary-action hover:underline"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {['All', 'Coffee Buddy', 'Travel Companion', 'Language Exchange', 'Food Explorer', 'Museum Guide', 'Hiking Partner', 'Shopping Buddy'].map(cat => (
-                        <button
-                          key={cat}
-                          onClick={() => setSelectedCategory(cat)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${selectedCategory === cat ? 'bg-primary-action text-background border-primary-action font-bold' : 'bg-surface-elevated text-text-secondary border-border-token hover:border-white/20'}`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {companionsLoading ? (
+                    {companionsLoading ? (
                     <div className="text-center py-20 text-text-secondary flex flex-col items-center gap-2">
                       <div className="w-10 h-10 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
                       <span>Syncing companion profiles...</span>
@@ -1108,94 +1043,50 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   ) : selectedCategory === 'All' && !searchQuery && selectedCity === 'All' && !showSavedOnly ? (
                     /* Grouped category-based horizontal scrolling rows */
                     (() => {
-                      const companionCategoryMap: Record<string, Companion[]> = {};
-                      filteredCompanions.forEach(c => {
-                        const primaryCat = c.interests[0] || 'Local Companion';
-                        if (!companionCategoryMap[primaryCat]) {
-                          companionCategoryMap[primaryCat] = [];
-                        }
-                        companionCategoryMap[primaryCat].push(c);
-                      });
-
-                      const categoryEmojis: Record<string, string> = {
-                        'Coffee Buddy': '☕',
-                        'Travel Companion': '✈️',
-                        'Language Exchange': '🗣️',
-                        'Food Explorer': '🍜',
-                        'Museum Guide': '🏛️',
-                        'Hiking Partner': '🥾',
-                        'Shopping Buddy': '🛍️',
-                        'Study Partner': '📚',
-                        'Nightlife': '🌙',
-                        'Photography Walk': '📷',
-                        'Local Companion': '✨'
-                      };
-
-                      const orderPref = [
-                        'Hiking Partner',
-                        'Travel Companion',
-                        'Coffee Buddy',
-                        'Food Explorer',
-                        'Photography Walk',
-                        'Language Exchange',
-                        'Museum Guide',
-                        'Shopping Buddy',
-                        'Study Partner',
-                        'Nightlife',
-                        'Local Companion'
-                      ];
-
-                      const activeCats = Object.keys(companionCategoryMap).filter(cat => companionCategoryMap[cat].length > 0);
-                      const sortedActiveCats = [
-                        ...orderPref.filter(cat => activeCats.includes(cat)),
-                        ...activeCats.filter(cat => !orderPref.includes(cat))
-                      ];
+                      const categories = useCompanionCategories(filteredCompanions);
 
                       return (
                         <div className="space-y-10">
-                          {sortedActiveCats.map(cat => {
-                            const catsList = companionCategoryMap[cat];
-                            return (
-                              <div key={cat} className="space-y-4 text-left">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xl" role="img" aria-label={cat}>{categoryEmojis[cat] || '✨'}</span>
-                                    <h3 className="text-lg font-bold text-text-primary tracking-tight">{cat}</h3>
-                                    <span className="text-[10px] bg-surface-elevated text-text-secondary px-2.5 py-0.5 rounded-full border border-border-token/30">
-                                      {catsList.length} {catsList.length === 1 ? 'guide' : 'guides'}
-                                    </span>
-                                  </div>
-                                  <button 
-                                    onClick={() => {
-                                      setSelectedCategory(cat);
-                                      showToast(`Viewing all ${cat} guides`, 'success');
-                                    }}
-                                    className="text-xs font-bold text-primary-action hover:underline flex items-center gap-1"
-                                  >
-                                    See all <ChevronRight className="w-3 h-3" />
-                                  </button>
+                          {categories.map(cat => (
+                            <div key={cat.category} className="space-y-4 text-left">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xl" role="img" aria-label={cat.category}>{cat.emoji}</span>
+                                  <h3 className="text-lg font-bold text-text-primary tracking-tight">{cat.category}</h3>
+                                  <span className="text-[10px] bg-surface-elevated text-text-secondary px-2.5 py-0.5 rounded-full border border-border-token/30">
+                                    {cat.companions.length} {cat.companions.length === 1 ? 'guide' : 'guides'}
+                                  </span>
                                 </div>
-
-                                <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory pt-1">
-                                  {catsList.map((comp, compIdx) => {
-                                      const isFav = favorites && favorites.includes(comp.id);
-                                      return (
-                                        <div key={`${cat}-${comp.id}-${compIdx}`}>
-                                          <CompanionCard
-                                            companion={comp}
-                                            isFav={isFav}
-                                            onToggleFavorite={toggleFavorite}
-                                            onViewCompanion={handleViewCompanion}
-                                            onShowToast={showToast}
-                                            layout="featured"
-                                          />
-                                        </div>
-                                      );
-                                  })}
-                               </div>
+                                <button 
+                                  onClick={() => {
+                                    setSelectedCategory(cat.category);
+                                    showToast(`Viewing all ${cat.category} guides`, 'success');
+                                  }}
+                                  className="text-xs font-bold text-primary-action hover:underline flex items-center gap-1"
+                                >
+                                  See all <ChevronRight className="w-3 h-3" />
+                                </button>
                               </div>
-                            );
-                          })}
+
+                              <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory pt-1">
+                                {cat.companions.map((comp, compIdx) => {
+                                    const isFav = favorites && favorites.includes(comp.id);
+                                    return (
+                                      <div key={`${cat.category}-${comp.id}-${compIdx}`}>
+                                        <CompanionCard
+                                          companion={comp}
+                                          isFav={isFav}
+                                          onToggleFavorite={toggleFavorite}
+                                          onViewCompanion={handleViewCompanion}
+                                          onShowToast={showToast}
+                                          layout="featured"
+                                        />
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       );
                     })()
@@ -1293,20 +1184,18 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
                 {/* 5. EXPLORE CURATED NEPAL EXPERIENCES */}
                 <section id="activities-section" className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-border-token/40 pb-4">
-                    <div>
-                      <h2 className="text-xl md:text-3xl font-extrabold text-text-primary flex items-center gap-2">
-                        📍 Explore Nepal Experiences
-                      </h2>
-                      <p className="text-xs text-text-secondary mt-1">Book direct curated local adventures guided by trusted hosts.</p>
-                    </div>
-                    <button
-                      onClick={() => { document.getElementById('activities-section')?.scrollIntoView({ behavior: 'smooth' }); }}
-                      className="text-xs font-bold text-primary-action hover:underline"
-                    >
-                      Explore All
-                    </button>
-                  </div>
+                  <SectionHeader
+                    title="📍 Explore Nepal Experiences"
+                    subtitle="Book direct curated local adventures guided by trusted hosts."
+                    action={
+                      <button
+                        onClick={() => { document.getElementById('activities-section')?.scrollIntoView({ behavior: 'smooth' }); }}
+                        className="text-xs font-bold text-primary-action hover:underline"
+                      >
+                        Explore All
+                      </button>
+                    }
+                  />
 
                   <div id="activities-section" className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {activitiesLoading ? (
@@ -1427,12 +1316,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
                 {/* 7. INSTAGRAM-STYLE COMMUNITY FEED */}
                 <section id="moments-section" className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-border-token/40 pb-4">
-                    <div>
-                      <h2 className="text-xl md:text-3xl font-extrabold text-text-primary">📸 Community Moments Feed</h2>
-                      <p className="text-xs text-text-secondary mt-1">Live adventures shared by travelers and companion guides in Kathmandu valley.</p>
-                    </div>
-                  </div>
+                  <SectionHeader
+                    title="📸 Community Moments Feed"
+                    subtitle="Live adventures shared by travelers and companion guides in Kathmandu valley."
+                  />
 
                   <CommunityFeed />
                 </section>
@@ -1544,24 +1431,23 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
              {activeTab === 'companions' && (
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border-token/40 pb-4">
-                   <div>
-                     <h2 className="text-xl md:text-3xl font-extrabold text-text-primary flex items-center gap-2">
-                       Discover Companions <span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">KYC Verified</span>
-                     </h2>
-                     <p className="text-xs text-text-secondary mt-1">Browse verified local companions by category, location, and interest.</p>
-                   </div>
-                   <button 
-                     onClick={() => setIsFilterDrawerOpen(true)}
-                     className="flex items-center gap-2 px-3.5 py-2 bg-surface-elevated hover:bg-border-token border border-border-token hover:border-primary-action rounded-xl text-xs font-bold text-text-primary transition-all shadow-sm"
-                   >
-                     <SlidersHorizontal className="w-3.5 h-3.5 text-primary-action" />
-                     <span>Filters</span>
-                     {activeFilterCount > 0 && (
-                       <span className="w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">{activeFilterCount}</span>
-                     )}
-                   </button>
-                 </div>
+                 <SectionHeader
+                   title="Discover Companions"
+                   subtitle="Browse verified local companions by category, location, and interest."
+                   badge={<span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">KYC Verified</span>}
+                   action={
+                     <button 
+                       onClick={() => setIsFilterDrawerOpen(true)}
+                       className="flex items-center gap-2 px-3.5 py-2 bg-surface-elevated hover:bg-border-token border border-border-token hover:border-primary-action rounded-xl text-xs font-bold text-text-primary transition-all shadow-sm"
+                     >
+                       <SlidersHorizontal className="w-3.5 h-3.5 text-primary-action" />
+                       <span>Filters</span>
+                       {activeFilterCount > 0 && (
+                         <span className="w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">{activeFilterCount}</span>
+                       )}
+                     </button>
+                   }
+                 />
 
                  {companionsLoading ? (
                    <div className="text-center py-20 text-text-secondary flex flex-col items-center gap-2">
@@ -1574,90 +1460,41 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                      <p className="text-sm font-bold text-text-secondary">No companions found</p>
                      <p className="text-[10px] text-text-muted mt-1">Try adjusting your search or filters</p>
                    </div>
-                 ) : (
-                   <div className="space-y-8">
-                     {(() => {
-                       const companionCategoryMap: Record<string, Companion[]> = {};
-                       filteredCompanions.forEach(c => {
-                         const primaryCat = c.interests[0] || 'Local Companion';
-                         if (!companionCategoryMap[primaryCat]) {
-                           companionCategoryMap[primaryCat] = [];
-                         }
-                         companionCategoryMap[primaryCat].push(c);
-                       });
+                  ) : (
+                    <div className="space-y-8">
+                      {(() => {
+                        const categories = useCompanionCategories(filteredCompanions);
 
-                       const categoryEmojis: Record<string, string> = {
-                         'Hiking Partner': '🥾',
-                         'Travel Companion': '✈️',
-                         'Coffee Buddy': '☕',
-                         'Photography Guide': '📷',
-                         'Food Explorer': '🍜',
-                         'Cultural Guide': '🏛️',
-                         'Local Host': '✨',
-                         'Tour Operator': '🗺️',
-                         'Cycling Guide': '🚴',
-                         'Yoga Instructor': '🧘',
-                         'Bird Watching Guide': '🦅',
-                         'Heritage Walk Guide': '🚶',
-                         'Adventure Companion': '🎯',
-                         'Festival Guide': '🎉',
-                         'Language Exchange Partner': '🗣️',
-                       };
-
-                       const orderPref = [
-                         'Hiking Partner',
-                         'Travel Companion',
-                         'Coffee Buddy',
-                         'Food Explorer',
-                         'Photography Guide',
-                         'Language Exchange Partner',
-                         'Museum Guide',
-                         'Shopping Buddy',
-                         'Study Partner',
-                         'Nightlife',
-                         'Local Companion'
-                       ];
-
-                       const activeCats = Object.keys(companionCategoryMap).filter(cat => companionCategoryMap[cat].length > 0);
-                       const sortedActiveCats = [
-                         ...orderPref.filter(cat => activeCats.includes(cat)),
-                         ...activeCats.filter(cat => !orderPref.includes(cat))
-                       ];
-
-                       return sortedActiveCats.map(cat => {
-                         const catsList = companionCategoryMap[cat];
-                         const emoji = categoryEmojis[cat] || '✨';
-                         return (
-                           <div key={cat} className="space-y-3">
-                             <div className="flex items-center justify-between">
-                               <div className="flex items-center gap-2">
-                                 <span className="text-xl" role="img" aria-label={cat}>{emoji}</span>
-                                 <h3 className="text-lg font-bold text-text-primary tracking-tight">{cat}</h3>
-                                 <span className="text-[10px] bg-surface-elevated text-text-secondary px-2.5 py-0.5 rounded-full border border-border-token/30">
-                                   {catsList.length} {catsList.length === 1 ? 'guide' : 'guides'}
-                                 </span>
-                               </div>
-                             </div>
-                             <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory">
-                               {catsList.map((comp, idx) => (
-                                 <div key={`${comp.id}-${idx}`}>
-                                   <CompanionCard
-                                     companion={comp}
-                                     isFav={favorites.includes(comp.id)}
-                                     onToggleFavorite={toggleFavorite}
-                                     onViewCompanion={handleViewCompanion}
-                                     onShowToast={showToast}
-                                     layout="featured"
-                                   />
-                                 </div>
-                               ))}
-                             </div>
-                           </div>
-                         );
-                       });
-                     })()}
-                   </div>
-                 )}
+                        return categories.map(cat => (
+                          <div key={cat.category} className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xl" role="img" aria-label={cat.category}>{cat.emoji}</span>
+                                <h3 className="text-lg font-bold text-text-primary tracking-tight">{cat.category}</h3>
+                                <span className="text-[10px] bg-surface-elevated text-text-secondary px-2.5 py-0.5 rounded-full border border-border-token/30">
+                                  {cat.companions.length} {cat.companions.length === 1 ? 'guide' : 'guides'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory">
+                              {cat.companions.map((comp, idx) => (
+                                <div key={`${comp.id}-${idx}`}>
+                                  <CompanionCard
+                                    companion={comp}
+                                    isFav={favorites.includes(comp.id)}
+                                    onToggleFavorite={toggleFavorite}
+                                    onViewCompanion={handleViewCompanion}
+                                    onShowToast={showToast}
+                                    layout="featured"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
                </motion.div>
              )}
 
@@ -2145,83 +1982,37 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
             {/* Dynamic category-based horizontal scrolling rows for Mobile */}
             {(() => {
-              const companionCategoryMap: Record<string, Companion[]> = {};
-              filteredCompanions.forEach(c => {
-                const primaryCat = c.interests[0] || 'Local Companion';
-                if (!companionCategoryMap[primaryCat]) {
-                  companionCategoryMap[primaryCat] = [];
-                }
-                companionCategoryMap[primaryCat].push(c);
-              });
-
-              const categoryEmojis: Record<string, string> = {
-                'Coffee Buddy': '☕',
-                'Travel Companion': '✈️',
-                'Language Exchange': '🗣️',
-                'Food Explorer': '🍜',
-                'Museum Guide': '🏛️',
-                'Hiking Partner': '🥾',
-                'Shopping Buddy': '🛍️',
-                'Study Partner': '📚',
-                'Nightlife': '🌙',
-                'Photography Walk': '📷',
-                'Local Companion': '✨'
-              };
-
-              const categoryDisplayNames: Record<string, string> = {
-                'Hiking Partner': 'Hiking Guides',
-                'Coffee Buddy': 'Coffee Buddies',
-                'Photography Walk': 'Photography Guides',
-                'Food Explorer': 'Food Experiences',
-                'Museum Guide': 'Culture',
-                'Travel Companion': 'Adventure',
-                'Language Exchange': 'Language Exchange',
-                'Shopping Buddy': 'Shopping Buddies',
-                'Study Partner': 'Study Partners',
-                'Nightlife': 'Nightlife Guides',
-                'Local Companion': 'Local Companions'
-              };
-
-              const orderPref = [
-                'Hiking Partner',
-                'Travel Companion',
-                'Coffee Buddy',
-                'Food Explorer',
-                'Photography Walk',
-                'Language Exchange',
-                'Museum Guide',
-                'Shopping Buddy',
-                'Study Partner',
-                'Nightlife',
-                'Local Companion'
-              ];
-
-              const activeCats = Object.keys(companionCategoryMap).filter(cat => companionCategoryMap[cat].length > 0);
-              const sortedActiveCats = [
-                ...orderPref.filter(cat => activeCats.includes(cat)),
-                ...activeCats.filter(cat => !orderPref.includes(cat))
-              ];
+              const categories = useCompanionCategories(filteredCompanions);
 
               return (
                 <div className="space-y-6">
-                  {sortedActiveCats.map(cat => {
-                    const catsList = companionCategoryMap[cat];
-                    const displayName = categoryDisplayNames[cat] || cat;
+                  {categories.map(cat => {
+                    const displayName = (cat.category === 'Hiking Partner' && 'Hiking Guides') ||
+                                        (cat.category === 'Coffee Buddy' && 'Coffee Buddies') ||
+                                        (cat.category === 'Photography Walk' && 'Photography Guides') ||
+                                        (cat.category === 'Food Explorer' && 'Food Experiences') ||
+                                        (cat.category === 'Museum Guide' && 'Culture') ||
+                                        (cat.category === 'Travel Companion' && 'Adventure') ||
+                                        (cat.category === 'Shopping Buddy' && 'Shopping Buddies') ||
+                                        (cat.category === 'Study Partner' && 'Study Partners') ||
+                                        (cat.category === 'Nightlife' && 'Nightlife Guides') ||
+                                        (cat.category === 'Local Companion' && 'Local Companions') ||
+                                        cat.category;
               return (
-                <div key={cat} className="space-y-3 text-left">
+                <div key={cat.category} className="space-y-3 text-left">
                   <CategoryHeader
                     title={displayName}
-                    count={catsList.length}
-                    emoji={categoryEmojis[cat] || '✨'}
+                    count={cat.companions.length}
+                    emoji={cat.emoji}
                     onViewMore={() => {
-                      setSelectedCategory(cat);
+                      setSelectedCategory(cat.category);
                       setMobileTab('search');
-                      showToast(`Viewing all ${cat} guides`, 'success');
+                      showToast(`Viewing all ${cat.category} guides`, 'success');
                     }}
                   />
                   <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
-                    {catsList.map((comp, compIdx) => (
-                      <div key={`${cat}-${comp.id}-${compIdx}`}>
+                    {cat.companions.map((comp, compIdx) => (
+                      <div key={`${cat.category}-${comp.id}-${compIdx}`}>
                         <CompanionCard
                           companion={comp}
                           isFav={favorites.includes(comp.id)}
