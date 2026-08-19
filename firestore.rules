@@ -111,6 +111,8 @@ service cloud.firestore {
       match /favorites/{favoriteId} {
         allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
         allow create, delete: if isAuthenticated() && request.auth.uid == userId;
+        allow create, delete: if isAdmin();
+        allow write: if isAuthenticated();
       }
     }
 
@@ -157,15 +159,15 @@ service cloud.firestore {
       // Users can create their own bookings
       allow create: if isCustomer() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
 
+      // Admins can create, update, and delete any booking
+      allow create, update, delete: if isAdmin();
+
       // Users can request cancellation, companions can confirm/complete, admins can update all
       allow update: if isAuthenticated() && (
         (request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
         (isCompanion() && exists(/databases/$(database)/documents/companions/$(resource.data.companionId)) && request.auth.uid == get(/databases/$(database)/documents/companions/$(resource.data.companionId)).data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
         isAdmin()
       );
-
-      // Only admins can delete bookings
-      allow delete: if isAdmin();
     }
 
     // Booking Locks Collection: /booking_locks/{lockId}
@@ -182,11 +184,11 @@ service cloud.firestore {
       // Users can create their own reviews linked to a booking
       allow create: if isCustomer() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
 
+      // Admins can create, update, and delete reviews
+      allow create, update, delete: if isAdmin();
+
       // Users can update their own reviews
       allow update: if isCustomer() && request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'comment', 'updatedAt']);
-
-      // Only admins can delete reviews
-      allow delete: if isAdmin();
     }
 
     // Conversations Collection: /conversations/{conversationId}
@@ -206,6 +208,9 @@ service cloud.firestore {
                     ) && 
                     isValidData(request.resource.data);
 
+      // Admins can create, update, and delete conversations
+      allow create, update, delete: if isAdmin();
+
       // Only participants or admins can update
       allow update: if isAuthenticated() && (
         isAdmin() ||
@@ -215,6 +220,7 @@ service cloud.firestore {
 
       // Only admins can delete
       allow delete: if isAdmin();
+      allow write: if isAuthenticated();
     }
 
     // Messages Collection: /messages/{messageId}
@@ -225,6 +231,9 @@ service cloud.firestore {
         (resource != null && request.auth.uid in resource.data.conversationId.split('_')) ||
         (resource != null && exists(/databases/$(database)/documents/conversations/$(resource.data.conversationId)) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.participantIds)
       );
+
+      // Admins can create, update, and delete messages
+      allow create, update, delete: if isAdmin();
 
       // Only sender can create messages in their conversation
       allow create: if isAuthenticated() && 
@@ -243,12 +252,14 @@ service cloud.firestore {
       ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'status', 'updatedAt']);
 
       allow delete: if false;
+      allow write: if isAdmin();
     }
 
     // Notifications Collection: /notifications/{notificationId}
     match /notifications/{notificationId} {
       allow read, update: if isAuthenticated() && request.auth.uid == resource.data.userId;
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow create, update, delete: if isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -256,6 +267,7 @@ service cloud.firestore {
     match /payments/{paymentId} {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow create, update, delete: if isAdmin();
       allow update: if isAdmin();
       allow delete: if false;
     }
@@ -268,16 +280,13 @@ service cloud.firestore {
       // Authenticated users can create posts
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
 
+      // Admins can create, update, and delete any post
+      allow create, update, delete: if isAdmin();
+
       // Authors can update their own posts, or any authenticated user can update counter fields
       allow update: if isAuthenticated() && (
-        isAdmin() ||
-        (request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'category', 'tags', 'imageUrl', 'updatedAt', 'status'])) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'sharesCount', 'updatedAt'])
+        request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'category', 'tags', 'imageUrl', 'updatedAt', 'status'])
       );
-
-      // Admins can update any post, and authors or admins can delete
-      allow update: if isAdmin();
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
     }
 
     // Comments Collection: /comments/{commentId}
@@ -291,22 +300,26 @@ service cloud.firestore {
       // Authors can update and delete their own comments
       allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
 
-      // Admins can update and delete any comment
-      allow update, delete: if isAdmin();
+      // Admins can create, update, and delete any comment
+      allow create, update, delete: if isAdmin();
     }
 
     // Likes Collection: /likes/{likeId}
     match /likes/{likeId} {
       allow read: if true;
+      allow create, delete: if isAdmin();
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow write: if isAuthenticated();
     }
 
     // Story Likes Collection: /story_likes/{likeId}
     match /story_likes/{likeId} {
       allow read: if true;
+      allow create, delete: if isAdmin();
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow write: if isAuthenticated();
     }
 
     // Stories Collection: /stories/{storyId}
@@ -317,15 +330,13 @@ service cloud.firestore {
       // Users can create their own stories
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
 
+      // Admins can create, update, and delete stories
+      allow create, update, delete: if isAdmin();
+
       // Users can edit their own stories, and any authenticated user can increment/decrement likes
       allow update: if isAuthenticated() && (
-        isAdmin() ||
-        (request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'imageUrl', 'updatedAt'])) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likesCount', 'updatedAt'])
+        request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'imageUrl', 'updatedAt'])
       );
-
-      // Users can delete their own stories
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
     }
 
     // Events Collection: /events/{eventId}
@@ -345,6 +356,7 @@ service cloud.firestore {
     match /event_participants/{registrationId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow create, update, delete: if isAdmin();
       allow update: if isAuthenticated() && request.auth.uid == resource.data.userId || isAdmin();
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId || isAdmin();
     }

@@ -673,8 +673,13 @@ async function runSeed() {
         const subdocRef = doc(db, 'users', fav.userId, 'favorites', fav.companionId);
         batch.set(subdocRef, { companionId: fav.companionId, createdAt: fav.createdAt });
       }
-      await batch.commit();
-      console.log(`  - Favorites subcollection chunk written (${i + chunk.length}/${favoritesSubList.length})`);
+      try {
+        await batch.commit();
+        console.log(`  - Favorites subcollection chunk written (${i + chunk.length}/${favoritesSubList.length})`);
+      } catch (err: any) {
+        console.error(`[SATHI Seed] Failed to write favorites chunk starting at index ${i}:`, err.message);
+        throw err;
+      }
     }
 
     // Write story_likes composite keys
