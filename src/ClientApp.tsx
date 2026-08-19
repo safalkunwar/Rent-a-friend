@@ -1542,50 +1542,124 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </motion.div>
             )}
 
-            {activeTab === 'companions' && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border-token/40 pb-4">
-                  <div>
-                    <h2 className="text-xl md:text-3xl font-extrabold text-text-primary flex items-center gap-2">
-                      Discover Companions <span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">KYC Verified</span>
-                    </h2>
-                    <p className="text-xs text-text-secondary mt-1">Browse verified local companions by category, location, and interest.</p>
-                  </div>
-                  <button 
-                    onClick={() => setIsFilterDrawerOpen(true)}
-                    className="flex items-center gap-2 px-3.5 py-2 bg-surface-elevated hover:bg-border-token border border-border-token hover:border-primary-action rounded-xl text-xs font-bold text-text-primary transition-all shadow-sm"
-                  >
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-primary-action" />
-                    <span>Filters</span>
-                    {activeFilterCount > 0 && (
-                      <span className="w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">{activeFilterCount}</span>
-                    )}
-                  </button>
-                </div>
+             {activeTab === 'companions' && (
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border-token/40 pb-4">
+                   <div>
+                     <h2 className="text-xl md:text-3xl font-extrabold text-text-primary flex items-center gap-2">
+                       Discover Companions <span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">KYC Verified</span>
+                     </h2>
+                     <p className="text-xs text-text-secondary mt-1">Browse verified local companions by category, location, and interest.</p>
+                   </div>
+                   <button 
+                     onClick={() => setIsFilterDrawerOpen(true)}
+                     className="flex items-center gap-2 px-3.5 py-2 bg-surface-elevated hover:bg-border-token border border-border-token hover:border-primary-action rounded-xl text-xs font-bold text-text-primary transition-all shadow-sm"
+                   >
+                     <SlidersHorizontal className="w-3.5 h-3.5 text-primary-action" />
+                     <span>Filters</span>
+                     {activeFilterCount > 0 && (
+                       <span className="w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">{activeFilterCount}</span>
+                     )}
+                   </button>
+                 </div>
 
-                {/* Results Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredCompanions.map((comp, idx) => (
-                    <CompanionCard
-                      key={`${comp.id}-${idx}`}
-                      companion={comp}
-                      isFav={favorites.includes(comp.id)}
-                      onToggleFavorite={toggleFavorite}
-                      onViewCompanion={handleViewCompanion}
-                      onShowToast={showToast}
-                      layout="featured"
-                    />
-                  ))}
-                </div>
-                {filteredCompanions.length === 0 && (
-                  <div className="text-center py-20">
-                    <Users className="w-12 h-12 text-text-muted mx-auto mb-3" />
-                    <p className="text-sm font-bold text-text-secondary">No companions found</p>
-                    <p className="text-[10px] text-text-muted mt-1">Try adjusting your search or filters</p>
-                  </div>
-                )}
-              </motion.div>
-            )}
+                 {companionsLoading ? (
+                   <div className="text-center py-20 text-text-secondary flex flex-col items-center gap-2">
+                     <div className="w-10 h-10 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                     <span>Syncing companion profiles...</span>
+                   </div>
+                 ) : filteredCompanions.length === 0 ? (
+                   <div className="text-center py-20">
+                     <Users className="w-12 h-12 text-text-muted mx-auto mb-3" />
+                     <p className="text-sm font-bold text-text-secondary">No companions found</p>
+                     <p className="text-[10px] text-text-muted mt-1">Try adjusting your search or filters</p>
+                   </div>
+                 ) : (
+                   <div className="space-y-8">
+                     {(() => {
+                       const companionCategoryMap: Record<string, Companion[]> = {};
+                       filteredCompanions.forEach(c => {
+                         const primaryCat = c.interests[0] || 'Local Companion';
+                         if (!companionCategoryMap[primaryCat]) {
+                           companionCategoryMap[primaryCat] = [];
+                         }
+                         companionCategoryMap[primaryCat].push(c);
+                       });
+
+                       const categoryEmojis: Record<string, string> = {
+                         'Hiking Partner': '🥾',
+                         'Travel Companion': '✈️',
+                         'Coffee Buddy': '☕',
+                         'Photography Guide': '📷',
+                         'Food Explorer': '🍜',
+                         'Cultural Guide': '🏛️',
+                         'Local Host': '✨',
+                         'Tour Operator': '🗺️',
+                         'Cycling Guide': '🚴',
+                         'Yoga Instructor': '🧘',
+                         'Bird Watching Guide': '🦅',
+                         'Heritage Walk Guide': '🚶',
+                         'Adventure Companion': '🎯',
+                         'Festival Guide': '🎉',
+                         'Language Exchange Partner': '🗣️',
+                       };
+
+                       const orderPref = [
+                         'Hiking Partner',
+                         'Travel Companion',
+                         'Coffee Buddy',
+                         'Food Explorer',
+                         'Photography Guide',
+                         'Language Exchange Partner',
+                         'Museum Guide',
+                         'Shopping Buddy',
+                         'Study Partner',
+                         'Nightlife',
+                         'Local Companion'
+                       ];
+
+                       const activeCats = Object.keys(companionCategoryMap).filter(cat => companionCategoryMap[cat].length > 0);
+                       const sortedActiveCats = [
+                         ...orderPref.filter(cat => activeCats.includes(cat)),
+                         ...activeCats.filter(cat => !orderPref.includes(cat))
+                       ];
+
+                       return sortedActiveCats.map(cat => {
+                         const catsList = companionCategoryMap[cat];
+                         const emoji = categoryEmojis[cat] || '✨';
+                         return (
+                           <div key={cat} className="space-y-3">
+                             <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-2">
+                                 <span className="text-xl" role="img" aria-label={cat}>{emoji}</span>
+                                 <h3 className="text-lg font-bold text-text-primary tracking-tight">{cat}</h3>
+                                 <span className="text-[10px] bg-surface-elevated text-text-secondary px-2.5 py-0.5 rounded-full border border-border-token/30">
+                                   {catsList.length} {catsList.length === 1 ? 'guide' : 'guides'}
+                                 </span>
+                               </div>
+                             </div>
+                             <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory">
+                               {catsList.map((comp, idx) => (
+                                 <div key={`${comp.id}-${idx}`}>
+                                   <CompanionCard
+                                     companion={comp}
+                                     isFav={favorites.includes(comp.id)}
+                                     onToggleFavorite={toggleFavorite}
+                                     onViewCompanion={handleViewCompanion}
+                                     onShowToast={showToast}
+                                     layout="featured"
+                                   />
+                                 </div>
+                               ))}
+                             </div>
+                           </div>
+                         );
+                       });
+                     })()}
+                   </div>
+                 )}
+               </motion.div>
+             )}
 
             {activeTab === 'partner' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
