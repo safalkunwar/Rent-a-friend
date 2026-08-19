@@ -1010,81 +1010,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   </div>
                 </div>
 
-                {/* 1. COMMUNITY STORIES SECTION (Horizontal Scroll - Classic Circular Bubbles) */}
-                <section aria-label="Recent Adventures Feed">
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-primary-action rounded-full animate-pulse"></span>
-                      <h2 className="text-sm font-extrabold text-text-primary tracking-wide uppercase">Stories from the Community</h2>
-                    </div>
-                     <button onClick={() => { document.getElementById('stories-section')?.scrollIntoView({ behavior: 'smooth' }); }} className="text-xs font-semibold text-primary-action hover:underline">See all</button>
-                  </div>
-                  
-                  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory">
-                    {/* Share story card */}
-                    <div 
-                      onClick={() => setShowCreateStoryModal(true)} 
-                      className="shrink-0 w-20 flex flex-col items-center gap-2 cursor-pointer group snap-start"
-                    >
-                      <div className="w-16 h-16 rounded-full p-[2.5px] bg-surface-elevated border border-border-token/60 relative hover:scale-105 transition-all">
-                        <SafeImage 
-                          src={currentUser?.avatar} 
-                          alt="Your Story" 
-                          fallbackType="avatar"
-                          textForInitials={currentUser?.name || "Your Story"}
-                          className="w-full h-full rounded-full border-2 border-surface-elevated object-cover" 
-                        />
-                        <div className="absolute bottom-0 right-0 bg-primary-action text-background w-5 h-5 rounded-full flex items-center justify-center font-bold text-base leading-none border border-surface-elevated hover:bg-primary-action-hover">+</div>
-                      </div>
-                      <span className="text-[10px] font-bold text-text-secondary truncate w-full text-center">Your Story</span>
-                    </div>
-
-                    {/* Stories map */}
-                    {storiesLoading ? (
-                      <div className="flex gap-4 animate-pulse">
-                        {[1, 2, 3, 4].map(i => (
-                          <div key={i} className="w-16 h-16 rounded-full bg-surface-elevated" />
-                        ))}
-                      </div>
-                    ) : (
-                      stories.map((story, idx) => {
-                        const getEmoji = (caption: string) => {
-                          if (caption.toLowerCase().includes('momo') || caption.toLowerCase().includes('food')) return '🍜';
-                          if (caption.toLowerCase().includes('sunset') || caption.toLowerCase().includes('swayambhu')) return '🌅';
-                          if (caption.toLowerCase().includes('patan') || caption.toLowerCase().includes('durbar') || caption.toLowerCase().includes('history')) return '🏛️';
-                          return '☕';
-                        };
-                        return (
-                          <div 
-                            key={`${story.id}-${idx}`} 
-                            onClick={() => setViewingStory(story)}
-                            className="shrink-0 w-20 flex flex-col items-center gap-2 cursor-pointer group snap-start"
-                          >
-                            <div className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-[#C8A25E] via-red-500 to-purple-600 relative hover:scale-105 transition-all">
-                              <SafeImage 
-                                src={story.userAvatar} 
-                                alt={story.userName} 
-                                fallbackType="avatar"
-                                textForInitials={story.userName}
-                                className="w-full h-full rounded-full border-2 border-surface object-cover" 
-                              />
-                              {(story.id === 's1' || story.id === 's2') && (
-                                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-500 text-text-primary text-[7px] font-black px-1 py-0.5 rounded uppercase tracking-widest border border-red-600 shadow-md">
-                                  Live
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] font-bold text-text-secondary truncate w-full text-center">
-                              {story.userName}
-                            </span>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </section>
-
-
                 {/* 4. COMPANION MARKETPLACE FEED (VISUAL CENTERPIECE) */}
                 <section id="marketplace-section" className="space-y-6">
                   <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border-token/40 pb-4">
@@ -1127,6 +1052,39 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                           Clear
                         </button>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Search + Category Filter */}
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-text-secondary absolute left-3 top-1/2 transform -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search companions by name, skill, or location..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full h-10 pl-9 pr-4 bg-surface-elevated border border-border-token/50 rounded-xl text-xs text-text-primary placeholder-text-secondary focus:outline-none focus:border-primary-action focus:bg-surface transition-all"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery('')}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-primary-action hover:underline"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {['All', 'Coffee Buddy', 'Travel Companion', 'Language Exchange', 'Food Explorer', 'Museum Guide', 'Hiking Partner', 'Shopping Buddy'].map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedCategory(cat)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${selectedCategory === cat ? 'bg-primary-action text-background border-primary-action font-bold' : 'bg-surface-elevated text-text-secondary border-border-token hover:border-white/20'}`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
@@ -1220,69 +1178,19 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
                                 <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory pt-1">
                                   {catsList.map((comp, compIdx) => {
-                                     const isFav = favorites && favorites.includes(comp.id);
-                                     return (
-                                       <div 
-                                         key={`${cat}-${comp.id}-${compIdx}`}
-                                         onClick={() => handleViewCompanion(comp)}
-                                         className="shrink-0 w-72 sm:w-80 group relative flex flex-col rounded-[24px] overflow-hidden border border-border-token-light bg-card hover:border-primary-action/40 hover:shadow-xl transition-all duration-300 cursor-pointer snap-start focus-visible:ring-2 focus-visible:ring-primary-action"
-                                       >
-                                         {/* Card Image Container */}
-                                         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-[24px]">
-                                           <SafeImage 
-                                             src={comp.imageUrl} 
-                                             alt={comp.name} 
-                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                                             fallbackType="thumbnail" 
-                                             loading="lazy" 
-                                           />
-                                           
-                                           {/* Top left category tag & Top right save button */}
-                                           <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10">
-                                             <span className="bg-background/80 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-bold text-primary-action border border-border-token-light uppercase tracking-widest">
-                                               {comp.interests[0] || 'Local Companion'}
-                                             </span>
-                                             <button 
-                                               onClick={(e) => { e.stopPropagation(); toggleFavorite(comp.id); }}
-                                               className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-md flex items-center justify-center border border-border-token-light text-text-primary hover:text-red-500 hover:scale-110 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-primary-action"
-                                               aria-label="Save companion"
-                                             >
-                                               <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
-                                             </button>
-                                           </div>
-                                         </div>
-
-                                         {/* Bottom Details (Clean background, NO dark overlays!) */}
-                                         <div className="p-4 flex-1 flex flex-col justify-between space-y-3 bg-card rounded-b-[24px]">
-                                           <div className="space-y-1">
-                                             <div className="flex items-center gap-1.5 text-text-primary font-bold text-base">
-                                               {comp.name}, {comp.age}
-                                               {comp.isVerified && <ShieldCheck className="w-4 h-4 text-verified shrink-0" />}
-                                             </div>
-                                             <p className="text-text-secondary text-xs flex items-center gap-1">
-                                               <MapPin className="w-3.5 h-3.5 text-text-secondary" /> {comp.location}, Nepal
-                                             </p>
-                                           </div>
-
-                                           <div className="flex items-center justify-between pt-2 border-t border-border-token-light">
-                                             <div className="space-y-0.5">
-                                               <div className="flex items-center gap-1 text-xs font-bold text-rating">
-                                                 <Star className="w-3.5 h-3.5 fill-current text-rating" /> {comp.rating}
-                                                 <span className="text-text-secondary font-normal text-[10px]">({comp.reviewsCount || 120})</span>
-                                               </div>
-                                               <span className="text-[10px] text-text-secondary block">From <span className="font-bold text-text-primary">NPR {comp.hourlyRate}</span>/hr</span>
-                                             </div>
-
-                                             <button 
-                                               onClick={(e) => { e.stopPropagation(); handleViewCompanion(comp); }}
-                                               className="px-4 py-1.5 bg-primary-action hover:bg-primary-action-hover text-background rounded-xl text-xs font-bold transition-all active:scale-95 shadow-xs"
-                                             >
-                                               Book
-                                             </button>
-                                           </div>
-                                         </div>
-                                       </div>
-                                     );
+                                      const isFav = favorites && favorites.includes(comp.id);
+                                      return (
+                                        <div key={`${cat}-${comp.id}-${compIdx}`}>
+                                          <CompanionCard
+                                            companion={comp}
+                                            isFav={isFav}
+                                            onToggleFavorite={toggleFavorite}
+                                            onViewCompanion={handleViewCompanion}
+                                            onShowToast={showToast}
+                                            layout="featured"
+                                          />
+                                        </div>
+                                      );
                                   })}
                                </div>
                               </div>
@@ -3741,22 +3649,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${selectedCity === city ? 'bg-primary-action text-background border-primary-action font-bold' : 'bg-surface-elevated text-text-secondary border-border-token hover:border-white/20'}`}
                       >
                         {city}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 2. Category Filter */}
-                <div className="space-y-3 pt-5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-primary-action block">Category / Specialization</label>
-                  <div className="flex flex-wrap gap-2">
-                    {['All', 'Coffee Buddy', 'Travel Companion', 'Language Exchange', 'Food Explorer', 'Museum Guide', 'Hiking Partner', 'Shopping Buddy', 'Study Partner', 'Nightlife', 'Photography Walk'].map(cat => (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${selectedCategory === cat ? 'bg-primary-action text-background border-primary-action font-bold' : 'bg-surface-elevated text-text-secondary border-border-token hover:border-white/20'}`}
-                      >
-                        {cat}
                       </button>
                     ))}
                   </div>
