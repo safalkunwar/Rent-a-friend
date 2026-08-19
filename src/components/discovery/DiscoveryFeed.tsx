@@ -1,10 +1,8 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Companion, Activity, Event, ExperienceStory, CommunityPost } from '../../types';
 import { generateDiscoveryFeed, type FeedItem } from '../../services/feedGenerator';
-import { CompanionCard } from '../companions/CompanionCard';
-import { SocialPostCard } from '../social/SocialPostCard';
 import { SafeImage } from '../ui/SafeImage';
-import { CategoryHeader } from './CategoryHeader';
+import { SocialPostCard } from '../social/SocialPostCard';
 import { DiscoveryContentContainer } from './DiscoveryContentContainer';
 import { Heart, MapPin, Star, ArrowRight, ChevronRight, Search } from 'lucide-react';
 
@@ -28,31 +26,6 @@ interface DiscoveryFeedProps {
 }
 
 const BATCH_SIZE = 8;
-
-const CATEGORY_EMOJIS: Record<string, string> = {
-  'Hiking Partner': '🥾',
-  'Travel Companion': '✈️',
-  'Coffee Buddy': '☕',
-  'Photography Guide': '📷',
-  'Food Explorer': '🍜',
-  'Cultural Guide': '🏛️',
-  'Local Host': '✨',
-  'Tour Operator': '🗺️',
-  'Cycling Guide': '🚴',
-  'Yoga Instructor': '🧘',
-  'Bird Watching Guide': '🦅',
-  'Heritage Walk Guide': '🚶',
-  'Adventure Companion': '🎯',
-  'Festival Guide': '🎉',
-  'Language Exchange Partner': '🗣️',
-};
-
-interface CompanionGroup {
-  title: string;
-  category: string;
-  emoji?: string;
-  companions: Companion[];
-}
 
 export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   companions,
@@ -78,38 +51,23 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const feedItems = useMemo(() => {
-    return generateDiscoveryFeed(companions, activities, events, stories, posts, {
+    const items = generateDiscoveryFeed(companions, activities, events, stories, posts, {
       userLocation: currentUser?.location,
       userInterests: currentUser?.interests,
       savedCompanionIds: favorites,
       maxItems: 60,
     });
+    
+    const shuffled = [...items];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    return shuffled;
   }, [companions, activities, events, stories, posts, currentUser?.location, currentUser?.interests, favorites]);
 
   const visibleItems = useMemo(() => feedItems.slice(0, visibleCount), [feedItems, visibleCount]);
-
-  const companionGroups = useMemo<CompanionGroup[]>(() => {
-    const groups: CompanionGroup[] = [];
-    let currentGroup: CompanionGroup | null = null;
-
-    visibleItems.forEach((item) => {
-      if (item.type === 'companion') {
-        const category = (item.data as any).category || 'Companions';
-        const emoji = CATEGORY_EMOJIS[category];
-        const title = item.section || category;
-
-        if (!currentGroup || currentGroup.category !== category) {
-          currentGroup = { title, category, emoji, companions: [] };
-          groups.push(currentGroup);
-        }
-        currentGroup.companions.push(item.data as Companion);
-      } else {
-        currentGroup = null;
-      }
-    });
-
-    return groups;
-  }, [visibleItems]);
 
   React.useEffect(() => {
     setVisibleCount(BATCH_SIZE);
@@ -163,33 +121,6 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
     if (lightboxIndex > 0) {
       setLightboxIndex(lightboxIndex - 1);
     }
-  };
-
-  const renderCompanionSection = (group: CompanionGroup, index: number) => {
-    return (
-      <div key={`${group.category}-${index}`} className="space-y-3">
-        <CategoryHeader
-          title={group.title}
-          count={group.companions.length}
-          emoji={group.emoji}
-          onViewMore={() => onNavigateExplore(group.category)}
-        />
-        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory">
-          {group.companions.map((companion, idx) => (
-            <div key={`${companion.id}-${idx}`}>
-              <CompanionCard
-                companion={companion}
-                isFav={favorites.includes(companion.id)}
-                onToggleFavorite={onToggleFavorite}
-                onViewCompanion={onViewCompanion}
-                onShowToast={onShowToast}
-                layout="default"
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -270,7 +201,40 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
         <div className="space-y-8">
           {visibleItems.map((item, idx) => {
             if (item.type === 'companion') {
-              return null;
+              return (
+                <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
+                  <div className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer hover:border-primary-action/30 transition-all">
+                    <div className="relative h-48 bg-surface-elevated">
+                      <SafeImage src={(item.data as Companion).imageUrl || (item.data as Companion).images?.[0]} className="w-full h-full object-cover" alt={(item.data as Companion).name} />
+                      <span className="absolute top-3 left-3 bg-primary-action text-background text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
+                        {(item.data as Companion).interests?.[0] || 'COMPANION'}
+                      </span>
+                    </div>
+                    <div className="p-4 space-y-2 text-left">
+                      <h4 className="text-sm font-bold text-text-primary">{(item.data as Companion).name}</h4>
+                      <p className="text-xs text-text-secondary flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-primary-action" />
+                        {(item.data as Companion).location || 'Nepal'} • NPR {(item.data as Companion).hourlyRate}/hr
+                      </p>
+                      <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                        <div className="flex items-center gap-0.5 text-xs text-primary-action font-bold">
+                          <Star className="w-3 h-3 fill-current" />
+                          <span>{(item.data as Companion).rating || 5.0}</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewCompanion(item.data as Companion);
+                          }}
+                          className="px-3 py-1 bg-primary-action text-background text-[10px] font-bold rounded-lg hover:bg-primary-action-hover transition-colors"
+                        >
+                          View Profile
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
             }
             
             if (item.type === 'story') {
@@ -369,13 +333,6 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
             
             return null;
           })}
-        </div>
-      </DiscoveryContentContainer>
-
-      {/* Companion Categories - rendered separately for intelligent composition */}
-      <DiscoveryContentContainer>
-        <div className="space-y-8">
-          {companionGroups.map((group, idx) => renderCompanionSection(group, idx))}
         </div>
       </DiscoveryContentContainer>
 

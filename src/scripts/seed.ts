@@ -78,21 +78,32 @@ async function writeAllInChunks<T extends { id: string }>(collectionName: string
   }
 }
 
-// Register authentication users safely
-async function ensureAuthUserExists(email: string, pass: string): Promise<string | null> {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(authInstance, email, pass);
-    console.log(`[SATHI Auth] Created Firebase Auth user: ${email} -> UID: ${userCredential.user.uid}`);
-    return userCredential.user.uid;
-  } catch (err: any) {
-    if (err.code === 'auth/email-already-in-use') {
-      console.log(`[SATHI Auth] Account already exists: ${email}`);
-      return null;
-    } else {
-      console.warn(`[SATHI Auth] Warning creating auth user for ${email}:`, err.message);
-      return null;
+// Register authentication users safely with retry/backoff for rate limits
+async function ensureAuthUserExists(email: string, pass: string, maxRetries = 5, delayMs = 0): Promise<string | null> {
+  if (delayMs > 0) {
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(authInstance, email, pass);
+      console.log(`[SATHI Auth] Created Firebase Auth user: ${email} -> UID: ${userCredential.user.uid}`);
+      return userCredential.user.uid;
+    } catch (err: any) {
+      if (err.code === 'auth/email-already-in-use') {
+        console.log(`[SATHI Auth] Account already exists: ${email}`);
+        return null;
+      } else if (err.code === 'auth/too-many-requests') {
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+        console.warn(`[SATHI Auth] Rate limited creating ${email}. Retry ${attempt}/${maxRetries} in ${backoffMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      } else {
+        console.warn(`[SATHI Auth] Warning creating auth user for ${email}:`, err.message);
+        return null;
+      }
     }
   }
+  console.error(`[SATHI Auth] Failed to create auth user for ${email} after ${maxRetries} retries`);
+  return null;
 }
 
 async function runSeed() {
@@ -222,7 +233,7 @@ async function runSeed() {
     const email = `traveler.${i}@sathi.com`;
     const travelerId = `u-traveler-${i}`;
 
-    await ensureAuthUserExists(email, 'Password123!');
+    await ensureAuthUserExists(email, 'Password123!', 5, 100);
 
     travelersList.push({
       id: travelerId,
@@ -271,7 +282,7 @@ async function runSeed() {
     const companionUserId = `u-companion-${i}`;
     const companionId = `c${i}`;
 
-    await ensureAuthUserExists(email, 'Password123!');
+    await ensureAuthUserExists(email, 'Password123!', 5, 250);
 
     // 1. Create Companion User profile
     const avatarUrl = companionAvatars[i % companionAvatars.length];
