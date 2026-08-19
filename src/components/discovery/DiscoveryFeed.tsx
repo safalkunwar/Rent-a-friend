@@ -57,17 +57,36 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
       savedCompanionIds: favorites,
       maxItems: 60,
     });
-    
+
     const shuffled = [...items];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    
+
     return shuffled;
   }, [companions, activities, events, stories, posts, currentUser?.location, currentUser?.interests, favorites]);
 
   const visibleItems = useMemo(() => feedItems.slice(0, visibleCount), [feedItems, visibleCount]);
+
+  const groupedVisibleItems = useMemo(() => {
+    const groups: Array<{ type: 'companions'; items: FeedItem[] } | { type: 'single'; item: FeedItem }> = [];
+    let i = 0;
+    while (i < visibleItems.length) {
+      if (visibleItems[i].type === 'companion') {
+        const companionItems: FeedItem[] = [];
+        while (i < visibleItems.length && visibleItems[i].type === 'companion') {
+          companionItems.push(visibleItems[i]);
+          i++;
+        }
+        groups.push({ type: 'companions', items: companionItems });
+      } else {
+        groups.push({ type: 'single', item: visibleItems[i] });
+        i++;
+      }
+    }
+    return groups;
+  }, [visibleItems]);
 
   React.useEffect(() => {
     setVisibleCount(BATCH_SIZE);
@@ -131,7 +150,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
           <div className="w-8 h-8 rounded-lg bg-primary-action flex items-center justify-center font-bold text-background text-base">S</div>
           <span className="text-lg font-black tracking-tight text-text-primary hidden sm:inline">SATHI</span>
         </div>
-        
+
         <div className="flex-1 relative flex items-center">
           <Search className="w-4 h-4 text-primary-action absolute left-3" />
           <input
@@ -199,44 +218,51 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
       {/* Continuous Mixed Discovery Feed */}
       <DiscoveryContentContainer>
         <div className="space-y-8">
-          {visibleItems.map((item, idx) => {
-            if (item.type === 'companion') {
+          {groupedVisibleItems.map((group, idx) => {
+            if (group.type === 'companions') {
               return (
-                <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
-                  <div className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer hover:border-primary-action/30 transition-all">
-                    <div className="relative h-48 bg-surface-elevated">
-                      <SafeImage src={(item.data as Companion).imageUrl || (item.data as Companion).images?.[0]} className="w-full h-full object-cover" alt={(item.data as Companion).name} />
-                      <span className="absolute top-3 left-3 bg-primary-action text-background text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
-                        {(item.data as Companion).interests?.[0] || 'COMPANION'}
-                      </span>
-                    </div>
-                    <div className="p-4 space-y-2 text-left">
-                      <h4 className="text-sm font-bold text-text-primary">{(item.data as Companion).name}</h4>
-                      <p className="text-xs text-text-secondary flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-primary-action" />
-                        {(item.data as Companion).location || 'Nepal'} • NPR {(item.data as Companion).hourlyRate}/hr
-                      </p>
-                      <div className="flex justify-between items-center pt-2 border-t border-white/5">
-                        <div className="flex items-center gap-0.5 text-xs text-primary-action font-bold">
-                          <Star className="w-3 h-3 fill-current" />
-                          <span>{(item.data as Companion).rating || 5.0}</span>
+                <div key={`companion-group-${idx}`} className="max-w-2xl mx-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {group.items.map((item) => (
+                      <div key={item.data.id} className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer hover:border-primary-action/30 transition-all">
+                        <div className="relative h-40 bg-surface-elevated">
+                          <SafeImage src={(item.data as Companion).imageUrl || (item.data as Companion).images?.[0]} className="w-full h-full object-cover" alt={(item.data as Companion).name} />
+                          <span className="absolute top-3 left-3 bg-primary-action text-background text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
+                            {(item.data as Companion).interests?.[0] || 'COMPANION'}
+                          </span>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onViewCompanion(item.data as Companion);
-                          }}
-                          className="px-3 py-1 bg-primary-action text-background text-[10px] font-bold rounded-lg hover:bg-primary-action-hover transition-colors"
-                        >
-                          View Profile
-                        </button>
+                        <div className="p-3 space-y-1.5 text-left">
+                          <h4 className="text-sm font-bold text-text-primary">{(item.data as Companion).name}</h4>
+                          <p className="text-xs text-text-secondary flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-primary-action" />
+                            {(item.data as Companion).location || 'Nepal'} • NPR {(item.data as Companion).hourlyRate}/hr
+                          </p>
+                          <div className="flex justify-between items-center pt-1.5 border-t border-white/5">
+                            <div className="flex items-center gap-0.5 text-xs text-primary-action font-bold">
+                              <Star className="w-3 h-3 fill-current" />
+                              <span>{(item.data as Companion).rating || 5.0}</span>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onViewCompanion(item.data as Companion);
+                              }}
+                              className="px-3 py-1 bg-primary-action text-background text-[10px] font-bold rounded-lg hover:bg-primary-action-hover transition-colors"
+                            >
+                              View Profile
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               );
             }
-            
+
+            const item = group.item;
+            const idx2 = visibleItems.indexOf(item);
+
             if (item.type === 'story') {
               return (
                 <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
@@ -253,7 +279,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                 </div>
               );
             }
-            
+
             if (item.type === 'post') {
               return (
                 <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
@@ -270,7 +296,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                 </div>
               );
             }
-            
+
             if (item.type === 'activity') {
               return (
                 <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
@@ -302,7 +328,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                 </div>
               );
             }
-            
+
             if (item.type === 'event') {
               return (
                 <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
@@ -330,7 +356,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                 </div>
               );
             }
-            
+
             return null;
           })}
         </div>
@@ -374,7 +400,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-          
+
           {lightboxImages.length > 1 && (
             <>
               <button
@@ -395,14 +421,14 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
               </button>
             </>
           )}
-          
+
           <img
             src={lightboxImages[lightboxIndex]}
             alt=""
             className="max-w-full max-h-full object-contain"
             onClick={(e) => e.stopPropagation()}
           />
-          
+
           {lightboxImages.length > 1 && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
               {lightboxImages.map((_, idx) => (
