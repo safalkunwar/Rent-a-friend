@@ -2011,7 +2011,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             </div>
 
             {/* Dynamic category-based feed for Mobile */}
-            {(() => {
+            {mobileTab === 'home' && (() => {
               const feedItems = homeFeedItems;
 
               const categoryChunks = feedItems.reduce<FeedItem[][]>((acc, item) => {
