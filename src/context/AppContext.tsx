@@ -39,7 +39,10 @@ interface AppState {
   createPost: (post: Omit<CommunityPost, 'id'>) => Promise<string>;
   likePost: (postId: string) => Promise<void>;
   unlikePost: (postId: string) => Promise<void>;
+  likeStory: (storyId: string) => Promise<void>;
+  unlikeStory: (storyId: string) => Promise<void>;
   checkUserLikedPost: (postId: string) => Promise<boolean>;
+  checkUserLikedStory: (storyId: string) => Promise<boolean>;
   createComment: (comment: Omit<Comment, 'id' | 'createdAt'>) => Promise<string>;
   deleteComment: (id: string, postId: string) => Promise<void>;
   uploadStory: (story: Omit<ExperienceStory, 'id'>) => Promise<string>;
@@ -441,6 +444,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return await socialRepository.checkUserLikedPost(currentUser.id, postId);
   }, [currentUser]);
 
+  const likeStory = useCallback(async (storyId: string) => {
+    if (!currentUser) return;
+    await socialRepository.likeStory(currentUser.id, storyId);
+  }, [currentUser]);
+
+  const unlikeStory = useCallback(async (storyId: string) => {
+    if (!currentUser) return;
+    await socialRepository.unlikeStory(currentUser.id, storyId);
+  }, [currentUser]);
+
+  const checkUserLikedStory = useCallback(async (storyId: string) => {
+    if (!currentUser) return false;
+    return await socialRepository.checkUserLikedStory(currentUser.id, storyId);
+  }, [currentUser]);
+
   const createComment = useCallback(async (comment: Omit<Comment, 'id' | 'createdAt'>) => {
     return await socialRepository.createComment(comment);
   }, []);
@@ -482,7 +500,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       createPost,
       likePost,
       unlikePost,
+      likeStory,
+      unlikeStory,
       checkUserLikedPost,
+      checkUserLikedStory,
       createComment,
       deleteComment,
       uploadStory,

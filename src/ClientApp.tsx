@@ -21,7 +21,7 @@ import { PageContainer, SectionHeader } from './components/layout';
 import { ProfileEditModal } from './components/modals/ProfileEditModal';
 import { DocumentModal } from './components/modals/DocumentModal';
 import { MapPreview } from './components/maps/MapPreview';
-import { Companion, ExperienceStory } from './types';
+import { Companion, ExperienceStory, Activity, Event as SathiEvent } from './types';
 import { socialRepository } from './repositories/SocialRepository';
 import { CreateStoryModal } from './components/modals/CreateStoryModal';
 import { 
@@ -36,6 +36,8 @@ import { useAppContext } from './context/AppContext';
 import { useToast } from './components/ui/Toast';
 import { useCompanions, useStories, useActivities, useEvents, usePartners, useCommunityPosts } from './hooks/useFirestoreData';
 import { useCompanionCategories } from './hooks/useCompanionCategories';
+import { useDiscoveryFeed } from './hooks/useDiscoveryFeed';
+import { type FeedItem } from './services/feedGenerator';
 import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
 import { saveStoredPreferences } from './services/preferences';
@@ -86,7 +88,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const { events, loading: eventsLoading } = useEvents();
   const { partners, loading: partnersLoading } = usePartners();
   const { posts, loading: postsLoading } = useCommunityPosts();
-  
+
+  const homeFeedItems = useDiscoveryFeed(fetchedCompanions, activities, events, fetchedStories, posts);
+
   const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'companions' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings'>(initialTab || 'home');
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -95,6 +99,23 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [storyLiked, setStoryLiked] = useState<Record<string, boolean>>({});
   const [storyLikesCount, setStoryLikesCount] = useState<Record<string, number>>({});
+  const [visibleMobileCategoryCount, setVisibleMobileCategoryCount] = useState(2);
+  const mobileSentinelRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const sentinel = mobileSentinelRef.current;
+      if (!sentinel) return;
+      const rect = sentinel.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      if (rect.top < windowHeight + 200) {
+        setVisibleMobileCategoryCount(prev => prev + 1);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [homeFeedItems]);
 
   useEffect(() => {
     if (viewingStory) {
@@ -931,6 +952,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)}
                 onCreateStory={() => setShowCreateStoryModal(true)}
                 onViewStory={setViewingStory}
+                feedItems={homeFeedItems}
               />
             )}
 
@@ -1988,53 +2010,157 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </div>
             </div>
 
-            {/* Dynamic category-based horizontal scrolling rows for Mobile */}
+            {/* Dynamic category-based feed for Mobile */}
             {(() => {
-              const categories = useCompanionCategories(filteredCompanions);
+              const feedItems = homeFeedItems;
+
+              const categoryChunks = feedItems.reduce<FeedItem[][]>((acc, item) => {
+                if (item.type === 'category-header' && acc.length > 0 && acc[acc.length - 1].length > 0) {
+                  acc.push([item]);
+                } else if (item.type === 'category-header') {
+                  acc.push([item]);
+                } else {
+                  if (acc.length === 0) acc.push([item]);
+                  else acc[acc.length - 1].push(item);
+                }
+                return acc;
+              }, []);
+
+              const visibleMobileItems = categoryChunks.slice(0, visibleMobileCategoryCount).flat();
+
+              const grouped = visibleMobileItems.reduce<Record<string, FeedItem[]>>((acc, item) => {
+                if (item.type === 'category-header') return acc;
+                const cat = (item as Extract<FeedItem, { category?: string }>).category || 'General';
+                if (!acc[cat]) acc[cat] = [];
+                acc[cat].push(item);
+                return acc;
+              }, {});
+
+              const categories = Object.keys(grouped);
 
               return (
                 <div className="space-y-6">
                   {categories.map(cat => {
-                    const displayName = (cat.category === 'Hiking Partner' && 'Hiking Guides') ||
-                                        (cat.category === 'Coffee Buddy' && 'Coffee Buddies') ||
-                                        (cat.category === 'Photography Walk' && 'Photography Guides') ||
-                                        (cat.category === 'Food Explorer' && 'Food Experiences') ||
-                                        (cat.category === 'Museum Guide' && 'Culture') ||
-                                        (cat.category === 'Travel Companion' && 'Adventure') ||
-                                        (cat.category === 'Shopping Buddy' && 'Shopping Buddies') ||
-                                        (cat.category === 'Study Partner' && 'Study Partners') ||
-                                        (cat.category === 'Nightlife' && 'Nightlife Guides') ||
-                                        (cat.category === 'Local Companion' && 'Local Companions') ||
-                                        cat.category;
-              return (
-                <div key={cat.category} className="space-y-3 text-left">
-                  <CategoryHeader
-                    title={displayName}
-                    count={cat.companions.length}
-                    emoji={cat.emoji}
-                    onViewMore={() => {
-                      setSelectedCategory(cat.category);
-                      setMobileTab('search');
-                      showToast(`Viewing all ${cat.category} guides`, 'success');
-                    }}
-                  />
-                  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
-                    {cat.companions.map((comp, compIdx) => (
-                      <div key={`${cat.category}-${comp.id}-${compIdx}`}>
-                        <CompanionCard
-                          companion={comp}
-                          isFav={favorites.includes(comp.id)}
-                          onToggleFavorite={toggleFavorite}
-                          onViewCompanion={handleViewCompanion}
-                          onShowToast={showToast}
-                          layout="compact"
-                        />
+                    const items = grouped[cat];
+                    const companions = items.filter(i => i.type === 'companion');
+                    const activities = items.filter(i => i.type === 'activity');
+                    const events = items.filter(i => i.type === 'event');
+                    const stories = items.filter(i => i.type === 'story');
+
+                    const emoji = (cat === 'Hiking Partner' && '🥾') ||
+                      (cat === 'Coffee Buddy' && '☕') ||
+                      (cat === 'Photography Guide' && '📷') ||
+                      (cat === 'Food Explorer' && '🍜') ||
+                      (cat === 'Cultural Guide' && '🏛️') ||
+                      (cat === 'Local Host' && '✨') ||
+                      (cat === 'Travel Companion' && '✈️') ||
+                      '📌';
+
+                    return (
+                      <div key={cat} className="space-y-3 text-left">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{emoji}</span>
+                            <h3 className="text-sm font-extrabold text-text-primary">{cat}</h3>
+                          </div>
+                          <span className="text-[10px] font-bold text-primary-action cursor-pointer" onClick={() => { setSelectedCategory(cat); setMobileTab('search'); showToast(`Viewing all ${cat} guides`, 'success'); }}>See all</span>
+                        </div>
+
+                        {companions.length > 0 && (
+                          <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1 snap-x">
+                            {companions.map((item, idx) => (
+                              <div key={`${cat}-comp-${item.data.id}-${idx}`}>
+                                <CompanionCard
+                                  companion={item.data as Companion}
+                                  isFav={favorites.includes(item.data.id)}
+                                  onToggleFavorite={toggleFavorite}
+                                  onViewCompanion={handleViewCompanion}
+                                  onShowToast={showToast}
+                                  layout="compact"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {activities.length > 0 && (
+                          <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1 snap-x">
+                            {activities.map((item, idx) => (
+                              <div key={`${cat}-act-${item.data.id}-${idx}`} className="shrink-0 w-44 bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col snap-start">
+                                <div className="relative h-24 bg-surface-elevated">
+                                  <SafeImage src={(item.data as Activity).imageUrl || (item.data as Activity).image} className="w-full h-full object-cover" alt={(item.data as Activity).title} />
+                                </div>
+                                <div className="p-2.5 space-y-1 text-left">
+                                  <h4 className="text-[11px] font-bold text-text-primary truncate">{(item.data as Activity).title}</h4>
+                                  <p className="text-[9px] text-text-secondary">NPR {(item.data as Activity).avgPrice || (item.data as Activity).price || '1,500'}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {events.length > 0 && (
+                          <div className="space-y-2">
+                            {events.slice(0, 3).map((item, idx) => (
+                              <div key={`${cat}-evt-${item.data.id}-${idx}`} className="bg-surface border border-white/5 p-3 rounded-2xl flex items-center gap-3">
+                                <div className="shrink-0 w-10 h-10 rounded-xl bg-surface-elevated flex flex-col items-center justify-center border border-white/10">
+                                  <span className="text-primary-action text-[7px] font-black leading-none uppercase">
+                                    {new Date((item.data as SathiEvent).date || Date.now()).toLocaleString('en-US', { month: 'short' })}
+                                  </span>
+                                  <span className="text-text-primary font-black text-xs leading-none mt-0.5">
+                                    {new Date((item.data as SathiEvent).date || Date.now()).getDate()}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                   <h5 className="text-[11px] font-bold text-text-primary truncate">{(item.data as SathiEvent).title}</h5>
+                                   <p className="text-[9px] text-text-secondary truncate">{(item.data as SathiEvent).location}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {stories.length > 0 && (
+                          <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1 snap-x">
+                            {stories.map((item, idx) => (
+                              <div key={`${cat}-story-${item.data.id}-${idx}`} className="shrink-0 w-36 bg-surface border border-white/5 rounded-2xl overflow-hidden">
+                                <div className="relative h-24 bg-surface-elevated">
+                                  <SafeImage src={(item.data as ExperienceStory).imageUrl} className="w-full h-full object-cover" alt={(item.data as ExperienceStory).caption} />
+                                </div>
+                                <div className="p-2">
+                                  <p className="text-[10px] text-text-primary line-clamp-2">{(item.data as ExperienceStory).caption}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               );
-                  })}
+            })()}
+
+            {/* Mobile progressive loading sentinel */}
+            {(() => {
+              const feedItems = homeFeedItems;
+              const categoryChunks = feedItems.reduce<FeedItem[][]>((acc, item) => {
+                if (item.type === 'category-header' && acc.length > 0 && acc[acc.length - 1].length > 0) {
+                  acc.push([item]);
+                } else if (item.type === 'category-header') {
+                  acc.push([item]);
+                } else {
+                  if (acc.length === 0) acc.push([item]);
+                  else acc[acc.length - 1].push(item);
+                }
+                return acc;
+              }, []);
+              
+              if (visibleMobileCategoryCount >= categoryChunks.length) return null;
+              
+              return (
+                <div ref={mobileSentinelRef} className="flex justify-center py-4">
+                  <div className="w-8 h-8 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin" />
                 </div>
               );
             })()}

@@ -20,6 +20,8 @@ export function useDiscoveryFeed(
       userInterests,
       savedCompanionIds: favorites,
       maxItems: 60,
+      categoriesPerFeed: 3,
+      itemsPerCategory: 6,
     });
   }, [companions, activities, events, stories, posts, currentUser?.location, (currentUser as any)?.interests, favorites]);
 }

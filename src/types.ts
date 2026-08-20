@@ -34,6 +34,8 @@ export interface ExperienceStory {
   comments?: number;
   likesCount?: number;
   commentsCount?: number;
+  category?: string;
+  tags?: string[];
 }
 
 export interface Companion {
@@ -116,6 +118,7 @@ export interface Event {
   description?: string;
   imageUrl?: string;
   image?: string;
+  category?: string;
   coordinates?: { latitude: number; longitude: number; _lat?: number; _lng?: number; lat?: number; lng?: number };
 }
 

@@ -1,11 +1,12 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Companion, Activity, Event, ExperienceStory, CommunityPost } from '../../types';
-import { generateDiscoveryFeed, type FeedItem } from '../../services/feedGenerator';
+import { type FeedItem } from '../../services/feedGenerator';
 import { SafeImage } from '../ui/SafeImage';
 import { SocialPostCard } from '../social/SocialPostCard';
 import { DiscoveryContentContainer } from './DiscoveryContentContainer';
 import { Heart, MapPin, Star, ArrowRight, ChevronRight, Search } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { useDiscoveryFeed } from '../../hooks/useDiscoveryFeed';
 
 interface DiscoveryFeedProps {
   companions: Companion[];
@@ -24,10 +25,10 @@ interface DiscoveryFeedProps {
   onOpenFilterDrawer: () => void;
   onCreateStory: () => void;
   onViewStory: (story: ExperienceStory) => void;
+  feedItems?: FeedItem[];
 }
 
 const BATCH_SIZE = 8;
-
 export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   companions,
   activities,
@@ -45,49 +46,71 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   onOpenFilterDrawer,
   onCreateStory,
   onViewStory,
+  feedItems: externalFeedItems,
 }) => {
-  const [visibleCount, setVisibleCount] = React.useState(BATCH_SIZE);
+  const [visibleCategoryCount, setVisibleCategoryCount] = React.useState(2);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [lightboxImages, setLightboxImages] = useState<string[] | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  const { currentUser: ctxCurrentUser, likePost, unlikePost, createComment, deleteComment, openAuthModal } = useAppContext();
+  const { currentUser: ctxCurrentUser, likePost, unlikePost, likeStory, unlikeStory, checkUserLikedPost, checkUserLikedStory, createComment, deleteComment, openAuthModal } = useAppContext();
   const currentUserId = ctxCurrentUser?.id;
 
-  const handleLike = async (id: string) => {
+  const handleLike = async (id: string, type: 'story' | 'post') => {
     if (!currentUserId) {
       openAuthModal();
       return;
     }
     try {
-      await likePost(id);
+      if (type === 'story') {
+        const liked = await checkUserLikedStory(id);
+        if (liked) {
+          await unlikeStory(id);
+        } else {
+          await likeStory(id);
+        }
+      } else {
+        const liked = await checkUserLikedPost(id);
+        if (liked) {
+          await unlikePost(id);
+        } else {
+          await likePost(id);
+        }
+      }
     } catch (err) {
       onShowToast('Failed to sync like with Firebase. Try again.', 'error');
     }
   };
 
-  const handleUnlike = async (id: string) => {
+  const handleUnlike = async (id: string, type: 'story' | 'post') => {
     if (!currentUserId) return;
     try {
-      await unlikePost(id);
+      if (type === 'story') {
+        await unlikeStory(id);
+      } else {
+        await unlikePost(id);
+      }
     } catch (err) {
       onShowToast('Failed to sync unlike with Firebase. Try again.', 'error');
     }
   };
 
-  const handleComment = async (postId: string, text: string) => {
+  const handleComment = async (postId: string) => {
     if (!currentUserId) {
       openAuthModal();
       return;
     }
+    const text = window.prompt('Enter your comment:');
+    if (!text || !text.trim()) return;
     try {
       await createComment({
         postId,
         userId: currentUserId,
         userName: ctxCurrentUser.name || 'User',
         userAvatar: ctxCurrentUser.avatar || '',
-        text,
+        text: text.trim(),
       });
+      onShowToast('Comment posted!', 'success');
     } catch (err) {
       onShowToast('Failed to post comment. Try again.', 'error');
     }
@@ -101,38 +124,55 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
     }
   };
 
-  const feedItems = useMemo(() => {
-    const items = generateDiscoveryFeed(companions, activities, events, stories, posts, {
-      userLocation: currentUser?.location,
-      userInterests: currentUser?.interests,
-      savedCompanionIds: favorites,
-      maxItems: 60,
-    });
+  const internalFeedItems = useDiscoveryFeed(companions, activities, events, stories, posts);
+  const feedItems = externalFeedItems ?? internalFeedItems;
 
-    const shuffled = [...items];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  const categoryChunks = useMemo(() => {
+    const chunks: FeedItem[][] = [];
+    let currentChunk: FeedItem[] = [];
+    for (const item of feedItems) {
+      if (item.type === 'category-header' && currentChunk.length > 0) {
+        chunks.push(currentChunk);
+        currentChunk = [];
+      }
+      currentChunk.push(item);
     }
+    if (currentChunk.length > 0) {
+      chunks.push(currentChunk);
+    }
+    return chunks;
+  }, [feedItems]);
 
-    return shuffled;
-  }, [companions, activities, events, stories, posts, currentUser?.location, currentUser?.interests, favorites]);
+  React.useEffect(() => {
+    setVisibleCategoryCount(2);
+  }, [feedItems]);
 
-  const visibleItems = useMemo(() => feedItems.slice(0, visibleCount), [feedItems, visibleCount]);
+  const visibleItems = useMemo(() => {
+    const visibleChunks = categoryChunks.slice(0, visibleCategoryCount);
+    return visibleChunks.flat();
+  }, [categoryChunks, visibleCategoryCount]);
 
   const groupedVisibleItems = useMemo(() => {
-    const groups: Array<{ type: 'companions'; items: FeedItem[] } | { type: 'single'; item: FeedItem }> = [];
+    type CategoryHeader = { type: 'category-header'; category: string; emoji?: string };
+    type CompanionGroup = { type: 'companions'; items: Extract<FeedItem, { type: 'companion' }>[] };
+    type SingleItem = { type: 'single'; item: Extract<FeedItem, { type: 'story' | 'post' | 'activity' | 'event' }> };
+    const groups: Array<CategoryHeader | CompanionGroup | SingleItem> = [];
     let i = 0;
     while (i < visibleItems.length) {
-      if (visibleItems[i].type === 'companion') {
-        const companionItems: FeedItem[] = [];
+      const item = visibleItems[i];
+      if (item.type === 'category-header') {
+        groups.push({ type: 'category-header', category: item.category, emoji: item.emoji });
+        i++;
+      } else if (item.type === 'companion') {
+        const companionItems: Extract<FeedItem, { type: 'companion' }>[] = [];
         while (i < visibleItems.length && visibleItems[i].type === 'companion') {
-          companionItems.push(visibleItems[i]);
+          const companionItem = visibleItems[i] as Extract<FeedItem, { type: 'companion' }>;
+          companionItems.push(companionItem);
           i++;
         }
         groups.push({ type: 'companions', items: companionItems });
       } else {
-        groups.push({ type: 'single', item: visibleItems[i] });
+        groups.push({ type: 'single', item: item as Extract<FeedItem, { type: 'story' | 'post' | 'activity' | 'event' }> });
         i++;
       }
     }
@@ -140,25 +180,23 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   }, [visibleItems]);
 
   React.useEffect(() => {
-    setVisibleCount(BATCH_SIZE);
+    setVisibleCategoryCount(2);
   }, [feedItems]);
 
   React.useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    const handleScroll = () => {
+      const sentinel = sentinelRef.current;
+      if (!sentinel) return;
+      const rect = sentinel.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      if (rect.top < windowHeight + 200) {
+        setVisibleCategoryCount(prev => Math.min(prev + 1, categoryChunks.length));
+      }
+    };
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && visibleCount < feedItems.length) {
-          setVisibleCount(prev => Math.min(prev + BATCH_SIZE, feedItems.length));
-        }
-      },
-      { rootMargin: '200px' }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [visibleCount, feedItems.length]);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [categoryChunks.length]);
 
   React.useEffect(() => {
     const saved = sessionStorage.getItem('discoveryFeedScroll');
@@ -270,42 +308,57 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
       <DiscoveryContentContainer>
         <div className="space-y-8">
           {groupedVisibleItems.map((group, idx) => {
+            if (group.type === 'category-header') {
+              return (
+                <div key={`category-${group.category}-${idx}`} className="flex items-center gap-3 pb-2 border-b border-white/5">
+                  <span className="text-2xl">{group.emoji}</span>
+                  <div>
+                    <h3 className="text-lg font-extrabold text-text-primary">{group.category}</h3>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-wider">Top picks near you</p>
+                  </div>
+                </div>
+              );
+            }
+
             if (group.type === 'companions') {
               return (
                 <div key={`companion-group-${idx}`} className="max-w-2xl mx-auto">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {group.items.map((item) => (
-                      <div key={item.data.id} className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer hover:border-primary-action/30 transition-all">
-                        <div className="relative h-40 bg-surface-elevated">
-                          <SafeImage src={(item.data as Companion).imageUrl || (item.data as Companion).images?.[0]} className="w-full h-full object-cover" alt={(item.data as Companion).name} />
-                          <span className="absolute top-3 left-3 bg-primary-action text-background text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
-                            {(item.data as Companion).interests?.[0] || 'COMPANION'}
-                          </span>
-                        </div>
-                        <div className="p-3 space-y-1.5 text-left">
-                          <h4 className="text-sm font-bold text-text-primary">{(item.data as Companion).name}</h4>
-                          <p className="text-xs text-text-secondary flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-primary-action" />
-                            {(item.data as Companion).location || 'Nepal'} • NPR {(item.data as Companion).hourlyRate}/hr
-                          </p>
-                          <div className="flex justify-between items-center pt-1.5 border-t border-white/5">
-                            <div className="flex items-center gap-0.5 text-xs text-primary-action font-bold">
-                              <Star className="w-3 h-3 fill-current" />
-                              <span>{(item.data as Companion).rating || 5.0}</span>
+                    {group.items.map((item) => {
+                      const companion = item.data as Companion;
+                      return (
+                        <div key={item.data.id} className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer hover:border-primary-action/30 transition-all">
+                          <div className="relative h-40 bg-surface-elevated">
+                            <SafeImage src={companion.imageUrl || companion.images?.[0]} className="w-full h-full object-cover" alt={companion.name} />
+                            <span className="absolute top-3 left-3 bg-primary-action text-background text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
+                              {companion.interests?.[0] || 'COMPANION'}
+                            </span>
+                          </div>
+                          <div className="p-3 space-y-1.5 text-left">
+                            <h4 className="text-sm font-bold text-text-primary">{companion.name}</h4>
+                            <p className="text-xs text-text-secondary flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-primary-action" />
+                              {companion.location || 'Nepal'} • NPR {companion.hourlyRate}/hr
+                            </p>
+                            <div className="flex justify-between items-center pt-1.5 border-t border-white/5">
+                              <div className="flex items-center gap-0.5 text-xs text-primary-action font-bold">
+                                <Star className="w-3 h-3 fill-current" />
+                                <span>{companion.rating || 5.0}</span>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onViewCompanion(companion);
+                                }}
+                                className="px-3 py-1 bg-primary-action text-background text-[10px] font-bold rounded-lg hover:bg-primary-action-hover transition-colors"
+                              >
+                                View Profile
+                              </button>
                             </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onViewCompanion(item.data as Companion);
-                              }}
-                              className="px-3 py-1 bg-primary-action text-background text-[10px] font-bold rounded-lg hover:bg-primary-action-hover transition-colors"
-                            >
-                              View Profile
-                            </button>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -320,8 +373,9 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                   <SocialPostCard
                     post={item.data as ExperienceStory}
                     type="story"
-                    onLike={handleLike}
-                    onComment={(id) => onShowToast('Comments coming soon', 'info')}
+                    onLike={(id) => handleLike(id, 'story')}
+                    onUnlike={(id) => handleUnlike(id, 'story')}
+                    onComment={(id) => handleComment(id)}
                     onShare={(id) => onShowToast('Shared!', 'success')}
                     onSave={(id) => onShowToast('Saved!', 'success')}
                     onViewProfile={(userId) => onShowToast('View profile coming soon', 'info')}
@@ -337,8 +391,9 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                   <SocialPostCard
                     post={item.data as CommunityPost}
                     type="post"
-                    onLike={handleLike}
-                    onComment={(id) => onShowToast('Comments coming soon', 'info')}
+                    onLike={(id) => handleLike(id, 'post')}
+                    onUnlike={(id) => handleUnlike(id, 'post')}
+                    onComment={(id) => handleComment(id)}
                     onShare={(id) => onShowToast('Shared!', 'success')}
                     onSave={(id) => onShowToast('Saved!', 'success')}
                     onViewProfile={(userId) => onShowToast('View profile coming soon', 'info')}
@@ -414,7 +469,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
       </DiscoveryContentContainer>
 
       {/* Progressive loading sentinel */}
-      {visibleCount < feedItems.length && (
+      {visibleCategoryCount < categoryChunks.length && (
         <div ref={sentinelRef} className="flex justify-center py-4">
           <div className="w-8 h-8 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin" />
         </div>

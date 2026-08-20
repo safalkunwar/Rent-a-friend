@@ -7,24 +7,28 @@ interface SocialPostCardProps {
   post: ExperienceStory | CommunityPost;
   type: 'story' | 'post';
   onLike?: (id: string) => void;
+  onUnlike?: (id: string) => void;
   onComment?: (id: string) => void;
   onShare?: (id: string) => void;
   onSave?: (id: string) => void;
   onViewProfile?: (userId: string) => void;
   onOpenMediaViewer?: (images: string[], index: number) => void;
+  initialLiked?: boolean;
 }
 
 export const SocialPostCard: React.FC<SocialPostCardProps> = ({
   post,
   type,
   onLike,
+  onUnlike,
   onComment,
   onShare,
   onSave,
   onViewProfile,
   onOpenMediaViewer,
+  initialLiked = false,
 }) => {
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(initialLiked);
   const [saved, setSaved] = useState(false);
 
   const isStory = type === 'story';
@@ -46,8 +50,13 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
 
   const handleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setLiked(!liked);
-    onLike?.(post.id);
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    if (nextLiked) {
+      onLike?.(post.id);
+    } else {
+      onUnlike?.(post.id);
+    }
   };
 
   const handleSave = (e: React.MouseEvent) => {
