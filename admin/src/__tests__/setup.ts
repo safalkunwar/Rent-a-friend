@@ -14,6 +14,15 @@ vi.mock('../src/firebase', () => ({
 
 vi.mock('firebase/messaging', () => ({
   getMessaging: vi.fn(() => null),
+  getToken: vi.fn(() => Promise.resolve(null)),
+  onMessage: vi.fn(() => () => {}),
+  onTokenRefresh: vi.fn(() => () => {}),
+  isSupported: vi.fn(() => Promise.resolve(false)),
+  deleteToken: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('@firebase/messaging', () => ({
+  getMessaging: vi.fn(() => null),
 }));
 
 if (typeof window !== 'undefined') {
@@ -56,7 +65,8 @@ afterEach(() => {
 });
 
 process.on('unhandledRejection', (reason: any) => {
-  if (reason?.code === 'messaging/unsupported-browser') {
+  const message = reason?.message || reason?.toString?.() || String(reason);
+  if (message.includes('messaging/unsupported-browser') || message.includes("doesn't support the API's required to use the Firebase SDK")) {
     return;
   }
   console.error('Unhandled Rejection:', reason);

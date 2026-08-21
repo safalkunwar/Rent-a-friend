@@ -80,8 +80,14 @@ try {
   storage = getStorage(app);
 
   try {
-    messaging = getMessaging(app);
-    console.log('[SATHI Admin] Messaging initialized:', !!messaging);
+    const isFcmSupported = typeof window !== 'undefined' && 'ServiceWorkerContainer' in window;
+    if (isFcmSupported) {
+      messaging = getMessaging(app);
+      console.log('[SATHI Admin] Messaging initialized:', !!messaging);
+    } else {
+      messaging = null;
+      console.warn('[SATHI Admin] Messaging skipped: browser does not support FCM prerequisites');
+    }
   } catch (e) {
     console.warn('[SATHI Admin] FCM not available:', e);
   }
