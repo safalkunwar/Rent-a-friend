@@ -763,7 +763,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     >
                       <div className="px-4 py-2 border-b border-border-token/60 flex items-center justify-between">
                         <span className="text-xs font-bold text-text-primary">Notifications</span>
-                        <span className="text-[10px] text-primary-action cursor-pointer hover:underline" onClick={() => showToast("All marked as read!", "success")}>Mark all read</span>
+                        <span className="text-[10px] text-primary-action cursor-pointer hover:underline" onClick={() => { notifications?.forEach(n => markNotificationRead(n.id)); showToast("All notifications marked as read", "success"); }}>Mark all read</span>
                       </div>
                       <div className="max-h-72 overflow-y-auto divide-y divide-border-token-light">
                         {notifications && notifications.length > 0 ? (
@@ -2206,7 +2206,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             <div className="px-4 py-1 space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black uppercase tracking-wider text-text-secondary">Popular Experiences</h3>
-                <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => showToast('Opening experience catalog...', 'info')}>See all</span>
+                 <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => showToast('Opening full experience catalog', 'info')}>See all</span>
               </div>
               
               <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
@@ -2245,7 +2245,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             <div className="px-4 py-1 space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black uppercase tracking-wider text-text-secondary">Upcoming Events</h3>
-                <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => showToast('All events loaded', 'success')}>See all</span>
+                 <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => { setMobileTab('explore'); showToast('Showing all upcoming events', 'success'); }}>See all</span>
               </div>
               
               <div className="space-y-3">
@@ -2514,7 +2514,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             {/* Header */}
             <div className="flex items-center justify-between p-4 bg-background border-b border-white/5">
               <span className="text-sm font-black text-text-primary uppercase tracking-wider">Experiences</span>
-              <button onClick={() => showToast('Opening experiences catalog...', 'info')} className="text-xs font-bold text-primary-action hover:underline">See all</button>
+              <button onClick={() => showToast('Opening experiences catalog', 'info')} className="text-xs font-bold text-primary-action hover:underline">See all</button>
             </div>
 
             {/* Category chips */}
@@ -2580,7 +2580,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             <div className="p-4 space-y-3.5">
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black uppercase tracking-wider text-text-primary">Community Moments</h3>
-                <span className="text-[10px] font-black text-primary-action cursor-pointer" onClick={() => showToast('Moments feed fully synchronized', 'success')}>See all</span>
+                <span className="text-[10px] font-black text-primary-action cursor-pointer hover:underline" onClick={() => showToast('Opening moments feed', 'info')}>See all</span>
               </div>
               
               <div className="space-y-4">
@@ -2650,7 +2650,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             <div className="p-4 pb-8 space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black uppercase tracking-wider text-text-primary">Upcoming Events</h3>
-                <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => showToast('Events listed!', 'success')}>See all</span>
+                <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => showToast('Showing all upcoming events', 'info')}>See all</span>
               </div>
               
               <div className="bg-surface border border-white/5 p-4 rounded-3xl flex items-center justify-between gap-4">

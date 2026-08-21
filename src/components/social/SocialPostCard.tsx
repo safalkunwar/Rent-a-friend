@@ -65,9 +65,20 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
     onSave?.(post.id);
   };
 
-  const handleShare = (e: React.MouseEvent) => {
+  const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    onShare?.(post.id);
+    const url = `${window.location.origin}/post/${post.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: caption, url });
+      } catch {
+        await navigator.clipboard.writeText(url);
+        onShare?.(post.id);
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      onShare?.(post.id);
+    }
   };
 
   const openViewer = (index: number) => {
