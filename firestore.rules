@@ -173,7 +173,8 @@ service cloud.firestore {
     // Booking Locks Collection: /booking_locks/{lockId}
     match /booking_locks/{lockId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow create: if isAuthenticated() && !exists(/databases/$(database)/documents/booking_locks/$(lockId));
+      allow update, delete: if isAdmin();
     }
 
     // Reviews Collection: /reviews/{reviewId}
@@ -221,6 +222,12 @@ service cloud.firestore {
       // Only admins can delete
       allow delete: if isAdmin();
       allow write: if isAuthenticated();
+
+      // Typing indicators subcollection
+      match /typing/{userId} {
+        allow read: if isAuthenticated() && request.auth.uid in conversationId.split('_');
+        allow create, update, delete: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
 
     // Messages Collection: /messages/{messageId}

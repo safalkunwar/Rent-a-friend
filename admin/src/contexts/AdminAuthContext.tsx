@@ -168,7 +168,6 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
       const role = await verifyAdminRole(userCredential.user);
       
       if (!role) {
-        await firebaseSignOut(auth!);
         const errMsg = 'Access restricted. Administrator privileges required.';
         setError(errMsg);
         setStatus('access_restricted');
