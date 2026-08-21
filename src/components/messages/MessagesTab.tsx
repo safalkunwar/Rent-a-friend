@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Send, Image as ImageIcon, Info, MessageSquare, LogIn, Wifi, Users, Compass, ShieldCheck, Paperclip } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
-import { firestore } from '../../services/firestore';
+import { messagingService } from '../../services/messaging';
 import { useCompanions } from '../../hooks/useFirestoreData';
 import { SafeImage } from '../ui/SafeImage';
 
@@ -261,29 +261,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
     });
 
     try {
-      await firestore.setDocument(`messages/${msgId}`, {
-        id: msgId,
-        conversationId: selectedConvo,
-        senderId: currentUser.id,
-        text: textToSend,
-        timestamp: optimisticMsg.timestamp,
-        isRead: false,
-      });
-
-      await firestore.setDocument(`conversations/${selectedConvo}`, {
-        id: selectedConvo,
-        participantIds: [currentUser.id, otherId],
-        lastMessage: {
-          id: msgId,
-          conversationId: selectedConvo,
-          senderId: currentUser.id,
-          text: textToSend,
-          timestamp: optimisticMsg.timestamp,
-          isRead: false,
-        },
-        unreadCount: 0,
-        updatedAt: new Date().toISOString(),
-      }, true);
+      await messagingService.sendMessage(selectedConvo, currentUser.id, textToSend);
 
       // Update optimistic status to sent
       setLocalMessages(prev => {

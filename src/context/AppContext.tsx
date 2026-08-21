@@ -21,6 +21,7 @@ interface AppState {
   getConversationId: (otherUserId: string) => string;
   notifications: Notification[];
   markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => Promise<void>;
   loading: boolean;
   logout: () => Promise<void>;
   signInAnonymously: () => Promise<void>;
@@ -343,33 +344,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const sendMessage = useCallback(async (conversationId: string, text: string) => {
     if (!currentUser) return;
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      conversationId,
-      senderId: currentUser.id,
-      text,
-      timestamp: new Date().toISOString(),
-      isRead: false,
-    };
-    await firestore.setDocument(`messages/${newMessage.id}`, newMessage as any);
-
-    await firestore.updateDocument(`conversations/${conversationId}`, {
-      lastMessage: {
-        id: newMessage.id,
-        conversationId,
-        senderId: newMessage.senderId,
-        text: newMessage.text,
-        timestamp: newMessage.timestamp,
-        isRead: false,
-      },
-      updatedAt: newMessage.timestamp,
-    });
+    await messagingService.sendMessage(conversationId, currentUser.id, text);
   }, [currentUser]);
 
   const markNotificationRead = useCallback(async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     await firestore.updateDocument(`notifications/${id}`, { isRead: true });
   }, []);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    const batchOps = unreadIds.map(id => ({ type: 'update' as const, path: `notifications/${id}`, data: { isRead: true } }));
+    await firestore.batchWrite(batchOps);
+  }, [notifications]);
 
   const getConversationWith = useCallback((otherUserId: string): string => {
     if (!currentUser) return '';
@@ -492,6 +481,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       getConversationId: getConversationWith,
       notifications,
       markNotificationRead,
+      markAllNotificationsRead,
       loading,
       logout,
       signInAnonymously,

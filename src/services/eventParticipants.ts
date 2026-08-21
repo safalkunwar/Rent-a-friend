@@ -40,6 +40,21 @@ export const eventParticipantsService = {
       }
 
       const registrationRef = doc(db!, `${EVENT_PARTICIPANTS_COLLECTION}/${registrationId}`);
+      const regSnap = await tx.get(registrationRef);
+      if (regSnap.exists()) {
+        const regData = regSnap.data() as any;
+        if (regData.status === 'joined') {
+          return registrationId;
+        }
+        if (regData.status === 'cancelled') {
+          tx.update(registrationRef, {
+            status: 'joined',
+            updatedAt: timestamp,
+          });
+          return registrationId;
+        }
+      }
+
       tx.set(registrationRef, {
         id: registrationId,
         eventId,

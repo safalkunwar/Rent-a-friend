@@ -92,6 +92,9 @@ describe('messaging service', () => {
         updateDocument,
       },
     }));
+    vi.doMock('../firebase', () => ({
+      db: null,
+    }));
     const { messagingService } = await import('../services/messaging');
     const msgId = await messagingService.sendMessage('convo1', 'user1', 'Hello');
     expect(msgId).toMatch(/^msg-\d+$/);

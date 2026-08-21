@@ -763,7 +763,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     >
                       <div className="px-4 py-2 border-b border-border-token/60 flex items-center justify-between">
                         <span className="text-xs font-bold text-text-primary">Notifications</span>
-                        <span className="text-[10px] text-primary-action cursor-pointer hover:underline" onClick={() => { notifications?.forEach(n => markNotificationRead(n.id)); showToast("All notifications marked as read", "success"); }}>Mark all read</span>
+                        <span className="text-[10px] text-primary-action cursor-pointer hover:underline" onClick={() => { markAllNotificationsRead(); showToast("All notifications marked as read", "success"); }}>Mark all read</span>
                       </div>
                       <div className="max-h-72 overflow-y-auto divide-y divide-border-token-light">
                         {notifications && notifications.length > 0 ? (
@@ -3241,15 +3241,15 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-extrabold text-text-primary">Notifications</h2>
               {unreadNotifCount > 0 && (
-                <button 
-                  onClick={() => {
-                    notifications?.forEach(n => markNotificationRead(n.id));
-                    showToast("All notifications marked as read", "success");
-                  }}
-                  className="text-xs font-bold text-primary-action hover:underline"
-                >
-                  Mark all read
-                </button>
+                 <button 
+                   onClick={() => {
+                     markAllNotificationsRead();
+                     showToast("All notifications marked as read", "success");
+                   }}
+                   className="text-xs font-bold text-primary-action hover:underline"
+                 >
+                   Mark all read
+                 </button>
               )}
             </div>
 

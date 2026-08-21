@@ -1,4 +1,6 @@
 import { firestore } from './firestore';
+import { db } from '../firebase';
+import { runTransaction, doc } from 'firebase/firestore';
 
 const TYPING_TIMEOUT_MS = 3000;
 
@@ -67,25 +69,53 @@ export const messagingService = {
     const messageId = `msg-${Date.now()}`;
     const timestamp = new Date().toISOString();
 
-    await firestore.setDocument(`messages/${messageId}`, {
-      id: messageId,
-      conversationId,
-      senderId,
-      text,
-      timestamp,
-      isRead: false,
-    });
-
-    await firestore.updateDocument(`conversations/${conversationId}`, {
-      lastMessage: {
+    if (!db) {
+      await firestore.setDocument(`messages/${messageId}`, {
         id: messageId,
         conversationId,
         senderId,
         text,
         timestamp,
         isRead: false,
-      },
-      updatedAt: timestamp,
+      });
+      await firestore.updateDocument(`conversations/${conversationId}`, {
+        lastMessage: {
+          id: messageId,
+          conversationId,
+          senderId,
+          text,
+          timestamp,
+          isRead: false,
+        },
+        updatedAt: timestamp,
+      });
+      return messageId;
+    }
+
+    await runTransaction(db, async (tx) => {
+      const messageRef = doc(db, 'messages', messageId);
+      const convoRef = doc(db, 'conversations', conversationId);
+
+      tx.set(messageRef, {
+        id: messageId,
+        conversationId,
+        senderId,
+        text,
+        timestamp,
+        isRead: false,
+      });
+
+      tx.update(convoRef, {
+        lastMessage: {
+          id: messageId,
+          conversationId,
+          senderId,
+          text,
+          timestamp,
+          isRead: false,
+        },
+        updatedAt: timestamp,
+      });
     });
 
     return messageId;
@@ -101,14 +131,22 @@ export const messagingService = {
       limitCount: 100,
     });
 
-    const updatePromises = messages.map(msg =>
-      firestore.updateDocument(`messages/${msg.id}`, { isRead: true })
-    );
+    if (!db || messages.length === 0) {
+      if (messages.length === 0) {
+        await firestore.updateDocument(`conversations/${conversationId}`, {
+          unreadCount: 0,
+        });
+      }
+      return;
+    }
 
-    await Promise.all(updatePromises);
-
-    await firestore.updateDocument(`conversations/${conversationId}`, {
-      unreadCount: 0,
+    await runTransaction(db, async (tx) => {
+      const convoRef = doc(db, 'conversations', conversationId);
+      for (const msg of messages) {
+        const msgRef = doc(db, 'messages', msg.id);
+        tx.update(msgRef, { isRead: true });
+      }
+      tx.update(convoRef, { unreadCount: 0 });
     });
   },
 
