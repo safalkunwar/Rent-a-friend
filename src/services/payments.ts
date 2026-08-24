@@ -1,3 +1,6 @@
+import { auth } from '../firebase';
+import { firestore } from './firestore';
+
 export type PaymentProvider = 'khalti' | 'esewa';
 
 export type PaymentRequest = {

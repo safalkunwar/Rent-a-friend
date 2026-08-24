@@ -4,6 +4,7 @@ import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { messagingService } from '../../services/messaging';
 import { useCompanions } from '../../hooks/useFirestoreData';
+import { firestore } from '../../services/firestore';
 import { SafeImage } from '../ui/SafeImage';
 
 interface MessagesTabProps {

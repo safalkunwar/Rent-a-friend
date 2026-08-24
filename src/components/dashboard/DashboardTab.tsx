@@ -26,13 +26,11 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
   } | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
-  if (!currentUser) return <div className="text-text-primary p-8">Please log in to view dashboard</div>;
-
-  const favoriteCompanions = fetchedCompanions.filter(c => favorites.includes(c.id));
-  const myBookings = bookings.filter(b => b.userId === currentUser.id);
+  const [joinedEvents, setJoinedEvents] = useState<Array<{ id: string; title: string; date: string; time: string; location: string }>>([]);
+  const [loadingJoined, setLoadingJoined] = useState(false);
 
   useEffect(() => {
-    if (currentUser.role !== 'companion') return;
+    if (currentUser?.role !== 'companion') return;
     let cancelled = false;
     setLoadingStats(true);
     companionDashboardService.getStats(currentUser.id)
@@ -54,11 +52,7 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
         if (!cancelled) setLoadingStats(false);
       });
     return () => { cancelled = true; };
-  }, [currentUser.id, currentUser.role]);
-  const totalSpent = myBookings.reduce((sum, b) => sum + b.totalPrice, 0);
-
-  const [joinedEvents, setJoinedEvents] = useState<Array<{ id: string; title: string; date: string; time: string; location: string }>>([]);
-  const [loadingJoined, setLoadingJoined] = useState(false);
+  }, [currentUser?.id, currentUser?.role]);
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'customer') return;
@@ -84,6 +78,8 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
       .finally(() => { if (!cancelled) setLoadingJoined(false); });
     return () => { cancelled = true; };
   }, [currentUser?.id, currentUser?.role, fetchedEvents]);
+
+  if (!currentUser) return <div className="text-text-primary p-8">Please log in to view dashboard</div>;
 
   return (
     <div className="space-y-8">

@@ -1,52 +1,42 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Companion, Activity, Event, ExperienceStory, CommunityPost } from '../../types';
+import { Companion, ExperienceStory } from '../../types';
 import { type FeedItem } from '../../services/feedGenerator';
 import { SafeImage } from '../ui/SafeImage';
 import { SocialPostCard } from '../social/SocialPostCard';
 import { DiscoveryContentContainer } from './DiscoveryContentContainer';
-import { Heart, MapPin, Star, ArrowRight, ChevronRight, Search } from 'lucide-react';
+import { Heart, MapPin, Star, ArrowRight, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
-import { useDiscoveryFeed } from '../../hooks/useDiscoveryFeed';
 
 interface DiscoveryFeedProps {
-  companions: Companion[];
-  activities: Activity[];
-  events: Event[];
   stories: ExperienceStory[];
-  posts: CommunityPost[];
-  currentUser: { avatar?: string; location?: string; interests?: string[] } | null;
   favorites: string[];
   onToggleFavorite: (companionId: string) => void;
   onViewCompanion: (companion: Companion) => void;
   onShowToast: (message: string, type?: string) => void;
   onNavigateExplore: (category?: string) => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  onOpenFilterDrawer: () => void;
   onCreateStory: () => void;
   onViewStory: (story: ExperienceStory) => void;
-  feedItems?: FeedItem[];
+  feedItems: FeedItem[];
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
-const BATCH_SIZE = 8;
+const SENTINEL_ROOT_MARGIN = '200px';
+
 export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
-  companions,
-  activities,
-  events,
   stories,
-  posts,
-  currentUser,
   favorites,
   onToggleFavorite,
   onViewCompanion,
   onShowToast,
   onNavigateExplore,
-  searchQuery,
-  onSearchChange,
-  onOpenFilterDrawer,
   onCreateStory,
   onViewStory,
-  feedItems: externalFeedItems,
+  feedItems,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }) => {
   const [visibleCategoryCount, setVisibleCategoryCount] = React.useState(2);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -124,13 +114,12 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
     }
   };
 
-  const internalFeedItems = useDiscoveryFeed(companions, activities, events, stories, posts);
-  const feedItems = externalFeedItems ?? internalFeedItems;
+  const feedItemsList = feedItems;
 
   const categoryChunks = useMemo(() => {
     const chunks: FeedItem[][] = [];
     let currentChunk: FeedItem[] = [];
-    for (const item of feedItems) {
+    for (const item of feedItemsList) {
       if (item.type === 'category-header' && currentChunk.length > 0) {
         chunks.push(currentChunk);
         currentChunk = [];
@@ -141,11 +130,58 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
       chunks.push(currentChunk);
     }
     return chunks;
-  }, [feedItems]);
+  }, [feedItemsList]);
+
+  const sentinelStateRef = useRef({ chunkCount: 0, revealed: 2, hasMore: false, loadingMore: false });
+  sentinelStateRef.current = { chunkCount: categoryChunks.length, revealed: visibleCategoryCount, hasMore, loadingMore };
+  const onLoadMoreRef = useRef(onLoadMore);
+  onLoadMoreRef.current = onLoadMore;
+
+  const advanceProgressiveLoad = React.useCallback(() => {
+    const state = sentinelStateRef.current;
+    if (state.revealed < state.chunkCount) {
+      setVisibleCategoryCount(prev => Math.min(prev + 1, state.chunkCount));
+      return;
+    }
+    if (state.hasMore && !state.loadingMore) {
+      onLoadMoreRef.current?.();
+    }
+  }, []);
 
   React.useEffect(() => {
-    setVisibleCategoryCount(2);
-  }, [feedItems]);
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      const handleScroll = () => {
+        const rect = sentinel.getBoundingClientRect();
+        if (rect.top < window.innerHeight + 200) {
+          advanceProgressiveLoad();
+        }
+      };
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries.some(entry => entry.isIntersecting)) {
+          advanceProgressiveLoad();
+        }
+      },
+      { rootMargin: SENTINEL_ROOT_MARGIN }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [advanceProgressiveLoad]);
+
+  React.useEffect(() => {
+    if (loadingMore) return;
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const rect = sentinel.getBoundingClientRect();
+    if (rect.top < window.innerHeight + 200) {
+      advanceProgressiveLoad();
+    }
+  }, [feedItemsList, visibleCategoryCount, hasMore, loadingMore, advanceProgressiveLoad]);
 
   const visibleItems = useMemo(() => {
     const visibleChunks = categoryChunks.slice(0, visibleCategoryCount);
@@ -178,25 +214,6 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
     }
     return groups;
   }, [visibleItems]);
-
-  React.useEffect(() => {
-    setVisibleCategoryCount(2);
-  }, [feedItems]);
-
-  React.useEffect(() => {
-    const handleScroll = () => {
-      const sentinel = sentinelRef.current;
-      if (!sentinel) return;
-      const rect = sentinel.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
-      if (rect.top < windowHeight + 200) {
-        setVisibleCategoryCount(prev => Math.min(prev + 1, categoryChunks.length));
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [categoryChunks.length]);
 
   React.useEffect(() => {
     const saved = sessionStorage.getItem('discoveryFeedScroll');
@@ -233,41 +250,6 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
 
   return (
     <div className="space-y-6 pb-20">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 p-4 bg-background border-b border-white/5 h-[62px] sticky top-0 z-20">
-        <div className="flex items-center gap-1.5 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-primary-action flex items-center justify-center font-bold text-background text-base">S</div>
-          <span className="text-lg font-black tracking-tight text-text-primary hidden sm:inline">SATHI</span>
-        </div>
-
-        <div className="flex-1 relative flex items-center">
-          <Search className="w-4 h-4 text-primary-action absolute left-3" />
-          <input
-            type="text"
-            placeholder="Search companions, experiences, events..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full h-10 pl-9 pr-9 bg-surface-elevated/60 backdrop-blur-md rounded-full border border-white/10 text-xs text-text-primary focus:outline-none focus:border-primary-action transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="absolute right-3 text-text-secondary hover:text-primary-action transition-colors text-xs font-bold"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <img
-            src={currentUser?.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"}
-            className="w-9 h-9 rounded-full object-cover border-2 border-primary-action cursor-pointer"
-            alt="Profile"
-          />
-        </div>
-      </div>
-
       {/* Stories */}
       <DiscoveryContentContainer>
         <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 snap-x">
@@ -469,9 +451,11 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
       </DiscoveryContentContainer>
 
       {/* Progressive loading sentinel */}
-      {visibleCategoryCount < categoryChunks.length && (
+      {(visibleCategoryCount < categoryChunks.length || hasMore || loadingMore) && (
         <div ref={sentinelRef} className="flex justify-center py-4">
-          <div className="w-8 h-8 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+          {(loadingMore || visibleCategoryCount < categoryChunks.length) && (
+            <div className="w-8 h-8 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+          )}
         </div>
       )}
 

@@ -18,6 +18,20 @@ export interface Comment {
 }
 
 export class SocialRepository extends BaseRepository {
+  private likedStateCache = new Map<string, boolean>();
+
+  private getCachedLikedState(kind: 'post' | 'story', userId: string, targetId: string): boolean | undefined {
+    return this.likedStateCache.get(`${kind}:${userId}:${targetId}`);
+  }
+
+  private setCachedLikedState(kind: 'post' | 'story', userId: string, targetId: string, liked: boolean): void {
+    this.likedStateCache.set(`${kind}:${userId}:${targetId}`, liked);
+  }
+
+  private invalidateLikedState(kind: 'post' | 'story', userId: string, targetId: string): void {
+    this.likedStateCache.delete(`${kind}:${userId}:${targetId}`);
+  }
+
   async queueIfOffline(collection: string, docId: string, data: Record<string, unknown>, action: 'set' | 'update' | 'delete' = 'set'): Promise<void> {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       await offlineWriteQueue.enqueue({ collection, docId, data, action });
@@ -98,6 +112,7 @@ export class SocialRepository extends BaseRepository {
 
   async likePost(userId: string, postId: string): Promise<void> {
     if (!db) return;
+    this.invalidateLikedState('post', userId, postId);
     const likeId = `${userId}_${postId}`;
     const likeRef = doc(db, 'likes', likeId);
     const postRef = doc(db, 'community_posts', postId);
@@ -134,6 +149,7 @@ export class SocialRepository extends BaseRepository {
 
   async unlikePost(userId: string, postId: string): Promise<void> {
     if (!db) return;
+    this.invalidateLikedState('post', userId, postId);
     const likeId = `${userId}_${postId}`;
     const likeRef = doc(db, 'likes', likeId);
     const postRef = doc(db, 'community_posts', postId);
@@ -166,6 +182,8 @@ export class SocialRepository extends BaseRepository {
 
   async checkUserLikedPost(userId: string, postId: string): Promise<boolean> {
     if (!userId || !postId) return false;
+    const cached = this.getCachedLikedState('post', userId, postId);
+    if (cached !== undefined) return cached;
     try {
       const likeId = `${userId}_${postId}`;
       const docSnap = await this.executeWithRetry(
@@ -173,7 +191,9 @@ export class SocialRepository extends BaseRepository {
         OperationType.GET,
         `likes/${likeId}`
       );
-      return !!docSnap;
+      const liked = !!docSnap;
+      this.setCachedLikedState('post', userId, postId, liked);
+      return liked;
     } catch (err) {
       console.warn(`[SocialRepository] Error checking liked state for post ${postId}:`, err);
       return false;
@@ -327,6 +347,7 @@ export class SocialRepository extends BaseRepository {
 
   async likeStory(userId: string, storyId: string): Promise<void> {
     if (!db) return;
+    this.invalidateLikedState('story', userId, storyId);
     const likeId = `${userId}_${storyId}`;
     const likeRef = doc(db, 'story_likes', likeId);
     const storyRef = doc(db, 'stories', storyId);
@@ -364,6 +385,7 @@ export class SocialRepository extends BaseRepository {
 
   async unlikeStory(userId: string, storyId: string): Promise<void> {
     if (!db) return;
+    this.invalidateLikedState('story', userId, storyId);
     const likeId = `${userId}_${storyId}`;
     const likeRef = doc(db, 'story_likes', likeId);
     const storyRef = doc(db, 'stories', storyId);
@@ -397,6 +419,8 @@ export class SocialRepository extends BaseRepository {
 
   async checkUserLikedStory(userId: string, storyId: string): Promise<boolean> {
     if (!userId || !storyId) return false;
+    const cached = this.getCachedLikedState('story', userId, storyId);
+    if (cached !== undefined) return cached;
     try {
       const likeId = `${userId}_${storyId}`;
       const docSnap = await this.executeWithRetry(
@@ -404,7 +428,9 @@ export class SocialRepository extends BaseRepository {
         OperationType.GET,
         `story_likes/${likeId}`
       );
-      return !!docSnap;
+      const liked = !!docSnap;
+      this.setCachedLikedState('story', userId, storyId, liked);
+      return liked;
     } catch (err) {
       console.warn(`[SocialRepository] Error checking liked state for story ${storyId}:`, err);
       return false;

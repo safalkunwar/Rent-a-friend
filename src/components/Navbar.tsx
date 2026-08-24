@@ -77,9 +77,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLogoClick?.(); } }}
              aria-label="SATHI home"
           >
-              <div className="w-11 h-11 md:w-10 md:h-10 rounded-xl bg-primary-action flex items-center justify-center font-bold text-background text-xl" aria-hidden="true">
-                 S
-              </div>
+              <img src="/sathi-logo.png" alt="SATHI" className="w-11 h-11 md:w-10 md:h-10 rounded-xl object-contain" />
              <span className="text-xl md:text-2xl font-semibold tracking-tight text-text-primary hidden sm:block">SATHI<span className="text-primary-action">.</span></span>
           </div>
 

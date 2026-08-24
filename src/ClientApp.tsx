@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CompanionProfileModal } from './components/modals/CompanionProfileModal';
@@ -43,6 +43,7 @@ import { AnimatePresence } from 'motion/react';
 import { saveStoredPreferences } from './services/preferences';
 import { paymentService } from './services/payments';
 import { eventParticipantsService } from './services/eventParticipants';
+import { firestore } from './services/firestore';
 
 interface ClientAppProps {
   initialTab?: 'home' | 'explore' | 'companions' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings';
@@ -82,14 +83,46 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     }
   }, [location.pathname]);
   
-  const { companions: fetchedCompanions, loading: companionsLoading } = useCompanions();
-  const { stories: fetchedStories, loading: storiesLoading } = useStories();
-  const { activities, loading: activitiesLoading } = useActivities();
-  const { events, loading: eventsLoading } = useEvents();
+  const { companions: fetchedCompanions, loading: companionsLoading, hasMore: companionsHasMore, loadingMore: companionsLoadingMore, loadMore: loadMoreCompanions } = useCompanions();
+  const { stories: fetchedStories, loading: storiesLoading, hasMore: storiesHasMore, loadingMore: storiesLoadingMore, loadMore: loadMoreStories } = useStories();
+  const { activities, loading: activitiesLoading, hasMore: activitiesHasMore, loadingMore: activitiesLoadingMore, loadMore: loadMoreActivities } = useActivities();
+  const { events, loading: eventsLoading, hasMore: eventsHasMore, loadingMore: eventsLoadingMore, loadMore: loadMoreEvents } = useEvents();
   const { partners, loading: partnersLoading } = usePartners();
-  const { posts, loading: postsLoading } = useCommunityPosts();
+  const { posts, loading: postsLoading, hasMore: postsHasMore, loadingMore: postsLoadingMore, loadMore: loadMorePosts } = useCommunityPosts();
 
   const homeFeedItems = useDiscoveryFeed(fetchedCompanions, activities, events, fetchedStories, posts);
+
+  const homeFeedHasMore = companionsHasMore || storiesHasMore || activitiesHasMore || eventsHasMore || postsHasMore;
+  const homeFeedLoadingMore = companionsLoadingMore || storiesLoadingMore || activitiesLoadingMore || eventsLoadingMore || postsLoadingMore;
+  const homeFeedLoadMoreRef = useRef(false);
+  const loadMoreHome = useCallback(() => {
+    if (homeFeedLoadMoreRef.current) return;
+    homeFeedLoadMoreRef.current = true;
+    try {
+      loadMoreCompanions();
+      loadMoreStories();
+      loadMoreActivities();
+      loadMoreEvents();
+      loadMorePosts();
+    } finally {
+      homeFeedLoadMoreRef.current = false;
+    }
+  }, [loadMoreCompanions, loadMoreStories, loadMoreActivities, loadMoreEvents, loadMorePosts]);
+
+  const homeCategoryChunks = useMemo(() => {
+    const chunks: FeedItem[][] = [];
+    let currentChunk: FeedItem[] = [];
+    for (const item of homeFeedItems) {
+      if (item.type === 'category-header') {
+        if (currentChunk.length > 0) chunks.push(currentChunk);
+        currentChunk = [item];
+      } else {
+        currentChunk.push(item);
+      }
+    }
+    if (currentChunk.length > 0) chunks.push(currentChunk);
+    return chunks;
+  }, [homeFeedItems]);
 
   const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'companions' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings'>(initialTab || 'home');
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
@@ -101,21 +134,54 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [storyLikesCount, setStoryLikesCount] = useState<Record<string, number>>({});
   const [visibleMobileCategoryCount, setVisibleMobileCategoryCount] = useState(2);
   const mobileSentinelRef = React.useRef<HTMLDivElement>(null);
+  const mobileSentinelStateRef = useRef({ chunkCount: 0, revealed: 2, hasMore: false, loadingMore: false });
+  mobileSentinelStateRef.current = { chunkCount: homeCategoryChunks.length, revealed: visibleMobileCategoryCount, hasMore: homeFeedHasMore, loadingMore: homeFeedLoadingMore };
+
+  const advanceMobileProgressiveLoad = useCallback(() => {
+    const state = mobileSentinelStateRef.current;
+    if (state.revealed < state.chunkCount) {
+      setVisibleMobileCategoryCount(prev => Math.min(prev + 1, state.chunkCount));
+      return;
+    }
+    if (state.hasMore && !state.loadingMore) {
+      loadMoreHome();
+    }
+  }, [loadMoreHome]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const sentinel = mobileSentinelRef.current;
-      if (!sentinel) return;
-      const rect = sentinel.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
-      if (rect.top < windowHeight + 200) {
-        setVisibleMobileCategoryCount(prev => prev + 1);
-      }
-    };
+    const sentinel = mobileSentinelRef.current;
+    if (!sentinel) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      const handleScroll = () => {
+        const rect = sentinel.getBoundingClientRect();
+        if (rect.top < window.innerHeight + 200) {
+          advanceMobileProgressiveLoad();
+        }
+      };
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries.some(entry => entry.isIntersecting)) {
+          advanceMobileProgressiveLoad();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [advanceMobileProgressiveLoad]);
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [homeFeedItems]);
+  useEffect(() => {
+    if (homeFeedLoadingMore) return;
+    const sentinel = mobileSentinelRef.current;
+    if (!sentinel) return;
+    const rect = sentinel.getBoundingClientRect();
+    if (rect.top < window.innerHeight + 200) {
+      advanceMobileProgressiveLoad();
+    }
+  }, [homeFeedItems, visibleMobileCategoryCount, homeFeedHasMore, homeFeedLoadingMore, advanceMobileProgressiveLoad]);
 
   useEffect(() => {
     if (viewingStory) {
@@ -132,23 +198,29 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   }, [viewingStory, currentUser]);
 
   useEffect(() => {
-    if (!currentUser || !events || events.length === 0) return;
+    if (!currentUser) {
+      setJoinedEvents({});
+      return;
+    }
     let cancelled = false;
-    const checkJoined = async () => {
-      const joined: Record<string, boolean> = {};
-      for (const event of events) {
-        try {
-          const isJoined = await eventParticipantsService.isUserJoined(event.id, currentUser.id);
-          if (!cancelled) joined[event.id] = isJoined;
-        } catch {
-          // ignore
+    firestore.getDocuments<{ eventId: string }>('event_participants', {
+      where: [
+        { field: 'userId', operator: '==', value: currentUser.id },
+        { field: 'status', operator: '==', value: 'joined' },
+      ],
+      limitCount: 50,
+    })
+      .then(registrations => {
+        if (cancelled) return;
+        const joined: Record<string, boolean> = {};
+        for (const reg of registrations) {
+          if (reg?.eventId) joined[reg.eventId] = true;
         }
-      }
-      if (!cancelled) setJoinedEvents(joined);
-    };
-    checkJoined();
+        setJoinedEvents(joined);
+      })
+      .catch(() => {});
     return () => { cancelled = true; };
-  }, [currentUser, events]);
+  }, [currentUser]);
 
   const handleJoinEvent = async (eventId: string) => {
     if (!currentUser) {
@@ -473,9 +545,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               setShowSavedOnly(false);
             }}
           >
-            <div className="w-9 h-9 rounded-xl bg-primary-action flex items-center justify-center font-bold text-background text-lg shadow-md shadow-primary-action/20">
-              S
-            </div>
+            <img src="/sathi-logo.png" alt="SATHI" className="w-9 h-9 rounded-xl object-contain shadow-md shadow-primary-action/20" />
             <div>
               <span className="text-xl font-bold tracking-tight text-text-primary block">SATHI<span className="text-primary-action">.</span></span>
               <span className="text-[9px] uppercase tracking-wider text-text-secondary block font-light -mt-1">Trusted Experiences</span>
@@ -936,23 +1006,18 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             {/* Render dynamically based on Tab */}
             {activeTab === 'home' && (
               <DiscoveryFeed
-                companions={companions}
-                activities={activities}
-                events={events}
                 stories={stories}
-                posts={posts}
-                currentUser={currentUser}
                 favorites={favorites}
                 onToggleFavorite={toggleFavorite}
                 onViewCompanion={handleViewCompanion}
                 onShowToast={showToast}
                 onNavigateExplore={(category) => { setMobileTab('explore'); if (category) setSelectedCategory(category); }}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)}
                 onCreateStory={() => setShowCreateStoryModal(true)}
                 onViewStory={setViewingStory}
                 feedItems={homeFeedItems}
+                hasMore={homeFeedHasMore}
+                loadingMore={homeFeedLoadingMore}
+                onLoadMore={loadMoreHome}
               />
             )}
 
@@ -1935,41 +2000,32 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             {/* Render Mobile Tab Home */}
             {mobileTab === 'home' && (
               <div className="space-y-6">
-                {/* Header with Search Bar */}
+                {/* Compact Home Header (no logo/search above Stories; Filters + profile only) */}
                 <div className="flex items-center justify-between gap-3 p-4 bg-background border-b border-white/5 h-[62px]">
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <div className="w-8 h-8 rounded-lg bg-primary-action flex items-center justify-center font-bold text-background text-base">S</div>
-                    <span className="text-lg font-black tracking-tight text-text-primary hidden sm:inline">SATHI</span>
-                  </div>
-                  
-                  {/* Fully rounded Glassmorphism Search Bar */}
-                  <div className="flex-1 relative flex items-center">
-                    <Search className="w-4 h-4 text-primary-action absolute left-3" />
-                    <input 
-                      type="text" 
-                      placeholder="Where are you going?" 
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full h-10 pl-9 pr-9 bg-surface-elevated/60 backdrop-blur-md rounded-full border border-white/10 text-xs text-text-primary focus:outline-none focus:border-primary-action transition-all"
-                    />
-                    <button 
-                      onClick={() => setIsFilterDrawerOpen(true)}
-                      className="absolute right-3 text-text-secondary hover:text-primary-action transition-colors"
-                    >
-                      <SlidersHorizontal className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setIsFilterDrawerOpen(true)}
+                    aria-label="Open filters"
+                    className="relative flex items-center gap-1.5 h-10 px-3.5 bg-surface-elevated/80 hover:bg-surface-elevated border border-border-token/40 rounded-full text-xs font-bold text-text-primary transition-all"
+                  >
+                    <SlidersHorizontal className="w-4 h-4 text-primary-action" />
+                    <span>Filters</span>
+                    {activeFilterCount > 0 && (
+                      <span className="w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {/* User profile with golden border */}
-                <img 
-                  src={currentUser?.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"} 
-                  className="w-9 h-9 rounded-full object-cover border-2 border-primary-action cursor-pointer" 
-                  alt="Profile"
-                  onClick={() => { setShowProfileDropdown(true); }}
-                />
-              </div>
-            </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* User profile with golden border */}
+                    <img
+                      src={currentUser?.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"}
+                      className="w-9 h-9 rounded-full object-cover border-2 border-primary-action cursor-pointer"
+                      alt="Profile"
+                      onClick={() => { setShowProfileDropdown(true); }}
+                    />
+                  </div>
+                </div>
 
             {/* Instagram-style Stories */}
             <div id="stories-section" className="px-4 py-1 bg-background">
@@ -2012,21 +2068,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
             {/* Dynamic category-based feed for Mobile */}
             {mobileTab === 'home' && (() => {
-              const feedItems = homeFeedItems;
-
-              const categoryChunks = feedItems.reduce<FeedItem[][]>((acc, item) => {
-                if (item.type === 'category-header' && acc.length > 0 && acc[acc.length - 1].length > 0) {
-                  acc.push([item]);
-                } else if (item.type === 'category-header') {
-                  acc.push([item]);
-                } else {
-                  if (acc.length === 0) acc.push([item]);
-                  else acc[acc.length - 1].push(item);
-                }
-                return acc;
-              }, []);
-
-              const visibleMobileItems = categoryChunks.slice(0, visibleMobileCategoryCount).flat();
+              const visibleMobileItems = homeCategoryChunks.slice(0, visibleMobileCategoryCount).flat();
 
               const grouped = visibleMobileItems.reduce<Record<string, FeedItem[]>>((acc, item) => {
                 if (item.type === 'category-header') return acc;
@@ -2142,28 +2184,13 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             })()}
 
             {/* Mobile progressive loading sentinel */}
-            {(() => {
-              const feedItems = homeFeedItems;
-              const categoryChunks = feedItems.reduce<FeedItem[][]>((acc, item) => {
-                if (item.type === 'category-header' && acc.length > 0 && acc[acc.length - 1].length > 0) {
-                  acc.push([item]);
-                } else if (item.type === 'category-header') {
-                  acc.push([item]);
-                } else {
-                  if (acc.length === 0) acc.push([item]);
-                  else acc[acc.length - 1].push(item);
-                }
-                return acc;
-              }, []);
-              
-              if (visibleMobileCategoryCount >= categoryChunks.length) return null;
-              
-              return (
-                <div ref={mobileSentinelRef} className="flex justify-center py-4">
+            {(visibleMobileCategoryCount < homeCategoryChunks.length || homeFeedHasMore || homeFeedLoadingMore) && (
+              <div ref={mobileSentinelRef} className="flex justify-center py-4">
+                {(homeFeedLoadingMore || visibleMobileCategoryCount < homeCategoryChunks.length) && (
                   <div className="w-8 h-8 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin" />
-                </div>
-              );
-            })()}
+                )}
+              </div>
+            )}
 
             {/* Community Feed */}
             <div className="px-4 py-1 space-y-4">
@@ -2176,61 +2203,29 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             {/* Activities Section */}
             <div className="px-4 py-1 space-y-3">
               <div className="flex justify-between items-center">
-                <h3 className="text-xs font-black uppercase tracking-wider text-text-secondary">Explore by Activities</h3>
+                <h3 className="text-xs font-black uppercase tracking-wider text-text-secondary">Activities</h3>
                 <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => setMobileTab('explore')}>See all</span>
               </div>
               
               <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
-                {[
-                  { name: 'Hiking', icon: '🥾', cat: 'Hiking' },
-                  { name: 'Coffee', icon: '☕', cat: 'Coffee' },
-                  { name: 'Photography', icon: '📸', cat: 'Photography' },
-                  { name: 'Culture', icon: '🏛️', cat: 'Culture' },
-                  { name: 'Food', icon: '🍜', cat: 'Food' },
-                  { name: 'Music', icon: '🎵', cat: 'Music' },
-                  { name: 'Trekking', icon: '🏔️', cat: 'Trekking' }
-                ].map((act) => (
-                  <div 
-                    key={act.name}
-                    onClick={() => { setSelectedCategory(act.cat); setMobileTab('explore'); showToast(`Exploring ${act.name} experiences`, 'info'); }}
-                    className="flex items-center gap-2 bg-surface border border-white/5 hover:border-primary-action/40 px-3.5 py-2.5 rounded-xl cursor-pointer shrink-0 transition-all duration-200"
-                  >
-                    <span className="text-base">{act.icon}</span>
-                    <span className="text-xs font-bold text-text-primary">{act.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Popular Experiences */}
-            <div className="px-4 py-1 space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xs font-black uppercase tracking-wider text-text-secondary">Popular Experiences</h3>
-                 <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => showToast('Opening full experience catalog', 'info')}>See all</span>
-              </div>
-              
-              <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1 snap-x">
-                {activities.slice(0, 6).map((exp, i) => (
+                {activities.slice(0, 10).map((exp, i) => (
                   <div 
                     key={`${exp.id || 'exp'}-${i}`} 
-                    className="shrink-0 w-56 bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col snap-start cursor-pointer hover:border-primary-action/30 transition-all"
+                    className="shrink-0 w-44 bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col snap-start cursor-pointer hover:border-primary-action/30 transition-all"
                     onClick={() => showToast(`Opening ${exp.title} details...`, 'info')}
                   >
-                    <div className="relative h-28 bg-surface-elevated">
-                      <img src={exp.imageUrl || exp.image || 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=600'} className="w-full h-full object-cover" alt={exp.title} />
-                      <span className="absolute top-2 left-2 bg-primary-action text-background text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                        {i === 0 ? 'TRENDING' : i === 1 ? 'POPULAR' : 'TOP RATED'}
+                    <div className="relative h-24 bg-surface-elevated">
+                      <img src={exp.imageUrl || exp.image || 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=600'} className="w-full h-full object-cover" alt={exp.title} loading="lazy" />
+                      <span className="absolute top-2 left-2 bg-primary-action text-background text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                        {exp.category || 'EXPERIENCE'}
                       </span>
                     </div>
-                    <div className="p-3 space-y-1.5 text-left">
-                      <h4 className="text-xs font-bold text-text-primary truncate">{exp.title}</h4>
-                      <p className="text-[10px] text-text-secondary flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-primary-action" />
-                        {exp.duration} • {exp.companionCount || 10} buddies
-                      </p>
-                      <div className="flex justify-between items-center pt-1.5 border-t border-white/5">
-                        <span className="text-xs font-black text-primary-action">NPR {exp.avgPrice}</span>
-                        <div className="flex items-center gap-0.5 text-[10px] text-primary-action font-bold">
+                    <div className="p-2.5 space-y-1 text-left">
+                      <h4 className="text-[11px] font-bold text-text-primary truncate">{exp.title}</h4>
+                      <p className="text-[9px] text-text-secondary truncate">{exp.duration} • {exp.companionCount || 10} buddies</p>
+                      <div className="flex justify-between items-center pt-1 border-t border-white/5">
+                        <span className="text-[10px] font-black text-primary-action">NPR {exp.avgPrice}</span>
+                        <div className="flex items-center gap-0.5 text-[9px] text-primary-action font-bold">
                           <Star className="w-2.5 h-2.5 fill-current" />
                           <span>4.8</span>
                         </div>

@@ -1,4 +1,4 @@
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter, onSnapshot, writeBatch, runTransaction as firebaseRunTransaction, type Unsubscribe, type Query, type DocumentData, type Firestore } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter, onSnapshot, writeBatch, runTransaction as firebaseRunTransaction, documentId, type Unsubscribe, type Query, type DocumentData, type Firestore } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from './firestore-errors';
 
@@ -12,6 +12,7 @@ export interface QueryOptions {
   where?: QueryCondition[];
   orderByField?: string;
   orderDirection?: 'asc' | 'desc';
+  orderById?: boolean;
   limitCount?: number;
   startAfter?: unknown[];
 };
@@ -30,8 +31,12 @@ const buildQuery = <T = DocumentData>(collectionName: string, options: QueryOpti
     q = query(q, orderBy(options.orderByField, options.orderDirection || 'asc'));
   }
 
-  if (options.startAfter && options.startAfter.length > 0 && options.orderByField) {
-    q = query(q, startAfter(...options.startAfter));
+  if (options.orderById) {
+    q = query(q, orderBy(documentId(), 'asc'));
+  }
+
+  if ((options.startAfter?.length ?? 0) > 0 && (options.orderByField || options.orderById)) {
+    q = query(q, startAfter(...options.startAfter!));
   }
 
   if (options.limitCount) {
@@ -102,18 +107,19 @@ export const firestore = {
     }
   },
 
-  getDocumentsPaginated: async <T = DocumentData>(collectionName: string, options: QueryOptions = {}): Promise<{ items: T[]; lastVisible?: unknown[]; hasMore: boolean }> => {
+  getDocumentsPaginated: async <T = DocumentData>(collectionName: string, options: QueryOptions = {}): Promise<{ items: T[]; lastVisible?: unknown[]; hasMore: boolean; failed?: boolean }> => {
     if (!db) return { items: [], hasMore: false };
     try {
       const q = buildQuery<T>(collectionName, options);
       const snap = await getDocs(q);
       const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as T));
-      const lastVisible = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1].data() as unknown[] : undefined;
-      const hasMore = snap.docs.length >= (options.limitCount || 0);
+      const lastDoc = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : undefined;
+      const lastVisible = lastDoc ? [lastDoc.id] : undefined;
+      const hasMore = options.limitCount ? snap.docs.length >= options.limitCount : false;
       return { items, lastVisible, hasMore };
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, collectionName);
-      return { items: [], hasMore: false };
+      return { items: [], hasMore: false, failed: true };
     }
   },
 
