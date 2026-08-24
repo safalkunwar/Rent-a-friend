@@ -16,9 +16,6 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 const rootEl = document.getElementById('root');
-if (rootEl) {
-  rootEl.textContent = 'MOUNTING SATHI...';
-}
 
 console.log('[SATHI] main.tsx executing, root exists:', !!rootEl);
 

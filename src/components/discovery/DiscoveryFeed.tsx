@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Companion, ExperienceStory } from '../../types';
+import { Companion, Activity, CommunityPost, Event, ExperienceStory } from '../../types';
 import { type FeedItem } from '../../services/feedGenerator';
 import { SafeImage } from '../ui/SafeImage';
 import { SocialPostCard } from '../social/SocialPostCard';

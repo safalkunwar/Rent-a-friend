@@ -89,50 +89,16 @@ export default defineConfig(() => {
           scope: '/',
           icons: [
             {
-              src: 'icon.jpg',
-              sizes: '72x72',
-              type: 'image/jpeg'
+              src: 'sathi-logo.png',
+              sizes: '1254x1254',
+              type: 'image/png',
+              purpose: 'any'
             },
             {
-              src: 'icon.jpg',
-              sizes: '96x96',
-              type: 'image/jpeg'
-            },
-            {
-              src: 'icon.jpg',
-              sizes: '128x128',
-              type: 'image/jpeg'
-            },
-            {
-              src: 'icon-192.jpg',
-              sizes: '144x144',
-              type: 'image/jpeg'
-            },
-            {
-              src: 'icon-192.jpg',
-              sizes: '152x152',
-              type: 'image/jpeg'
-            },
-            {
-              src: 'icon-192.jpg',
-              sizes: '192x192',
-              type: 'image/jpeg'
-            },
-            {
-              src: 'icon-512.jpg',
-              sizes: '384x384',
-              type: 'image/jpeg'
-            },
-            {
-              src: 'icon-512.jpg',
-              sizes: '512x512',
-              type: 'image/jpeg'
-            },
-            {
-              src: 'icon-512.jpg',
-              sizes: '512x512',
-              type: 'image/jpeg',
-              purpose: 'any maskable'
+              src: 'sathi-logo.png',
+              sizes: '1254x1254',
+              type: 'image/png',
+              purpose: 'maskable'
             }
           ]
         }

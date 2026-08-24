@@ -184,7 +184,7 @@ export const PWAInstallPrompt: React.FC = () => {
               {/* SATHI Icon inside banner */}
               <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-surface-elevated to-background border border-primary-action/30 flex-shrink-0 flex items-center justify-center shadow-inner">
                 <img 
-                  src="/icon.jpg" 
+                  src="/sathi-logo.png" 
                   alt="SATHI PWA" 
                   className="w-10 h-10 object-cover rounded-xl"
                   onError={(e) => {
@@ -263,7 +263,7 @@ export const PWAInstallPrompt: React.FC = () => {
               {/* Header */}
               <div className="space-y-2">
                 <div className="mx-auto w-16 h-16 rounded-[22px] overflow-hidden bg-gradient-to-br from-surface-elevated to-background border border-primary-action/40 flex items-center justify-center shadow-lg shadow-primary-action/5">
-                  <img src="/icon.jpg" alt="SATHI" className="w-14 h-14 object-cover rounded-2xl" />
+                  <img src="/sathi-logo.png" alt="SATHI" className="w-14 h-14 object-cover rounded-2xl" />
                 </div>
                 <h3 className="text-xl font-extrabold text-primary-action">Install SATHI on iOS</h3>
                 <p className="text-xs text-text-secondary leading-relaxed">

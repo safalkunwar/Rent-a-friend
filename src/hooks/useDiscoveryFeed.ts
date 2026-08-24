@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react';
 import { Companion, Activity, Event, ExperienceStory, CommunityPost } from '../types';
-import { generateDiscoveryFeed, type FeedItem } from '../services/feedGenerator';
+import { generateDiscoveryFeed, mulberry32, type FeedItem } from '../services/feedGenerator';
 import { stabilizeFeed } from '../services/feedStabilizer';
 import { useAppContext } from '../context/AppContext';
 
@@ -18,6 +18,11 @@ export function useDiscoveryFeed(
   const userLocation = currentUser?.location;
   const userInterests = (currentUser as any)?.interests;
 
+  const sessionRngRef = useRef<() => number | null>(null);
+  if (sessionRngRef.current === null) {
+    sessionRngRef.current = mulberry32((Math.random() * 4294967296) >>> 0);
+  }
+
   const companionsKey = idsKey(companions);
   const activitiesKey = idsKey(activities);
   const eventsKey = idsKey(events);
@@ -33,6 +38,7 @@ export function useDiscoveryFeed(
       maxItems: Math.max(60, companions.length + activities.length + events.length + stories.length + posts.length),
       categoriesPerFeed: 16,
       itemsPerCategory: 24,
+      rng: sessionRngRef.current ?? undefined,
     });
     const stable = stabilizeFeed(stabilizedRef.current, regenerated);
     stabilizedRef.current = stable;

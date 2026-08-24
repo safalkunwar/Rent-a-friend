@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateDiscoveryFeed, type FeedItem } from '../services/feedGenerator';
+import { generateDiscoveryFeed, mulberry32, type FeedItem } from '../services/feedGenerator';
 import { mergeById, splitIntoChunks, stabilizeFeed } from '../services/feedStabilizer';
 import { Companion, Activity, Event as EventType, ExperienceStory, CommunityPost } from '../types';
 
@@ -48,7 +48,7 @@ function makeEvent(id: string, category?: string): EventType {
   };
 }
 
-function makeStory(id: string): ExperienceStory {
+function makeStory(id: string, category?: string): ExperienceStory {
   return {
     id,
     userId: 'u1',
@@ -61,7 +61,8 @@ function makeStory(id: string): ExperienceStory {
     likes: 5,
     comments: 2,
     createdAt: new Date().toISOString(),
-    tags: [],
+    category,
+    tags: category ? [category.toLowerCase().replace(' ', '_')] : [],
   };
 }
 
@@ -87,6 +88,37 @@ function makePost(id: string): CommunityPost {
 
 const contentKeys = (feed: FeedItem[]): string[] =>
   feed.filter(i => i.type !== 'category-header').map(i => `${i.type}:${i.data.id}`);
+
+function assertAppendOnlyStability(feed1: FeedItem[], feed2: FeedItem[], label = ''): void {
+  const stabilized = stabilizeFeed(feed1, feed2);
+  const beforeKeys = contentKeys(feed1);
+  const afterKeys = contentKeys(stabilized);
+
+  const beforeSet = new Set(beforeKeys);
+  expect(beforeSet.size).toBe(beforeKeys.length);
+
+  let cursor = -1;
+  let failedKey: string | null = null;
+  for (const key of beforeKeys) {
+    const found = afterKeys.indexOf(key, cursor + 1);
+    if (found <= cursor) {
+      failedKey = key;
+      break;
+    }
+    cursor = found;
+  }
+  if (failedKey !== null) {
+    const seq = (f: FeedItem[]) => f.map(i => i.type === 'category-header' ? `<<${i.category}>>` : `${i.type}:${i.data.id}`).join(' | ');
+    console.log(`APPEND-ONLY VIOLATION [${label}] for key:`, failedKey);
+    console.log('PREV :', seq(feed1));
+    console.log('NEXT :', seq(feed2));
+    console.log('STAB :', seq(stabilized));
+  }
+  expect(failedKey).toBeNull();
+
+  const missing = beforeKeys.filter(key => !afterKeys.includes(key));
+  expect(missing).toEqual([]);
+}
 
 const contentTypes = (feed: FeedItem[]): string[] =>
   feed.filter(i => i.type !== 'category-header').map(i => i.type);
@@ -147,10 +179,10 @@ describe('mixed feed composition rules', () => {
       const types = contentTypes(feed);
 
       let run = 0;
-      for (const type of types) {
-        if (type === 'companion') {
+      for (let i = 0; i < types.length; i++) {
+        if (types[i] === 'companion') {
           run += 1;
-          const othersLeft = types.slice(types.indexOf(type) + 1).some(t => t !== 'companion');
+          const othersLeft = types.slice(i + 1).some(t => t !== 'companion');
           if (othersLeft) expect(run).toBeLessThan(3);
         } else {
           run = 0;
@@ -175,7 +207,7 @@ describe('mixed feed composition rules', () => {
   it('keeps every displayed document unique within one generated batch', () => {
     const companions = Array.from({ length: 15 }, (_, i) => makeCompanion(`dc${i}`, [['Hiking Partner', 'Food Explorer'][i % 2]]));
     const activities = Array.from({ length: 5 }, (_, i) => makeActivity(`da${i}`, ['Hiking Partner', 'Food Explorer'][i % 2]));
-    const events = Array.from({ length: 4 }, (_, i) => makeEvent(`de${i}`, 'E', 'Kathmandu', ['Hiking Partner', 'Food Explorer'][i % 2]));
+    const events = Array.from({ length: 4 }, (_, i) => makeEvent(`de${i}`, ['Hiking Partner', 'Food Explorer'][i % 2]));
     const posts = Array.from({ length: 5 }, (_, i) => makeUncategorizedPost(`dp${i}`));
 
     const feed = generateDiscoveryFeed(companions, activities, events, [], posts, { maxItems: 60 });
@@ -218,29 +250,21 @@ describe('stabilizeFeed (append-only Home feed)', () => {
     expect(stabilizeFeed([], fresh)).toBe(fresh);
   });
 
-  it('preserves previously displayed content in exact order when more data arrives', () => {
+  it('preserves previously displayed content in exact order when more data arrives within a session', () => {
     const batch1Companions = Array.from({ length: 5 }, (_, i) => makeCompanion(`c${i}`, ['Hiking Partner']));
-    const feed1 = generateDiscoveryFeed(batch1Companions, [makeActivity('a1')], [makeEvent('e1')], [makeStory('s1')], [makePost('p1')], { maxItems: 60 });
-
     const batch2Companions = [...batch1Companions, ...Array.from({ length: 5 }, (_, i) => makeCompanion(`n${i}`, ['Food Explorer']))];
-    const feed2 = generateDiscoveryFeed(batch2Companions, [makeActivity('a1'), makeActivity('a2')], [makeEvent('e1'), makeEvent('e2')], [makeStory('s1'), makeStory('s2')], [makePost('p1'), makePost('p2')], { maxItems: 120 });
+    const batch3Companions = [...batch2Companions, ...Array.from({ length: 4 }, (_, i) => makeCompanion(`t${i}`, ['Coffee Buddy']))];
 
-    const stabilized = stabilizeFeed(feed1, feed2);
+    for (let session = 0; session < 15; session++) {
+      const rng = mulberry32(session * 31 + 3);
+      const f1 = generateDiscoveryFeed(batch1Companions, [makeActivity('a1')], [makeEvent('e1')], [makeStory('s1')], [makePost('p1')], { maxItems: 60, rng });
+      const f2 = generateDiscoveryFeed(batch2Companions, [makeActivity('a1'), makeActivity('a2')], [makeEvent('e1'), makeEvent('e2')], [makeStory('s1'), makeStory('s2')], [makePost('p1'), makePost('p2')], { maxItems: 120, rng });
+      const f3 = generateDiscoveryFeed(batch3Companions, [makeActivity('a1'), makeActivity('a2'), makeActivity('a3', 'Coffee Buddy')], [makeEvent('e1'), makeEvent('e2'), makeEvent('e3')], [makeStory('s1'), makeStory('s2'), makeStory('s3')], [makePost('p1'), makePost('p2'), makePost('p3')], { maxItems: 180, rng });
 
-    const beforeKeys = contentKeys(feed1);
-    const afterKeys = contentKeys(stabilized);
-
-    const beforeSet = new Set(beforeKeys);
-    expect(beforeSet.size).toBe(beforeKeys.length);
-
-    let cursor = -1;
-    for (const key of beforeKeys) {
-      const found = afterKeys.indexOf(key, cursor + 1);
-      expect(found).toBeGreaterThan(cursor);
-      cursor = found;
+      assertAppendOnlyStability(f1, f2, `session ${session} f1→f2`);
+      assertAppendOnlyStability(f2, f3, `session ${session} f2→f3`);
+      assertAppendOnlyStability(f1, f3, `session ${session} f1→f3`);
     }
-
-    expect(afterKeys.length).toBeGreaterThanOrEqual(beforeKeys.length);
   });
 
   it('never displays the same document twice across appended batches', () => {
@@ -275,7 +299,7 @@ describe('stabilizeFeed (append-only Home feed)', () => {
     }
   });
 
-  it('keeps chunk headers aligned with their categories', () => {
+  it('keeps chunk headers aligned with their categories for single-source sections', () => {
     const companions = [
       ...Array.from({ length: 6 }, (_, i) => makeCompanion(`h${i}`, ['Hiking Partner'])),
       ...Array.from({ length: 6 }, (_, i) => makeCompanion(`f${i}`, ['Food Explorer'])),
@@ -288,9 +312,23 @@ describe('stabilizeFeed (append-only Home feed)', () => {
 
     for (const chunk of chunks) {
       if (!chunk.header) continue;
-      for (const item of chunk.items) {
-        const cat = (item as Extract<FeedItem, { type: 'companion' }>).category;
-        expect(cat).toBe(chunk.headerCategory);
+      const companionItems = chunk.items.filter((item): item is Extract<FeedItem, { type: 'companion' }> => item.type === 'companion');
+      const primary = companionItems.filter(item => item.category === chunk.headerCategory);
+      expect(primary.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('labels every companion, activity and event with a truthful category even when mixed', () => {
+    const companions = Array.from({ length: 8 }, (_, i) => makeCompanion(`m${i}`, [['Hiking Partner', 'Food Explorer'][i % 2]]));
+    const activities = Array.from({ length: 4 }, (_, i) => makeActivity(`ma${i}`, ['Hiking Partner', 'Food Explorer'][i % 2]));
+    const events = Array.from({ length: 3 }, (_, i) => makeEvent(`me${i}`, ['Hiking Partner', 'Food Explorer'][i % 2]));
+
+    const feed = generateDiscoveryFeed(companions, activities, events, [], [], { maxItems: 60 });
+    for (const item of feed) {
+      if (item.type === 'companion') {
+        expect(['Hiking Partner', 'Food Explorer']).toContain(item.category);
+      } else if (item.type === 'activity' || item.type === 'event') {
+        expect(['Hiking Partner', 'Food Explorer']).toContain(item.category);
       }
     }
   });

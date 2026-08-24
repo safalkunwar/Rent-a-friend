@@ -18,6 +18,27 @@ export interface FeedOptions {
   maxItems?: number;
   categoriesPerFeed?: number;
   itemsPerCategory?: number;
+  rng?: () => number;
+}
+
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffledBy<T>(items: T[], rng: () => number): T[] {
+  const arr = items.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 const CATEGORY_RELATIONS: Record<string, string[]> = {
@@ -159,54 +180,40 @@ function getFreshness(item: any): number {
   return 0;
 }
 
-export function weaveWithCompanions(
+export function weaveCompanionsIntoStream(
   companionEntries: ContentItem[],
-  otherEntries: ContentItem[],
+  stream: ContentItem[],
   rng: () => number = Math.random
 ): ContentItem[] {
   const result: ContentItem[] = [];
-  let ci = 0;
-  let oi = 0;
-  let lastKind: 'c' | 'o' | null = null;
-  let lastRun = 0;
-  let safety = 0;
-  while ((ci < companionEntries.length || oi < otherEntries.length) && safety++ < 10000) {
-    const companionsLeft = companionEntries.length - ci;
-    const othersLeft = otherEntries.length - oi;
-    const kinds: Array<'c' | 'o'> = [];
-    const othersRemaining = otherEntries.length - oi;
-    if (companionsLeft > 0 && !(lastKind === 'c' && lastRun >= 2)) kinds.push('c');
-    if (othersLeft > 0 && !(lastKind === 'o' && lastRun >= 2)) kinds.push('o');
-    let usable = kinds.length > 0 ? kinds : companionsLeft > 0 ? (['c'] as Array<'c'>) : (['o'] as Array<'o'>);
-    if (
-      usable.includes('c') &&
-      usable.includes('o') &&
-      companionsLeft > othersRemaining * 2 &&
-      !(lastKind === 'o' && lastRun >= 2)
-    ) {
-      usable = ['o'];
-    }
-    const shares = usable.map(kind => (kind === 'c' ? companionsLeft : othersLeft) * (0.75 + rng() * 0.5));
-    const totalShare = shares.reduce((sum, value) => sum + value, 0);
-    let roll = rng() * totalShare;
-    let pick: 'c' | 'o' = usable[usable.length - 1];
-    for (let i = 0; i < usable.length; i++) {
-      roll -= shares[i];
-      if (roll <= 0) {
-        pick = usable[i];
-        break;
+  const gapCount = stream.length + 1;
+  if (gapCount <= 0) return companionEntries.slice();
+
+  const alloc = new Array<number>(gapCount).fill(0);
+  let remaining = companionEntries.length;
+  let guard = 0;
+  while (remaining > 0 && guard++ < 10000) {
+    let placedThisPass = 0;
+    for (let g = 0; g < gapCount && remaining > 0; g++) {
+      if (alloc[g] < 2) {
+        alloc[g]++;
+        remaining--;
+        placedThisPass++;
       }
     }
-    if (pick === 'c') {
-      result.push(companionEntries[ci++]);
-    } else {
-      result.push(otherEntries[oi++]);
+    if (placedThisPass === 0) break;
+  }
+
+  const startOffset = gapCount > 0 ? Math.floor(rng() * gapCount) : 0;
+  let companionIdx = 0;
+  let streamIdx = 0;
+  for (let k = 0; k < gapCount; k++) {
+    const gap = (startOffset + k) % gapCount;
+    for (let j = 0; j < alloc[gap] && companionIdx < companionEntries.length; j++) {
+      result.push(companionEntries[companionIdx++]);
     }
-    if (pick === lastKind) {
-      lastRun += 1;
-    } else {
-      lastKind = pick;
-      lastRun = 1;
+    if (streamIdx < stream.length) {
+      result.push(stream[streamIdx++]);
     }
   }
   return result;
@@ -262,7 +269,6 @@ function scoreActivity(a: Activity, contextCategory?: string): number {
   score += getLocationMatch(a, contextCategory);
   if (contextCategory && a.category === contextCategory) score += 3;
   score += getFreshness(a);
-  score += Math.random() * 2;
   return score;
 }
 
@@ -270,7 +276,6 @@ function scoreEvent(e: Event, contextCategory?: string): number {
   let score = 0;
   score += getLocationMatch(e, contextCategory);
   score += getFreshness(e);
-  score += Math.random() * 2;
   return score;
 }
 
@@ -313,7 +318,9 @@ export function generateDiscoveryFeed(
     maxItems = 60,
     categoriesPerFeed = 3,
     itemsPerCategory = 6,
+    rng: optionsRng,
   } = options;
+  const rng = optionsRng ?? Math.random;
 
   const seenIds = new Set<string>();
   const feed: FeedItem[] = [];
@@ -348,25 +355,13 @@ export function generateDiscoveryFeed(
   }
 
   const categoryGroups = buildCategoryGroups(companions, usedCompanionIds, userLocation);
-  const sortedCategories = Array.from(categoryGroups.keys()).sort(() => Math.random() - 0.5);
+  const sortedCategories = shuffledBy(Array.from(categoryGroups.keys()), rng);
   const selectedCategories = sortedCategories.slice(0, categoriesPerFeed);
 
   const allActivities = [...activities].sort((a, b) => scoreActivity(b) - scoreActivity(a));
   const allEvents = [...events].sort((a, b) => scoreEvent(b) - scoreEvent(a));
-  const allStories = [...stories].sort((a, b) => getFreshness(b) - getFreshness(a) + Math.random() * 2);
-  const allPosts = [...posts].sort(() => Math.random() - 0.5);
-
-  const takeUnused = <T extends { id: string }>(pool: T[], count: number): T[] =>
-    pool.filter(item => !seenIds.has(item.id)).slice(0, count);
-
-  const takeRelatedOrAvailable = <T extends { id: string }>(pool: T[], isRelated: (item: T) => boolean, count: number): T[] => {
-    const unused = pool.filter(item => !seenIds.has(item.id));
-    const related = unused.filter(isRelated).slice(0, count);
-    if (related.length >= count || unused.length === 0) return related;
-    const relatedIds = new Set(related.map(item => item.id));
-    const filler = unused.filter(item => !relatedIds.has(item.id)).slice(0, count - related.length);
-    return [...related, ...filler];
-  };
+  const allStories = [...stories].sort((a, b) => getFreshness(b) - getFreshness(a));
+  const allPosts = [...posts];
 
   let carryLastType: string | null = null;
   for (const category of selectedCategories) {
@@ -375,28 +370,20 @@ export function generateDiscoveryFeed(
 
     feed.push({ type: 'category-header', category, emoji: CATEGORY_EMOJIS[category] });
 
-    const relatedActivities = takeRelatedOrAvailable(
-      allActivities,
-      a => a.category === category || getCategoryFallbacks(category).includes(a.category || ''),
-      2
-    );
-    const relatedEvents = takeRelatedOrAvailable(
-      allEvents,
-      e => e.category === category || getCategoryFallbacks(category).includes(e.category || ''),
-      2
-    );
-    const relatedStories = takeRelatedOrAvailable(
-      allStories,
-      s => s.category === category || (!!s.tags && s.tags.includes(category.toLowerCase().replace(' ', '_'))),
-      1
-    );
-    const relatedPosts = takeRelatedOrAvailable(
-      allPosts,
-      p => !p.category || p.category.toLowerCase() === category.toLowerCase() || getCategoryFallbacks(category).includes(p.category || ''),
-      2
-    );
+    const relatedActivities = allActivities
+      .filter(a => !seenIds.has(a.id) && (a.category === category || getCategoryFallbacks(category).includes(a.category || '')))
+      .slice(0, 2);
+    const relatedEvents = allEvents
+      .filter(e => !seenIds.has(e.id) && (e.category === category || getCategoryFallbacks(category).includes(e.category || '')))
+      .slice(0, 2);
+    const relatedStories = allStories
+      .filter(s => !seenIds.has(s.id) && (s.category === category || (!!s.tags && s.tags.includes(category.toLowerCase().replace(' ', '_')))))
+      .slice(0, 1);
+    const relatedPosts = allPosts
+      .filter(p => !seenIds.has(p.id) && (!p.category || p.category.toLowerCase() === category.toLowerCase() || getCategoryFallbacks(category).includes(p.category || '')))
+      .slice(0, 2);
 
-    const shuffledCompanions = [...groupCompanions].sort(() => Math.random() - 0.5).slice(0, itemsPerCategory);
+    const shuffledCompanions = [...groupCompanions].slice(0, itemsPerCategory);
 
     const companionEntries: ContentItem[] = shuffledCompanions.map(c => ({ type: 'companion', data: c, section: sectionTitles.companion, category }));
     const activityEntries: ContentItem[] = relatedActivities.map(a => ({ type: 'activity', data: a, section: sectionTitles.activity, category }));
@@ -404,17 +391,24 @@ export function generateDiscoveryFeed(
     const storyEntries: ContentItem[] = relatedStories.map(s => ({ type: 'story', data: s, section: `${category} stories` }));
     const postEntries: ContentItem[] = relatedPosts.map(p => ({ type: 'post', data: p, section: 'Community Feed' }));
 
-    const nonCompanionEntries = interleaveByType([
-      activityEntries,
-      eventEntries,
-      storyEntries,
-      postEntries,
-    ], Math.random, carryLastType);
-
-    const companionBudget = Math.min(companionEntries.length, Math.max(6, nonCompanionEntries.length * 2));
-    const orderedCategoryItems = weaveWithCompanions(
+    const relatedNonCompanionCount =
+      activityEntries.length +
+      eventEntries.length +
+      storyEntries.length +
+      postEntries.length;
+    const companionBudget = Math.min(
+      companionEntries.length,
+      itemsPerCategory,
+      relatedNonCompanionCount * 2 + 3
+    );
+    const nonCompanionStream = interleaveByType(
+      [activityEntries, eventEntries, storyEntries, postEntries],
+      rng,
+      carryLastType
+    );
+    const orderedCategoryItems = weaveCompanionsIntoStream(
       companionEntries.slice(0, companionBudget),
-      nonCompanionEntries
+      nonCompanionStream
     );
 
     for (const item of orderedCategoryItems) {
@@ -445,13 +439,25 @@ export function generateDiscoveryFeed(
     .filter(p => !seenIds.has(p.id))
     .map(p => ({ type: 'post' as const, data: p, section: 'Community Feed' }));
 
-  const tailItems = interleaveByType([
-    leftoverPostEntries,
-    leftoverCompanionEntries,
-    leftoverActivityEntries,
-    leftoverEventEntries,
-    leftoverStoryEntries,
-  ], Math.random, carryLastType);
+  const otherTailCount =
+    leftoverPostEntries.length +
+    leftoverActivityEntries.length +
+    leftoverEventEntries.length +
+    leftoverStoryEntries.length;
+  const tailCompanions: ContentItem[] = leftoverCompanionEntries
+    .slice(0, otherTailCount * 2)
+    .map(entry => ({ ...entry, _tail: true }));
+  const tailStream: ContentItem[] = interleaveByType(
+    [
+      leftoverPostEntries.map(entry => ({ ...entry, _tail: true as const })),
+      leftoverActivityEntries.map(entry => ({ ...entry, _tail: true as const })),
+      leftoverEventEntries.map(entry => ({ ...entry, _tail: true as const })),
+      leftoverStoryEntries.map(entry => ({ ...entry, _tail: true as const })),
+    ],
+    rng,
+    carryLastType
+  );
+  const tailItems = weaveCompanionsIntoStream(tailCompanions, tailStream, rng);
 
   for (const item of tailItems) {
     addItem(item);
