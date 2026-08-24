@@ -497,6 +497,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     return 0; // recommended
   });
 
+  const companionCategories = useCompanionCategories(filteredCompanions);
+
   const filteredActivities = (activities || []).filter(act => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q ||
@@ -1138,7 +1140,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   ) : selectedCategory === 'All' && !searchQuery && selectedCity === 'All' && !showSavedOnly ? (
                     /* Grouped category-based horizontal scrolling rows */
                     (() => {
-                      const categories = useCompanionCategories(filteredCompanions);
+                      const categories = companionCategories;
 
                       return (
                         <div className="space-y-10">
@@ -1555,12 +1557,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                      <p className="text-sm font-bold text-text-secondary">No companions found</p>
                      <p className="text-[10px] text-text-muted mt-1">Try adjusting your search or filters</p>
                    </div>
-                  ) : (
-                    <div className="space-y-8">
-                      {(() => {
-                        const categories = useCompanionCategories(filteredCompanions);
+                   ) : (
+                     <div className="space-y-8">
+                       {(() => {
+                         const categories = companionCategories;
 
-                        return categories.map(cat => (
+                         return categories.map(cat => (
                           <div key={cat.category} className="space-y-3">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
@@ -2000,31 +2002,44 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             {/* Render Mobile Tab Home */}
             {mobileTab === 'home' && (
               <div className="space-y-6">
-                {/* Compact Home Header (no logo/search above Stories; Filters + profile only) */}
+                {/* Mobile Home Header: SATHI logo + search + filters + profile */}
                 <div className="flex items-center justify-between gap-3 p-4 bg-background border-b border-white/5 h-[62px]">
+                  <img
+                    src="/sathi-logo.png"
+                    alt="SATHI"
+                    className="w-9 h-9 rounded-xl object-contain shrink-0 shadow-md shadow-primary-action/20"
+                  />
+
+                  <div className="flex-1 relative flex items-center min-w-0">
+                    <Search className="w-4 h-4 text-primary-action absolute left-3" />
+                    <input
+                      type="text"
+                      placeholder="Where are you going?"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full h-10 pl-9 pr-10 bg-surface-elevated/60 backdrop-blur-md rounded-full border border-white/10 text-xs text-text-primary focus:outline-none focus:border-primary-action transition-all"
+                    />
+                  </div>
+
                   <button
                     onClick={() => setIsFilterDrawerOpen(true)}
                     aria-label="Open filters"
-                    className="relative flex items-center gap-1.5 h-10 px-3.5 bg-surface-elevated/80 hover:bg-surface-elevated border border-border-token/40 rounded-full text-xs font-bold text-text-primary transition-all"
+                    className="relative flex items-center justify-center w-10 h-10 shrink-0 bg-surface-elevated/80 hover:bg-surface-elevated border border-border-token/40 rounded-full text-text-secondary hover:text-primary-action transition-all"
                   >
-                    <SlidersHorizontal className="w-4 h-4 text-primary-action" />
-                    <span>Filters</span>
+                    <SlidersHorizontal className="w-4 h-4" />
                     {activeFilterCount > 0 && (
-                      <span className="w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">
                         {activeFilterCount}
                       </span>
                     )}
                   </button>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* User profile with golden border */}
-                    <img
-                      src={currentUser?.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"}
-                      className="w-9 h-9 rounded-full object-cover border-2 border-primary-action cursor-pointer"
-                      alt="Profile"
-                      onClick={() => { setShowProfileDropdown(true); }}
-                    />
-                  </div>
+                  <img
+                    src={currentUser?.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"}
+                    className="w-9 h-9 rounded-full object-cover border-2 border-primary-action cursor-pointer shrink-0"
+                    alt="Profile"
+                    onClick={() => { setShowProfileDropdown(true); }}
+                  />
                 </div>
 
             {/* Instagram-style Stories */}
