@@ -12,6 +12,19 @@ import { firestore } from '../../services/firestore';
 import { ReportModal } from '../modals/ReportModal';
 import { CommentComposer } from './CommentComposer';
 
+const commentTimeAgo = (iso?: string): string => {
+  if (!iso) return '';
+  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
 export const CommunityFeed: React.FC = () => {
   const { currentUser, createPost, likePost, unlikePost, createComment, deleteComment, checkUserLikedPost, openAuthModal, signInAnonymously } = useAppContext();
   const { posts, loading } = useCommunityPosts();
@@ -519,7 +532,12 @@ export const CommunityFeed: React.FC = () => {
                             <SafeImage src={comm.userAvatar} className="w-5 h-5 rounded-full object-cover mt-0.5" alt={comm.userName} fallbackType="avatar" textForInitials={comm.userName} />
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between items-center">
-                                <span className="font-extrabold text-text-primary text-[10px]">{comm.userName}</span>
+                                <span className="font-extrabold text-text-primary text-[10px]">
+                                  {comm.userName}
+                                  {commentTimeAgo(comm.createdAt) && (
+                                    <span className="ml-1.5 font-medium text-text-muted normal-case">{commentTimeAgo(comm.createdAt)}</span>
+                                  )}
+                                </span>
                                 {currentUser && currentUser.id === comm.userId && (
                                   <div className="flex items-center gap-1.5">
                                     {editingComment?.id === comm.id ? (
@@ -575,7 +593,7 @@ export const CommunityFeed: React.FC = () => {
 
                  {/* Add Comment Input */}
                  {currentUser ? (
-                   <CommentComposer onSubmit={(text) => handleCreateComment(post.id, text)} />
+                   <CommentComposer autoFocus onSubmit={(text) => handleCreateComment(post.id, text)} />
                  ) : (
                    <button
                      onClick={openAuthModal}

@@ -1,10 +1,10 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Send } from 'lucide-react';
 
 interface CommentComposerProps {
   placeholder?: string;
   maxLength?: number;
-  autoFocusKey?: string;
+  autoFocus?: boolean;
   onSubmit: (text: string) => Promise<void>;
 }
 
@@ -13,12 +13,21 @@ const MAX_LENGTH = 500;
 export const CommentComposer: React.FC<CommentComposerProps> = ({
   placeholder = 'Write a comment...',
   maxLength = MAX_LENGTH,
+  autoFocus = false,
   onSubmit,
 }) => {
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const submittingRef = useRef(false);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    const el = textareaRef.current;
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, [autoFocus]);
 
   const trimmed = text.trim();
   const canSubmit = trimmed.length > 0 && !submitting;
