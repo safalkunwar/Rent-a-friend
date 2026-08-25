@@ -22,11 +22,11 @@ export const LoadingScreen: React.FC = () => {
       />
       <div className="relative flex flex-col items-center gap-5">
         <div className="relative">
-          <span className="absolute -inset-2 rounded-3xl bg-primary-action/30 animate-ping" />
+          <span className="absolute -inset-2 rounded-full bg-primary-action/30 animate-ping" />
           <img
             src="/sathi-logo.jpeg"
             alt="SATHI"
-            className="relative h-20 w-auto rounded-2xl object-contain shadow-[0_12px_48px_rgba(200,162,94,0.35)] bg-surface-elevated/60 px-1"
+            className="relative w-20 h-20 rounded-full object-cover ring-1 ring-primary-action/40 shadow-[0_12px_48px_rgba(200,162,94,0.45)]"
           />
         </div>
         <div className="text-2xl font-black tracking-tight text-text-primary">

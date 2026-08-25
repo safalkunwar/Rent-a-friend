@@ -182,11 +182,11 @@ export const PWAInstallPrompt: React.FC = () => {
           >
             <div className="flex items-start gap-4 text-left">
               {/* SATHI Icon inside banner */}
-              <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-surface-elevated to-background border border-primary-action/30 flex-shrink-0 flex items-center justify-center shadow-inner">
+              <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-surface-elevated to-background border border-primary-action/30 flex-shrink-0 flex items-center justify-center shadow-inner">
                 <img
                   src="/sathi-logo.jpeg"
                   alt="SATHI PWA"
-                  className="h-10 w-auto max-w-[64px] object-contain rounded-lg"
+                  className="w-full h-full object-cover"
                   onError={(e) => {
                     // Fallback if icon hasn't finished compiling in static route
                     e.currentTarget.style.display = 'none';
@@ -262,8 +262,8 @@ export const PWAInstallPrompt: React.FC = () => {
             >
               {/* Header */}
               <div className="space-y-2">
-                <div className="mx-auto w-16 h-16 rounded-[22px] overflow-hidden bg-gradient-to-br from-surface-elevated to-background border border-primary-action/40 flex items-center justify-center shadow-lg shadow-primary-action/5">
-                  <img src="/sathi-logo.jpeg" alt="SATHI" className="h-14 w-auto max-w-[84px] object-contain rounded-xl bg-surface-elevated/60 px-1" />
+                <div className="mx-auto w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-surface-elevated to-background border border-primary-action/40 flex items-center justify-center shadow-lg shadow-primary-action/5">
+                  <img src="/sathi-logo.jpeg" alt="SATHI" className="w-full h-full object-cover" />
                 </div>
                 <h3 className="text-xl font-extrabold text-primary-action">Install SATHI on iOS</h3>
                 <p className="text-xs text-text-secondary leading-relaxed">

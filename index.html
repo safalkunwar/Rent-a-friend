@@ -11,8 +11,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="SATHI" />
-    <link rel="icon" type="image/jpeg" href="/sathi-logo.jpeg" />
-    <link rel="apple-touch-icon" href="/sathi-logo.jpeg" />
+    <link rel="icon" type="image/png" href="/sathi-logo-circle.png" />
+    <link rel="apple-touch-icon" href="/sathi-logo-circle.png" />
     <style>
       #sathi-splash {
         position: fixed;
@@ -30,14 +30,11 @@
         gap: 18px;
       }
       #sathi-splash img {
+        width: 88px;
         height: 88px;
-        width: auto;
-        max-width: 132px;
-        border-radius: 16px;
-        object-fit: contain;
-        background: #17191C;
-        padding: 4px 8px;
-        box-shadow: 0 12px 48px rgba(200, 162, 94, 0.35), 0 0 0 1px rgba(200, 162, 94, 0.25);
+        border-radius: 50%;
+        object-fit: cover;
+        box-shadow: 0 12px 48px rgba(200, 162, 94, 0.45), 0 0 0 2px rgba(200, 162, 94, 0.35);
         animation: splash-glow 2.4s ease-in-out infinite;
       }
       #sathi-splash .splash-word {
@@ -80,7 +77,7 @@
     <div id="root">
       <div id="sathi-splash">
         <div class="splash-inner">
-          <img src="/sathi-logo.jpeg" alt="SATHI" width="132" height="88" />
+          <img src="/sathi-logo.jpeg" alt="SATHI" width="88" height="88" />
           <div class="splash-word">SATHI<span>.</span></div>
           <div class="splash-dots"><i></i><i></i><i></i></div>
         </div>

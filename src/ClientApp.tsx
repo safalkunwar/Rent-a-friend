@@ -491,7 +491,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               setShowSavedOnly(false);
             }}
           >
-            <img src="/sathi-logo.jpeg" alt="SATHI" className="h-9 w-auto rounded-lg object-contain shadow-md shadow-primary-action/20 bg-surface-elevated/60 px-0.5" />
+            <img src="/sathi-logo.jpeg" alt="SATHI" className="w-9 h-9 rounded-full object-cover ring-1 ring-primary-action/30 shadow-md shadow-primary-action/20" />
             <div>
               <span className="text-xl font-bold tracking-tight text-text-primary block">SATHI<span className="text-primary-action">.</span></span>
               <span className="text-[9px] uppercase tracking-wider text-text-secondary block font-light -mt-1">Trusted Experiences</span>
@@ -1953,7 +1953,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   <img
                     src="/sathi-logo.jpeg"
                     alt="SATHI"
-                    className="h-9 w-auto rounded-lg object-contain shrink-0 shadow-md shadow-primary-action/20 bg-surface-elevated/60 px-0.5"
+                    className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-primary-action/30 shadow-md shadow-primary-action/20"
                   />
 
                   <div className="flex-1 relative flex items-center min-w-0">

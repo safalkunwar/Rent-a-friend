@@ -89,10 +89,16 @@ export default defineConfig(() => {
           scope: '/',
           icons: [
             {
-              src: 'sathi-logo.jpeg',
-              sizes: '1600x1066',
-              type: 'image/jpeg',
+              src: 'sathi-logo-circle.png',
+              sizes: '1024x1024',
+              type: 'image/png',
               purpose: 'any'
+            },
+            {
+              src: 'sathi-logo-circle.png',
+              sizes: '1024x1024',
+              type: 'image/png',
+              purpose: 'maskable'
             }
           ]
         }
