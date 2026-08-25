@@ -10,7 +10,7 @@ import { ExpandableText } from './ExpandableText';
 import { uploadImageToStorage } from '../../services/storage';
 import { firestore } from '../../services/firestore';
 import { ReportModal } from '../modals/ReportModal';
-import { CommentComposer } from './CommentComposer';
+import { CommentsPanel } from './CommentsPanel';
 
 const commentTimeAgo = (iso?: string): string => {
   if (!iso) return '';
@@ -50,9 +50,6 @@ export const CommunityFeed: React.FC = () => {
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [savedPosts, setSavedPosts] = useState<Record<string, boolean>>({});
   const [selectedPostForComments, setSelectedPostForComments] = useState<string | null>(null);
-  const [comments, setComments] = useState<Record<string, Comment[]>>({});
-  const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
-  const [editingComment, setEditingComment] = useState<{ id: string; postId: string; text: string } | null>(null);
 
   const categories = ['All', 'Adventure', 'Food', 'Culture', 'Shopping', 'Nightlife'];
 
@@ -77,28 +74,6 @@ export const CommunityFeed: React.FC = () => {
     });
     setLikesCount(initialLikes);
   }, [posts, currentUser, checkUserLikedPost]);
-
-  // Real-time listener for open comments section
-  useEffect(() => {
-    if (!selectedPostForComments) return;
-    const postId = selectedPostForComments;
-    setLoadingComments(prev => ({ ...prev, [postId]: true }));
-
-    const unsubscribe = firestore.subscribe<Comment>('comments', {
-      where: [{ field: 'postId', operator: '==', value: postId }],
-      orderByField: 'createdAt',
-      orderDirection: 'asc'
-    }, (fetchedComments) => {
-      setComments(prev => ({ ...prev, [postId]: fetchedComments }));
-      setLoadingComments(prev => ({ ...prev, [postId]: false }));
-      // Server snapshot is authoritative while the panel is open.
-      setCommentCounts(prev => ({ ...prev, [postId]: fetchedComments.length }));
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [selectedPostForComments]);
 
   const handleToggleLike = async (postId: string) => {
     if (!currentUser) {
@@ -258,73 +233,8 @@ export const CommunityFeed: React.FC = () => {
     });
   };
 
-  const handleCreateComment = async (postId: string, rawText: string) => {
-    if (!currentUser) {
-      showToast('Please sign in to comment.', 'info');
-      openAuthModal();
-      throw new Error('unauthenticated');
-    }
-
-    const text = rawText.trim();
-    if (!text) throw new Error('empty');
-
-    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const defaultAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=C8A25E&color=0F1113';
-
-    setComments(prev => ({
-      ...prev,
-      [postId]: [
-        ...(prev[postId] || []),
-        { id: tempId, postId, userId: currentUser.id, userName: currentUser.name || 'Anonymous Traveler', userAvatar: currentUser.avatar || defaultAvatar, text, createdAt: new Date().toISOString(), pending: true } as Comment & { pending?: boolean },
-      ],
-    }));
-
-    try {
-      await createComment({
-        postId,
-        userId: currentUser.id,
-        userName: currentUser.name || 'Anonymous Traveler',
-        userAvatar: currentUser.avatar || defaultAvatar,
-        text
-      });
-
-      setComments(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(c => c.id !== tempId) }));
-      setCommentCounts(prev => ({ ...prev, [postId]: (prev[postId] ?? 0) + 1 }));
-      showToast('Comment posted!', 'success');
-    } catch (err) {
-      setComments(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(c => c.id !== tempId) }));
-      showToast('Comment failed to post. Your text was kept — try again.', 'error');
-      throw err instanceof Error ? err : new Error('comment-failed');
-    }
-  };
-
-  const handleDeleteComment = async (commentId: string, postId: string) => {
-    if (!currentUser) return;
-    try {
-      await deleteComment(commentId, postId);
-      setCommentCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] ?? 1) - 1) }));
-      if (editingComment?.id === commentId) setEditingComment(null);
-      showToast('Comment deleted', 'success');
-    } catch (err) {
-      showToast('Failed to delete comment', 'error');
-    }
-  };
-
-  const handleSaveEditedComment = async () => {
-    if (!editingComment || !editingComment.text.trim()) return;
-    try {
-      await socialRepository.editComment(editingComment.id, editingComment.text.trim());
-      setComments(prev => ({
-        ...prev,
-        [editingComment.postId]: (prev[editingComment.postId] || []).map(c =>
-          c.id === editingComment.id ? { ...c, text: editingComment.text.trim(), updatedAt: new Date().toISOString() } : c
-        ),
-      }));
-      setEditingComment(null);
-      showToast('Comment updated', 'success');
-    } catch (err) {
-      showToast('Failed to update comment', 'error');
-    }
+  const handleCountChange = (postId: string) => (count: number) => {
+    setCommentCounts(prev => ({ ...prev, [postId]: count }));
   };
 
   const filteredPosts = posts?.filter(post => {
@@ -404,7 +314,6 @@ export const CommunityFeed: React.FC = () => {
             const currentLikes = likesCount[post.id] || 0;
             const isSaved = savedPosts[post.id] || false;
             const showComments = selectedPostForComments === post.id;
-            const currentCommentsList = comments[post.id] || [];
             const isAuthor = currentUser && currentUser.id === post.userId;
 
             return (
@@ -520,91 +429,12 @@ export const CommunityFeed: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Real-time Comments Box */}
+                {/* Real-time Comments Panel */}
                 {showComments && (
-                  <div id={`comments-panel-${post.id}`} className="relative z-10 bg-background border-t border-border-token/40 p-3 text-left space-y-3">
-                    <div className="max-h-48 overflow-y-auto space-y-2.5 custom-scrollbar pr-1">
-                      {loadingComments[post.id] ? (
-                        <p className="text-[10px] text-text-secondary animate-pulse">Loading comments from Firestore...</p>
-                      ) : currentCommentsList.length === 0 ? (
-                        <p className="text-[10px] text-text-muted italic py-1">Be the first to comment.</p>
-                      ) : (
-                        currentCommentsList.map((comm, idx) => (
-                          <div key={`${comm.id || 'comm'}-${idx}`} className="flex gap-2 items-start text-xs bg-surface p-2 rounded-xl">
-                            <SafeImage src={comm.userAvatar} className="w-5 h-5 rounded-full object-cover mt-0.5" alt={comm.userName} fallbackType="avatar" textForInitials={comm.userName} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex justify-between items-center">
-                                <span className="font-extrabold text-text-primary text-[10px]">
-                                  {comm.userName}
-                                  {commentTimeAgo(comm.createdAt) && (
-                                    <span className="ml-1.5 font-medium text-text-muted normal-case">{commentTimeAgo(comm.createdAt)}</span>
-                                  )}
-                                </span>
-                                {currentUser && currentUser.id === comm.userId && (
-                                  <div className="flex items-center gap-1.5">
-                                    {editingComment?.id === comm.id ? (
-                                      <>
-                                        <button onClick={() => void handleSaveEditedComment()} className="text-primary-action hover:text-text-primary" title="Save">
-                                          <Send className="w-3 h-3" />
-                                        </button>
-                                        <button onClick={() => setEditingComment(null)} className="text-text-muted hover:text-red-500" title="Cancel">
-                                          <X className="w-3 h-3" />
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <button
-                                          onClick={() => setEditingComment({ id: comm.id, postId: post.id, text: comm.text })}
-                                          className="text-text-muted hover:text-primary-action"
-                                          title="Edit comment"
-                                        >
-                                          <Edit3 className="w-3 h-3" />
-                                        </button>
-                                        <button onClick={() => void handleDeleteComment(comm.id, post.id)} className="text-text-muted hover:text-red-500" title="Delete comment">
-                                          <Trash2 className="w-3 h-3" />
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              {editingComment?.id === comm.id ? (
-                                <input
-                                  autoFocus
-                                  value={editingComment.text}
-                                  onChange={(e) => setEditingComment(prev => prev ? { ...prev, text: e.target.value } : prev)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') void handleSaveEditedComment();
-                                    if (e.key === 'Escape') setEditingComment(null);
-                                  }}
-                                  className="w-full mt-1 bg-surface-elevated text-text-primary border border-primary-action/50 rounded-lg px-2 py-1 text-[10px] focus:outline-none"
-                                />
-                              ) : (
-                                <p className={`text-text-secondary font-light text-[10px] mt-0.5 leading-relaxed whitespace-pre-wrap break-words ${(comm as Comment & { pending?: boolean }).pending ? 'opacity-60' : ''}`}>
-                                  {comm.text}
-                                  {(comm as Comment & { pending?: boolean }).pending && (
-                                    <span className="ml-1.5 text-text-muted italic">Sending…</span>
-                                  )}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                 {/* Add Comment Input */}
-                 {currentUser ? (
-                   <CommentComposer autoFocus onSubmit={(text) => handleCreateComment(post.id, text)} />
-                 ) : (
-                   <button
-                     onClick={openAuthModal}
-                     className="w-full text-left py-1 text-[10px] text-primary-action font-bold hover:underline"
-                   >
-                     Sign in to leave a comment
-                   </button>
-                 )}
-                  </div>
+                  <CommentsPanel
+                    postId={post.id}
+                    onCountChange={handleCountChange(post.id)}
+                  />
                 )}
               </div>
             );

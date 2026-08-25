@@ -36,6 +36,16 @@ Entry format (all fields mandatory):
 
 ---
 
+## 2026-08-25 — Comment lifecycle fully traced & unified panel shipped
+- **Live pipeline proof:** authenticated as a REAL seeded Firebase Auth account via REST (`traveler.1@sathi.com`) and executed the exact app write against production `hamrosathi1` — rules **allowed** the create, document read-back succeeded, counter target post readable. Conclusion: Firestore/rules/path layer was never the failure point; failures were client-side UX/parity gaps.
+- **Root cause of perceived breakage:** three client gaps stacked — Home-feed cards had no per-user liked state and froze counts; mobile users had NO comment section at all after feed unification (posts fell back to `window.prompt`); CommunityFeed kept duplicated listener/state/edit logic that drifted from the shared layer.
+- **Unified architecture:** new shared `usePostComments(postId)` hook (one realtime listener per opened post, optimistic pending insertion reconciled by snapshot, failure revert) + new shared `CommentsPanel` component (list with avatars/names/relative timestamps/edit/delete own, empty state, pinned composer). `CommunityFeed` cards and Home-feed `FeedPostCard` both render this identical panel; FeedPostCard's `window.prompt` flow removed entirely — tapping Comments now expands the full panel on desktop AND mobile.
+- **Also fixed:** collision-prone timestamp-only comment IDs retained but composer double-submit guarded; dev-gated debug logs through the submit path (silent in production); panel carries stable DOM id for scroll targeting.
+- **Files changed:** new `src/hooks/usePostComments.ts`, `src/components/social/CommentsPanel.tsx`, `scripts/verify-comment-pipeline.mjs`; modified `src/components/social/CommunityFeed.tsx` (deduplicated), `src/components/social/FeedSocialCards.tsx`, `src/components/social/SocialPostCard.tsx`.
+- **Verification:** live WRITE(200, rules-allowed) → READ(200, content match) against production rules with a real account token; test doc cleaned up afterwards; 162/162 tests; lint baseline unchanged.
+
+---
+
 ## 2026-08-25 — Genuine-interaction hardening for likes/comments (Home feed parity)
 - **Gaps found:** Home-feed `SocialPostCard` instances never received the per-user liked state (always rendered ♡ even if the user had liked via Community Feed, and a first click silently UNLIKED), and like/comment counts were frozen at fetch-time values (tapping Like showed no count change; prompt-comments didn't bump counts).
 - **Fixes:** `SocialPostCard` now owns live `liked/likes/comments` display state seeded from real Firestore fields and re-synced when server truth changes; like toggle updates count optimistically; comment button awaits the parent handler result (boolean) and increments only on genuine success. `FeedPostCard`/`FeedStoryCard` resolve per-user liked state through the cached `checkUserLikedPost/Story` repository lookups and return success booleans from their comment flows. CommunityFeed's realtime panel callback now writes the authoritative server list length into the shared counter map while open.

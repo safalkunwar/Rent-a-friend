@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CommunityPost, ExperienceStory } from '../../types';
 import { SocialPostCard } from './SocialPostCard';
+import { CommentsPanel } from './CommentsPanel';
 import { useAppContext } from '../../context/AppContext';
 
 interface FeedSocialCardProps {
@@ -91,10 +92,12 @@ export const FeedStoryCard: React.FC<FeedSocialCardProps & { story: ExperienceSt
 };
 
 export const FeedPostCard: React.FC<FeedSocialCardProps & { post: CommunityPost }> = ({ post, onOpenMediaViewer, onToast }) => {
-  const { currentUser, likePost, unlikePost, checkUserLikedPost, createComment, openAuthModal } = useAppContext();
+  const { currentUser, likePost, unlikePost, checkUserLikedPost, openAuthModal } = useAppContext();
   const currentUserId = currentUser?.id;
   const toast = onToast ?? ((message: string) => console.log(message));
   const [likedByMe, setLikedByMe] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [liveComments, setLiveComments] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -131,43 +134,27 @@ export const FeedPostCard: React.FC<FeedSocialCardProps & { post: CommunityPost 
     }
   };
 
-  const handleComment = async (postId: string): Promise<boolean> => {
-    if (!currentUserId) {
-      openAuthModal();
-      return false;
-    }
-    const text = window.prompt('Enter your comment:');
-    if (!text || !text.trim()) return false;
-    try {
-      await createComment({
-        postId,
-        userId: currentUserId,
-        userName: currentUser?.name || 'User',
-        userAvatar: currentUser?.avatar || '',
-        text: text.trim(),
-      });
-      toast('Comment posted!', 'success');
-      return true;
-    } catch {
-      toast('Failed to post comment. Try again.', 'error');
-      return false;
-    }
-  };
-
   return (
     <div className="max-w-2xl mx-auto">
       <SocialPostCard
-        post={post}
+        post={liveComments !== null ? { ...post, commentsCount: liveComments } : post}
         type="post"
         initialLiked={likedByMe}
         onLike={handleLike}
         onUnlike={handleUnlike}
-        onComment={handleComment}
+        onToggleComments={() => setPanelOpen(value => !value)}
         onShare={() => toast('Shared!', 'success')}
         onSave={() => toast('Saved!', 'success')}
         onViewProfile={() => toast('View profile coming soon', 'info')}
         onOpenMediaViewer={onOpenMediaViewer}
       />
+      {panelOpen && (
+        <CommentsPanel
+          postId={post.id}
+          onClose={() => setPanelOpen(false)}
+          onCountChange={setLiveComments}
+        />
+      )}
     </div>
   );
 };

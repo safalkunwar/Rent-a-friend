@@ -15,6 +15,7 @@ interface SocialPostCardProps {
   onViewProfile?: (userId: string) => void;
   onOpenMediaViewer?: (images: string[], index: number) => void;
   initialLiked?: boolean;
+  onToggleComments?: () => void;
 }
 
 export const SocialPostCard: React.FC<SocialPostCardProps> = ({
@@ -28,6 +29,7 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
   onViewProfile,
   onOpenMediaViewer,
   initialLiked = false,
+  onToggleComments,
 }) => {
   const [liked, setLiked] = useState(initialLiked);
   const [saved, setSaved] = useState(false);
@@ -73,6 +75,10 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
 
   const handleCommentClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (onToggleComments) {
+      onToggleComments();
+      return;
+    }
     if (!onComment) return;
     try {
       const result = await onComment(post.id);
