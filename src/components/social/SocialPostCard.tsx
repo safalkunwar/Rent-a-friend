@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ExperienceStory, CommunityPost } from '../../types';
 import { SafeImage } from '../ui/SafeImage';
+import { ExpandableText } from './ExpandableText';
 import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, MapPin } from 'lucide-react';
 
 interface SocialPostCardProps {
@@ -178,9 +179,12 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
 
       {/* Content */}
       <div className="p-4 space-y-3">
-        <p className="text-sm text-text-primary leading-relaxed">
-          {caption}
-        </p>
+        <ExpandableText
+          text={caption}
+          lines={1}
+          className="text-sm text-text-primary leading-relaxed"
+          buttonClassName="text-xs font-bold text-primary-action hover:underline"
+        />
 
         {/* Location */}
         {!isStory && communityPost?.location && (

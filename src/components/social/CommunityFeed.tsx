@@ -6,6 +6,7 @@ import { useCommunityPosts } from '../../hooks/useFirestoreData';
 import { socialRepository, Comment } from '../../repositories/SocialRepository';
 import { CommunityPost } from '../../types';
 import { SafeImage } from '../ui/SafeImage';
+import { ExpandableText } from './ExpandableText';
 import { uploadImageToStorage } from '../../services/storage';
 import { firestore } from '../../services/firestore';
 import { ReportModal } from '../modals/ReportModal';
@@ -32,11 +33,13 @@ export const CommunityFeed: React.FC = () => {
   // Likes & Comments States
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
   const [likesCount, setLikesCount] = useState<Record<string, number>>({});
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [savedPosts, setSavedPosts] = useState<Record<string, boolean>>({});
   const [selectedPostForComments, setSelectedPostForComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [newCommentText, setNewCommentText] = useState<Record<string, string>>({});
   const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
+  const [editingComment, setEditingComment] = useState<{ id: string; postId: string; text: string } | null>(null);
 
   const categories = ['All', 'Adventure', 'Food', 'Culture', 'Shopping', 'Nightlife'];
 
@@ -51,6 +54,7 @@ export const CommunityFeed: React.FC = () => {
     const initialLikes: Record<string, number> = {};
     posts.forEach(post => {
       initialLikes[post.id] = post.likesCount || 0;
+      setCommentCounts(prev => (prev[post.id] === undefined ? { ...prev, [post.id]: post.commentsCount || 0 } : prev));
       const userId = getCurrentUserId();
       if (userId !== 'guest') {
         checkUserLikedPost(post.id).then(liked => {
@@ -258,6 +262,7 @@ export const CommunityFeed: React.FC = () => {
       });
 
       setNewCommentText(prev => ({ ...prev, [postId]: '' }));
+      setCommentCounts(prev => ({ ...prev, [postId]: (prev[postId] ?? 0) + 1 }));
       showToast('Comment posted successfully!', 'success');
     } catch (err) {
       showToast('Failed to post comment.', 'error');
@@ -268,9 +273,28 @@ export const CommunityFeed: React.FC = () => {
     if (!currentUser) return;
     try {
       await deleteComment(commentId, postId);
+      setCommentCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] ?? 1) - 1) }));
+      if (editingComment?.id === commentId) setEditingComment(null);
       showToast('Comment deleted', 'success');
     } catch (err) {
       showToast('Failed to delete comment', 'error');
+    }
+  };
+
+  const handleSaveEditedComment = async () => {
+    if (!editingComment || !editingComment.text.trim()) return;
+    try {
+      await socialRepository.editComment(editingComment.id, editingComment.text.trim());
+      setComments(prev => ({
+        ...prev,
+        [editingComment.postId]: (prev[editingComment.postId] || []).map(c =>
+          c.id === editingComment.id ? { ...c, text: editingComment.text.trim(), updatedAt: new Date().toISOString() } : c
+        ),
+      }));
+      setEditingComment(null);
+      showToast('Comment updated', 'success');
+    } catch (err) {
+      showToast('Failed to update comment', 'error');
     }
   };
 
@@ -407,9 +431,12 @@ export const CommunityFeed: React.FC = () => {
                 {/* Content */}
                 <div className="p-4 flex-1 flex flex-col text-left">
                   <h3 className="text-sm font-extrabold text-text-primary leading-snug line-clamp-1 mb-2">{post.title}</h3>
-                  <p className="text-xs text-text-primary/70 font-light leading-relaxed mb-4 flex-1 line-clamp-3">
-                    {post.content}
-                  </p>
+                  <ExpandableText
+                    text={post.content}
+                    lines={1}
+                    className="text-xs text-text-primary/70 font-light leading-relaxed mb-3"
+                    buttonClassName="text-[11px] font-bold text-primary-action hover:underline"
+                  />
 
                     {/* Actions Row */}
                     <div className="pt-3 border-t border-border-token/40 flex items-center justify-between">
@@ -431,9 +458,9 @@ export const CommunityFeed: React.FC = () => {
                           }`}
                         >
                           <MessageSquare className="w-4 h-4" />
-                          {post.commentsCount && post.commentsCount > 0 ? (
-                            <span>{post.commentsCount}</span>
-                          ) : null}
+                          {(commentCounts[post.id] ?? post.commentsCount ?? 0) > 0 && (
+                            <span>{commentCounts[post.id] ?? post.commentsCount}</span>
+                          )}
                         </button>
                       </div>
 
@@ -476,16 +503,51 @@ export const CommunityFeed: React.FC = () => {
                         currentCommentsList.map((comm, idx) => (
                           <div key={`${comm.id || 'comm'}-${idx}`} className="flex gap-2 items-start text-xs bg-surface p-2 rounded-xl">
                             <SafeImage src={comm.userAvatar} className="w-5 h-5 rounded-full object-cover mt-0.5" alt={comm.userName} fallbackType="avatar" textForInitials={comm.userName} />
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <div className="flex justify-between items-center">
                                 <span className="font-extrabold text-text-primary text-[10px]">{comm.userName}</span>
                                 {currentUser && currentUser.id === comm.userId && (
-                                  <button onClick={() => handleDeleteComment(comm.id, post.id)} className="text-text-muted hover:text-red-500">
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
+                                  <div className="flex items-center gap-1.5">
+                                    {editingComment?.id === comm.id ? (
+                                      <>
+                                        <button onClick={() => void handleSaveEditedComment()} className="text-primary-action hover:text-text-primary" title="Save">
+                                          <Send className="w-3 h-3" />
+                                        </button>
+                                        <button onClick={() => setEditingComment(null)} className="text-text-muted hover:text-red-500" title="Cancel">
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          onClick={() => setEditingComment({ id: comm.id, postId: post.id, text: comm.text })}
+                                          className="text-text-muted hover:text-primary-action"
+                                          title="Edit comment"
+                                        >
+                                          <Edit3 className="w-3 h-3" />
+                                        </button>
+                                        <button onClick={() => void handleDeleteComment(comm.id, post.id)} className="text-text-muted hover:text-red-500" title="Delete comment">
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
                                 )}
                               </div>
-                              <p className="text-text-secondary font-light text-[10px] mt-0.5 leading-relaxed">{comm.text}</p>
+                              {editingComment?.id === comm.id ? (
+                                <input
+                                  autoFocus
+                                  value={editingComment.text}
+                                  onChange={(e) => setEditingComment(prev => prev ? { ...prev, text: e.target.value } : prev)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') void handleSaveEditedComment();
+                                    if (e.key === 'Escape') setEditingComment(null);
+                                  }}
+                                  className="w-full mt-1 bg-surface-elevated text-text-primary border border-primary-action/50 rounded-lg px-2 py-1 text-[10px] focus:outline-none"
+                                />
+                              ) : (
+                                <p className="text-text-secondary font-light text-[10px] mt-0.5 leading-relaxed whitespace-pre-wrap break-words">{comm.text}</p>
+                              )}
                             </div>
                           </div>
                         ))
