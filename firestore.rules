@@ -293,8 +293,13 @@ service cloud.firestore {
       // Authors can update their own posts
       allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'category', 'tags', 'imageUrl', 'updatedAt', 'status']);
 
-      // Any authenticated user can update counter fields
-      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'updatedAt']);
+      // Any authenticated user can update counter fields, but values must be
+      // sane: non-negative numbers only. Aggregate integrity beyond this is
+      // maintained transactionally by the client repositories.
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'updatedAt'])
+        && (!('likesCount' in request.resource.data) || (request.resource.data.likesCount is number && request.resource.data.likesCount >= 0))
+        && (!('commentsCount' in request.resource.data) || (request.resource.data.commentsCount is number && request.resource.data.commentsCount >= 0));
     }
 
     // Comments Collection: /comments/{commentId}

@@ -441,7 +441,6 @@ async function runSeed() {
 
   // Generate 100 Experience Stories
   const storiesList: any[] = [];
-  const storyLikesList: any[] = [];
 
   for (let i = 1; i <= 100; i++) {
     const traveler = travelersList[i % travelersList.length];
@@ -454,21 +453,10 @@ async function runSeed() {
       userId: traveler.id,
       imageUrl: activityImages[i % activityImages.length],
       caption: storyCaptions[i % storyCaptions.length],
-      likes: 3 + (i % 12),
-      comments: 1 + (i % 5),
+      likes: 0,
+      comments: 0,
       createdAt: new Date(Date.now() - i * 6 * 3600000).toISOString()
     });
-
-    // Populate actual companion-traveler likes for each story
-    for (let l = 1; l <= (3 + (i % 12)); l++) {
-      const liker = travelersList[(i + l) % travelersList.length];
-      storyLikesList.push({
-        id: `${liker.id}_${storyId}`,
-        userId: liker.id,
-        storyId: storyId,
-        createdAt: new Date().toISOString()
-      });
-    }
   }
 
   // Generate 150 Community Posts
@@ -500,52 +488,8 @@ async function runSeed() {
     });
   }
 
-  // Generate likes for community posts
-  const postLikesList: any[] = [];
-  for (const post of postsList) {
-    const likeCount = 2 + (parseInt(post.id.replace('cp', '')) % 15);
-    post.likesCount = likeCount;
-    for (let l = 0; l < likeCount; l++) {
-      const liker = travelersList[(l + parseInt(post.id.replace('cp', ''))) % travelersList.length];
-      postLikesList.push({
-        id: `${liker.id}_${post.id}`,
-        userId: liker.id,
-        postId: post.id,
-        createdAt: new Date().toISOString()
-      });
-    }
-  }
-
-  // Generate comments for community posts
-  const commentsList: any[] = [];
-  const commentTexts = [
-    "Great post! Really helpful insights for my upcoming trip.",
-    "Thanks for sharing this! Nepal is absolutely beautiful.",
-    "I had a similar experience last month. SATHI companions are amazing!",
-    "Can't wait to try this out. Any recommendations for beginners?",
-    "This is exactly what I needed to know before my trip.",
-    "Amazing photography! The mountains look incredible.",
-    "Local insights like this are what make SATHI special.",
-    "Booking my companion through SATHI was the best decision.",
-    "The food recommendations here are spot on!",
-    "Safety tips are so important when traveling in Nepal."
-  ];
-  for (const post of postsList) {
-    const commentCount = 1 + (parseInt(post.id.replace('cp', '')) % 5);
-    post.commentsCount = commentCount;
-    for (let c = 0; c < commentCount; c++) {
-      const commenter = travelersList[(c + parseInt(post.id.replace('cp', ''))) % travelersList.length];
-      commentsList.push({
-        id: `comment-${post.id}-${c}`,
-        postId: post.id,
-        userId: commenter.id,
-        userName: commenter.name,
-        userAvatar: commenter.avatar,
-        text: commentTexts[(c + parseInt(post.id.replace('cp', ''))) % commentTexts.length],
-        createdAt: new Date(Date.now() - (commentCount - c) * 3600000).toISOString(),
-      });
-    }
-  }
+  // NOTE: Engagement (likes/comments) is NEVER fabricated. Posts start at
+  // likesCount: 0 / commentsCount: 0 and grow only from real user activity.
 
   // Generate 85 Activities
   const activitiesList: any[] = [];
@@ -699,7 +643,6 @@ async function runSeed() {
     await writeAllInChunks('reviews', reviewsList);
     await writeAllInChunks('stories', storiesList);
     await writeAllInChunks('community_posts', postsList);
-    await writeAllInChunks('comments', commentsList);
     await writeAllInChunks('activities', activitiesList);
     await writeAllInChunks('events', eventsList);
     await writeAllInChunks('partners', partnersList);
@@ -725,31 +668,8 @@ async function runSeed() {
       }
     }
 
-    // Write story_likes composite keys
-    console.log(`[SATHI Seed] Writing story_likes composite keys...`);
-    for (let i = 0; i < storyLikesList.length; i += favChunkSize) {
-      const chunk = storyLikesList.slice(i, i + favChunkSize);
-      const batch = writeBatch(db);
-      for (const sl of chunk) {
-        const docRef = doc(db, 'story_likes', sl.id);
-        batch.set(docRef, sl);
-      }
-      await batch.commit();
-      console.log(`  - Story likes chunk written (${i + chunk.length}/${storyLikesList.length})`);
-    }
-
-    // Write post likes composite keys
-    console.log(`[SATHI Seed] Writing post likes composite keys...`);
-    for (let i = 0; i < postLikesList.length; i += favChunkSize) {
-      const chunk = postLikesList.slice(i, i + favChunkSize);
-      const batch = writeBatch(db);
-      for (const pl of chunk) {
-        const docRef = doc(db, 'likes', pl.id);
-        batch.set(docRef, pl);
-      }
-      await batch.commit();
-      console.log(`  - Post likes chunk written (${i + chunk.length}/${postLikesList.length})`);
-    }
+    // Engagement (story_likes / post likes / comments) is intentionally NOT
+    // seeded. Real user activity is the only source of likes and comments.
 
     // Write Message docs
     console.log(`[SATHI Seed] Writing chat message documents...`);
