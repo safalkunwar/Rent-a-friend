@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { CommunityPost, ExperienceStory } from '../../types';
 import { SocialPostCard } from './SocialPostCard';
 import { useAppContext } from '../../context/AppContext';
@@ -12,6 +12,16 @@ export const FeedStoryCard: React.FC<FeedSocialCardProps & { story: ExperienceSt
   const { currentUser, likeStory, unlikeStory, checkUserLikedStory, createComment, deleteComment, openAuthModal } = useAppContext();
   const currentUserId = currentUser?.id;
   const toast = onToast ?? ((message: string) => console.log(message));
+  const [likedByMe, setLikedByMe] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!currentUserId) return;
+    checkUserLikedStory(story.id).then(liked => {
+      if (active) setLikedByMe(liked);
+    });
+    return () => { active = false; };
+  }, [currentUserId, story.id, checkUserLikedStory]);
 
   const handleLike = async (id: string) => {
     if (!currentUserId) {
@@ -20,9 +30,11 @@ export const FeedStoryCard: React.FC<FeedSocialCardProps & { story: ExperienceSt
     }
     try {
       const liked = await checkUserLikedStory(id);
+      setLikedByMe(!liked);
       if (liked) await unlikeStory(id);
       else await likeStory(id);
     } catch {
+      setLikedByMe(prev => !prev);
       toast('Failed to sync like with Firebase. Try again.', 'error');
     }
   };
@@ -31,18 +43,19 @@ export const FeedStoryCard: React.FC<FeedSocialCardProps & { story: ExperienceSt
     if (!currentUserId) return;
     try {
       await unlikeStory(id);
+      setLikedByMe(false);
     } catch {
       toast('Failed to sync unlike with Firebase. Try again.', 'error');
     }
   };
 
-  const handleComment = async (postId: string) => {
+  const handleComment = async (postId: string): Promise<boolean> => {
     if (!currentUserId) {
       openAuthModal();
-      return;
+      return false;
     }
     const text = window.prompt('Enter your comment:');
-    if (!text || !text.trim()) return;
+    if (!text || !text.trim()) return false;
     try {
       await createComment({
         postId,
@@ -52,8 +65,10 @@ export const FeedStoryCard: React.FC<FeedSocialCardProps & { story: ExperienceSt
         text: text.trim(),
       });
       toast('Comment posted!', 'success');
+      return true;
     } catch {
       toast('Failed to post comment. Try again.', 'error');
+      return false;
     }
   };
 
@@ -62,6 +77,7 @@ export const FeedStoryCard: React.FC<FeedSocialCardProps & { story: ExperienceSt
       <SocialPostCard
         post={story}
         type="story"
+        initialLiked={likedByMe}
         onLike={handleLike}
         onUnlike={handleUnlike}
         onComment={handleComment}
@@ -78,6 +94,16 @@ export const FeedPostCard: React.FC<FeedSocialCardProps & { post: CommunityPost 
   const { currentUser, likePost, unlikePost, checkUserLikedPost, createComment, openAuthModal } = useAppContext();
   const currentUserId = currentUser?.id;
   const toast = onToast ?? ((message: string) => console.log(message));
+  const [likedByMe, setLikedByMe] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!currentUserId) return;
+    checkUserLikedPost(post.id).then(liked => {
+      if (active) setLikedByMe(liked);
+    });
+    return () => { active = false; };
+  }, [currentUserId, post.id, checkUserLikedPost]);
 
   const handleLike = async (id: string) => {
     if (!currentUserId) {
@@ -86,20 +112,32 @@ export const FeedPostCard: React.FC<FeedSocialCardProps & { post: CommunityPost 
     }
     try {
       const liked = await checkUserLikedPost(id);
+      setLikedByMe(!liked);
       if (liked) await unlikePost(id);
       else await likePost(id);
     } catch {
+      setLikedByMe(prev => !prev);
       toast('Failed to sync like with Firebase. Try again.', 'error');
     }
   };
 
-  const handleComment = async (postId: string) => {
+  const handleUnlike = async (id: string) => {
+    if (!currentUserId) return;
+    try {
+      await unlikePost(id);
+      setLikedByMe(false);
+    } catch {
+      toast('Failed to sync unlike with Firebase. Try again.', 'error');
+    }
+  };
+
+  const handleComment = async (postId: string): Promise<boolean> => {
     if (!currentUserId) {
       openAuthModal();
-      return;
+      return false;
     }
     const text = window.prompt('Enter your comment:');
-    if (!text || !text.trim()) return;
+    if (!text || !text.trim()) return false;
     try {
       await createComment({
         postId,
@@ -109,8 +147,10 @@ export const FeedPostCard: React.FC<FeedSocialCardProps & { post: CommunityPost 
         text: text.trim(),
       });
       toast('Comment posted!', 'success');
+      return true;
     } catch {
       toast('Failed to post comment. Try again.', 'error');
+      return false;
     }
   };
 
@@ -119,8 +159,9 @@ export const FeedPostCard: React.FC<FeedSocialCardProps & { post: CommunityPost 
       <SocialPostCard
         post={post}
         type="post"
+        initialLiked={likedByMe}
         onLike={handleLike}
-        onUnlike={(id) => { if (currentUserId) unlikePost(id).catch(() => toast('Failed to sync. Try again.', 'error')); }}
+        onUnlike={handleUnlike}
         onComment={handleComment}
         onShare={() => toast('Shared!', 'success')}
         onSave={() => toast('Saved!', 'success')}

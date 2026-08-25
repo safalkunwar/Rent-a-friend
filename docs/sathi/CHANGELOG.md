@@ -36,6 +36,14 @@ Entry format (all fields mandatory):
 
 ---
 
+## 2026-08-25 — Genuine-interaction hardening for likes/comments (Home feed parity)
+- **Gaps found:** Home-feed `SocialPostCard` instances never received the per-user liked state (always rendered ♡ even if the user had liked via Community Feed, and a first click silently UNLIKED), and like/comment counts were frozen at fetch-time values (tapping Like showed no count change; prompt-comments didn't bump counts).
+- **Fixes:** `SocialPostCard` now owns live `liked/likes/comments` display state seeded from real Firestore fields and re-synced when server truth changes; like toggle updates count optimistically; comment button awaits the parent handler result (boolean) and increments only on genuine success. `FeedPostCard`/`FeedStoryCard` resolve per-user liked state through the cached `checkUserLikedPost/Story` repository lookups and return success booleans from their comment flows. CommunityFeed's realtime panel callback now writes the authoritative server list length into the shared counter map while open.
+- **Files changed:** `src/components/social/SocialPostCard.tsx`, `src/components/social/FeedSocialCards.tsx`, `src/components/social/CommunityFeed.tsx`.
+- **Verification:** 162/162 tests, zero new type errors. Live 3-account concurrency QA still recommended manually before launch.
+
+---
+
 ## 2026-08-25 — Removed all fabricated likes/comments; real-only engagement
 - **Fabrication found & removed:** `src/scripts/seed.ts` generated 150 community posts with fake like counts (2–16), 1,350 fake `likes/{uid}_{postId}` docs, ~500 canned comments from demo personas (u-demo-*, u-traveler-*, u-admin-*), and 100 stories with fabricated like/comment numbers + 838 fake `story_likes` docs. All engagement generation removed from the seed script — seeded posts now start at 0/0 and only grow from real user activity. (Seed script is standalone; never auto-wired into the app.)
 - **Production purge:** new `scripts/purge-fake-engagement.mjs` (Firestore REST + gcloud credentials; dry-run default, `--execute`) deleted **1,350 fake post-likes** and **838 fake story-likes** authored by demo accounts from production `hamrosathi1`, then recomputed every `community_posts.likesCount/commentsCount` from the REAL remaining records. Real user interactions were detected and preserved (e.g., cp2 → 1 like / 4 comments, cp10 → 1 like, cp38 → 1 like / 1 comment). Final verification pass: zero demo docs remain, zero counters need touching.

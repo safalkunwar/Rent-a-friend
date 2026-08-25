@@ -91,6 +91,8 @@ export const CommunityFeed: React.FC = () => {
     }, (fetchedComments) => {
       setComments(prev => ({ ...prev, [postId]: fetchedComments }));
       setLoadingComments(prev => ({ ...prev, [postId]: false }));
+      // Server snapshot is authoritative while the panel is open.
+      setCommentCounts(prev => ({ ...prev, [postId]: fetchedComments.length }));
     });
 
     return () => {

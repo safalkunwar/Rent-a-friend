@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ExperienceStory, CommunityPost } from '../../types';
 import { SafeImage } from '../ui/SafeImage';
 import { ExpandableText } from './ExpandableText';
@@ -9,7 +9,7 @@ interface SocialPostCardProps {
   type: 'story' | 'post';
   onLike?: (id: string) => void;
   onUnlike?: (id: string) => void;
-  onComment?: (id: string) => void;
+  onComment?: (id: string) => void | boolean | Promise<void | boolean>;
   onShare?: (id: string) => void;
   onSave?: (id: string) => void;
   onViewProfile?: (userId: string) => void;
@@ -36,6 +36,18 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
   const storyPost = isStory ? (post as ExperienceStory) : null;
   const communityPost = !isStory ? (post as CommunityPost) : null;
 
+  const realLikes = (isStory ? storyPost!.likes : communityPost!.likesCount) || 0;
+  const realComments = (isStory ? storyPost!.comments : communityPost!.commentsCount) || 0;
+
+  const [likes, setLikes] = useState(realLikes);
+  const [comments, setComments] = useState(realComments);
+
+  useEffect(() => {
+    setLiked(initialLiked);
+    setLikes(realLikes);
+    setComments(realComments);
+  }, [initialLiked, realLikes, realComments]);
+
   const images = isStory
     ? [post.imageUrl].filter(Boolean) as string[]
     : communityPost?.imageUrl
@@ -45,18 +57,28 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
   const userName = isStory ? storyPost!.userName : communityPost!.userName;
   const userAvatar = isStory ? storyPost!.userAvatar : communityPost!.userAvatar;
   const timestamp = isStory ? storyPost!.createdAt : communityPost!.createdAt;
-  const likes = isStory ? storyPost!.likes || 0 : communityPost!.likesCount || 0;
-  const comments = isStory ? storyPost!.comments || 0 : communityPost!.commentsCount || 0;
   const caption = isStory ? storyPost!.caption : communityPost!.content;
 
   const handleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
     const nextLiked = !liked;
     setLiked(nextLiked);
+    setLikes(value => Math.max(0, value + (nextLiked ? 1 : -1)));
     if (nextLiked) {
       onLike?.(post.id);
     } else {
       onUnlike?.(post.id);
+    }
+  };
+
+  const handleCommentClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onComment) return;
+    try {
+      const result = await onComment(post.id);
+      if (result !== false) setComments(value => value + 1);
+    } catch {
+      // parent reports the failure; count unchanged
     }
   };
 
@@ -205,7 +227,7 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
               <span>{likes}</span>
             </button>
             <button
-              onClick={() => onComment?.(post.id)}
+              onClick={(e) => void handleCommentClick(e)}
               className="flex items-center gap-1.5 text-xs font-bold text-text-secondary hover:text-primary-action transition-colors"
             >
               <MessageCircle className="w-5 h-5" />
