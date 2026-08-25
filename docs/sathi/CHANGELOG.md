@@ -36,6 +36,15 @@ Entry format (all fields mandatory):
 
 ---
 
+## 2026-08-25 — Comment composer rebuild: real input, optimistic flow, mobile-safe
+- **Problem:** the inline comment field was a bare controlled `<input>` keyed off a parent state map; signed-out users saw no input at all, Enter submitted whitespace/empty silently, there was no submitting/duplicate-send guard, slow networks showed nothing after Send (realtime listener latency read as "broken"), and mobile users had no scroll-into-view for the panel.
+- **Fix:** new self-contained `src/components/social/CommentComposer.tsx` — auto-growing textarea (Enter=send, Shift+Enter=newline, max 500 chars), visible focus ring, disabled Send until non-whitespace text, in-button spinner while submitting, refocus after success, double-submit guard via ref. Parent flow now inserts an optimistic "Sending…" comment immediately, removes it and bumps the count only after the Firebase transaction resolves, removes it and KEEPS THE USER'S TEXT PATH open (composer retains text on failure) with an error toast on rejection. Opening a panel scrollIntoViews it (`block:'nearest'`) so mobile keyboards never hide the input; panel carries `relative z-10`.
+- **Unchanged:** Firestore structure (`comments/{id}` + atomic `community_posts.commentsCount`), security rules (own-userId create/edit/delete, admin override), one-listener-per-open-post loading strategy, text-collapse behavior.
+- **Files changed:** new `src/components/social/CommentComposer.tsx`; `src/components/social/CommunityFeed.tsx` (composer swap, optimistic pending comments, removed `newCommentText` map).
+- **Verification:** full suite 162/162; lint baseline unchanged. TYPE→SUBMIT→FIREBASE→DISPLAY chain verified structurally (optimistic insert → transaction → listener reconciliation); live multi-device QA remains manual as before.
+
+---
+
 ## 2026-08-25 — Functional community comments + Instagram-style text collapse
 - **Audit result:** comment pipeline already existed end-to-end — `CommunityFeed` opens an inline panel that subscribes ONE realtime listener per OPENED post (`comments` where postId==X orderBy createdAt asc; composite index `(postId, createdAt)` deployed 2026-08-24), `SocialRepository.createComment/deleteComment` run transactions on top-level `comments/{commentId}` docs ({postId, userId, userName, userAvatar, text, createdAt}) that atomically maintain `community_posts.commentsCount`; security rules already allow public reads, authenticated own-userId creates, author-only edit/delete, admin override (`isValidData` passes). No second architecture created.
 - **Actual gaps fixed:** (1) card comment count read a one-shot snapshot field and never updated after add/delete — added optimistic `commentCounts` map seeded from `commentsCount`, incremented/decremented locally on success (no post refetch); (2) edit-own-comment existed in rules+repository but had no UI — added inline pencil→input→Save/Cancel flow via `socialRepository.editComment` with local state patch (listener reconciles); delete button retained; (3) long post descriptions occupied 3 clamped lines with no expansion.

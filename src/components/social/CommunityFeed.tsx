@@ -10,6 +10,7 @@ import { ExpandableText } from './ExpandableText';
 import { uploadImageToStorage } from '../../services/storage';
 import { firestore } from '../../services/firestore';
 import { ReportModal } from '../modals/ReportModal';
+import { CommentComposer } from './CommentComposer';
 
 export const CommunityFeed: React.FC = () => {
   const { currentUser, createPost, likePost, unlikePost, createComment, deleteComment, checkUserLikedPost, openAuthModal, signInAnonymously } = useAppContext();
@@ -37,7 +38,6 @@ export const CommunityFeed: React.FC = () => {
   const [savedPosts, setSavedPosts] = useState<Record<string, boolean>>({});
   const [selectedPostForComments, setSelectedPostForComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
-  const [newCommentText, setNewCommentText] = useState<Record<string, string>>({});
   const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
   const [editingComment, setEditingComment] = useState<{ id: string; postId: string; text: string } | null>(null);
 
@@ -235,24 +235,36 @@ export const CommunityFeed: React.FC = () => {
   const toggleCommentsSection = (postId: string) => {
     if (selectedPostForComments === postId) {
       setSelectedPostForComments(null);
-    } else {
-      setSelectedPostForComments(postId);
+      return;
     }
+    setSelectedPostForComments(postId);
+    requestAnimationFrame(() => {
+      document.getElementById(`comments-panel-${postId}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
   };
 
-  const handleCreateComment = async (postId: string) => {
+  const handleCreateComment = async (postId: string, rawText: string) => {
     if (!currentUser) {
       showToast('Please sign in to comment.', 'info');
       openAuthModal();
-      return;
+      throw new Error('unauthenticated');
     }
 
-    const text = newCommentText[postId]?.trim();
-    if (!text) return;
+    const text = rawText.trim();
+    if (!text) throw new Error('empty');
+
+    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const defaultAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=C8A25E&color=0F1113';
+
+    setComments(prev => ({
+      ...prev,
+      [postId]: [
+        ...(prev[postId] || []),
+        { id: tempId, postId, userId: currentUser.id, userName: currentUser.name || 'Anonymous Traveler', userAvatar: currentUser.avatar || defaultAvatar, text, createdAt: new Date().toISOString(), pending: true } as Comment & { pending?: boolean },
+      ],
+    }));
 
     try {
-      const defaultAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=C8A25E&color=0F1113';
-
       await createComment({
         postId,
         userId: currentUser.id,
@@ -261,11 +273,13 @@ export const CommunityFeed: React.FC = () => {
         text
       });
 
-      setNewCommentText(prev => ({ ...prev, [postId]: '' }));
+      setComments(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(c => c.id !== tempId) }));
       setCommentCounts(prev => ({ ...prev, [postId]: (prev[postId] ?? 0) + 1 }));
-      showToast('Comment posted successfully!', 'success');
+      showToast('Comment posted!', 'success');
     } catch (err) {
-      showToast('Failed to post comment.', 'error');
+      setComments(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(c => c.id !== tempId) }));
+      showToast('Comment failed to post. Your text was kept — try again.', 'error');
+      throw err instanceof Error ? err : new Error('comment-failed');
     }
   };
 
@@ -493,7 +507,7 @@ export const CommunityFeed: React.FC = () => {
 
                 {/* Real-time Comments Box */}
                 {showComments && (
-                  <div className="bg-background border-t border-border-token/40 p-3 text-left space-y-3">
+                  <div id={`comments-panel-${post.id}`} className="relative z-10 bg-background border-t border-border-token/40 p-3 text-left space-y-3">
                     <div className="max-h-48 overflow-y-auto space-y-2.5 custom-scrollbar pr-1">
                       {loadingComments[post.id] ? (
                         <p className="text-[10px] text-text-secondary animate-pulse">Loading comments from Firestore...</p>
@@ -546,7 +560,12 @@ export const CommunityFeed: React.FC = () => {
                                   className="w-full mt-1 bg-surface-elevated text-text-primary border border-primary-action/50 rounded-lg px-2 py-1 text-[10px] focus:outline-none"
                                 />
                               ) : (
-                                <p className="text-text-secondary font-light text-[10px] mt-0.5 leading-relaxed whitespace-pre-wrap break-words">{comm.text}</p>
+                                <p className={`text-text-secondary font-light text-[10px] mt-0.5 leading-relaxed whitespace-pre-wrap break-words ${(comm as Comment & { pending?: boolean }).pending ? 'opacity-60' : ''}`}>
+                                  {comm.text}
+                                  {(comm as Comment & { pending?: boolean }).pending && (
+                                    <span className="ml-1.5 text-text-muted italic">Sending…</span>
+                                  )}
+                                </p>
                               )}
                             </div>
                           </div>
@@ -554,32 +573,17 @@ export const CommunityFeed: React.FC = () => {
                       )}
                     </div>
 
-                     {/* Add Comment Input */}
-                     {currentUser ? (
-                       <div className="flex gap-2 items-center">
-                         <input
-                           type="text"
-                           placeholder="Write a comment..."
-                           value={newCommentText[post.id] || ''}
-                           onChange={(e) => setNewCommentText(prev => ({ ...prev, [post.id]: e.target.value }))}
-                           onKeyDown={(e) => e.key === 'Enter' && handleCreateComment(post.id)}
-                           className="flex-1 bg-surface-elevated text-text-primary border border-border-token/40 rounded-xl px-3 py-1.5 text-[10px] focus:outline-none focus:border-primary-action"
-                         />
-                         <button
-                           onClick={() => handleCreateComment(post.id)}
-                           className="w-7 h-7 rounded-full bg-primary-action flex items-center justify-center text-background active:scale-95 transition-transform shrink-0"
-                         >
-                           <Send className="w-3.5 h-3.5" />
-                         </button>
-                       </div>
-                     ) : (
-                       <button
-                         onClick={openAuthModal}
-                         className="w-full text-left py-1 text-[10px] text-primary-action font-bold hover:underline"
-                       >
-                         Sign in to leave a comment
-                       </button>
-                     )}
+                 {/* Add Comment Input */}
+                 {currentUser ? (
+                   <CommentComposer onSubmit={(text) => handleCreateComment(post.id, text)} />
+                 ) : (
+                   <button
+                     onClick={openAuthModal}
+                     className="w-full text-left py-1 text-[10px] text-primary-action font-bold hover:underline"
+                   >
+                     Sign in to leave a comment
+                   </button>
+                 )}
                   </div>
                 )}
               </div>
