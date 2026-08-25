@@ -90,15 +90,9 @@ export default defineConfig(() => {
           icons: [
             {
               src: 'sathi-logo.jpeg',
-              sizes: '1254x1254',
-              type: 'image/png',
+              sizes: '1600x1066',
+              type: 'image/jpeg',
               purpose: 'any'
-            },
-            {
-              src: 'sathi-logo.jpeg',
-              sizes: '1254x1254',
-              type: 'image/png',
-              purpose: 'maskable'
             }
           ]
         }
