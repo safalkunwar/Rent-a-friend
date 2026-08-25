@@ -14,6 +14,7 @@ import { PartnerDashboard } from './components/dashboard/PartnerDashboard';
 import { SettingsTab } from './components/settings/SettingsTab';
 import { SafetyWidget } from './components/SafetyWidget';
 import { CommunityFeed } from './components/social/CommunityFeed';
+import { FeedStoryCard, FeedPostCard } from './components/social/FeedSocialCards';
 import { DiscoveryFeed } from './components/discovery/DiscoveryFeed';
 import { CompanionCard } from './components/companions/CompanionCard';
 import { CategoryHeader } from './components/discovery/CategoryHeader';
@@ -37,6 +38,7 @@ import { useToast } from './components/ui/Toast';
 import { useCompanions, useStories, useActivities, useEvents, usePartners, useCommunityPosts } from './hooks/useFirestoreData';
 import { useCompanionCategories } from './hooks/useCompanionCategories';
 import { useDiscoveryFeed } from './hooks/useDiscoveryFeed';
+import { useProgressiveReveal } from './hooks/useProgressiveReveal';
 import { type FeedItem } from './services/feedGenerator';
 import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
@@ -109,20 +111,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     }
   }, [loadMoreCompanions, loadMoreStories, loadMoreActivities, loadMoreEvents, loadMorePosts]);
 
-  const homeCategoryChunks = useMemo(() => {
-    const chunks: FeedItem[][] = [];
-    let currentChunk: FeedItem[] = [];
-    for (const item of homeFeedItems) {
-      if (item.type === 'category-header') {
-        if (currentChunk.length > 0) chunks.push(currentChunk);
-        currentChunk = [item];
-      } else {
-        currentChunk.push(item);
-      }
-    }
-    if (currentChunk.length > 0) chunks.push(currentChunk);
-    return chunks;
-  }, [homeFeedItems]);
+  const homeReveal = useProgressiveReveal({
+    feedItems: homeFeedItems,
+    hasMore: homeFeedHasMore,
+    loadingMore: homeFeedLoadingMore,
+    onLoadMore: loadMoreHome,
+  });
 
   const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'companions' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings'>(initialTab || 'home');
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
@@ -132,56 +126,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [storyLiked, setStoryLiked] = useState<Record<string, boolean>>({});
   const [storyLikesCount, setStoryLikesCount] = useState<Record<string, number>>({});
-  const [visibleMobileCategoryCount, setVisibleMobileCategoryCount] = useState(2);
-  const mobileSentinelRef = React.useRef<HTMLDivElement>(null);
-  const mobileSentinelStateRef = useRef({ chunkCount: 0, revealed: 2, hasMore: false, loadingMore: false });
-  mobileSentinelStateRef.current = { chunkCount: homeCategoryChunks.length, revealed: visibleMobileCategoryCount, hasMore: homeFeedHasMore, loadingMore: homeFeedLoadingMore };
-
-  const advanceMobileProgressiveLoad = useCallback(() => {
-    const state = mobileSentinelStateRef.current;
-    if (state.revealed < state.chunkCount) {
-      setVisibleMobileCategoryCount(prev => Math.min(prev + 1, state.chunkCount));
-      return;
-    }
-    if (state.hasMore && !state.loadingMore) {
-      loadMoreHome();
-    }
-  }, [loadMoreHome]);
-
-  useEffect(() => {
-    const sentinel = mobileSentinelRef.current;
-    if (!sentinel) return;
-    if (typeof IntersectionObserver === 'undefined') {
-      const handleScroll = () => {
-        const rect = sentinel.getBoundingClientRect();
-        if (rect.top < window.innerHeight + 200) {
-          advanceMobileProgressiveLoad();
-        }
-      };
-      window.addEventListener('scroll', handleScroll, { passive: true });
-      return () => window.removeEventListener('scroll', handleScroll);
-    }
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries.some(entry => entry.isIntersecting)) {
-          advanceMobileProgressiveLoad();
-        }
-      },
-      { rootMargin: '200px' }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [advanceMobileProgressiveLoad]);
-
-  useEffect(() => {
-    if (homeFeedLoadingMore) return;
-    const sentinel = mobileSentinelRef.current;
-    if (!sentinel) return;
-    const rect = sentinel.getBoundingClientRect();
-    if (rect.top < window.innerHeight + 200) {
-      advanceMobileProgressiveLoad();
-    }
-  }, [homeFeedItems, visibleMobileCategoryCount, homeFeedHasMore, homeFeedLoadingMore, advanceMobileProgressiveLoad]);
 
   useEffect(() => {
     if (viewingStory) {
@@ -1017,6 +961,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 onCreateStory={() => setShowCreateStoryModal(true)}
                 onViewStory={setViewingStory}
                 feedItems={homeFeedItems}
+                visibleCategoryCount={homeReveal.visibleCount}
+                sentinelRef={homeReveal.sentinelRef}
                 hasMore={homeFeedHasMore}
                 loadingMore={homeFeedLoadingMore}
                 onLoadMore={loadMoreHome}
@@ -2081,29 +2027,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </div>
             </div>
 
-            {/* Dynamic category-based feed for Mobile */}
-            {mobileTab === 'home' && (() => {
-              const visibleMobileItems = homeCategoryChunks.slice(0, visibleMobileCategoryCount).flat();
-
-              const grouped = visibleMobileItems.reduce<Record<string, FeedItem[]>>((acc, item) => {
-                if (item.type === 'category-header') return acc;
-                const cat = (item as Extract<FeedItem, { category?: string }>).category || 'General';
-                if (!acc[cat]) acc[cat] = [];
-                acc[cat].push(item);
-                return acc;
-              }, {});
-
-              const categories = Object.keys(grouped);
-
-              return (
-                <div className="space-y-6">
-                  {categories.map(cat => {
-                    const items = grouped[cat];
-                    const companions = items.filter(i => i.type === 'companion');
-                    const activities = items.filter(i => i.type === 'activity');
-                    const events = items.filter(i => i.type === 'event');
-                    const stories = items.filter(i => i.type === 'story');
-
+            {/* Unified mixed feed for Mobile — same composed sequence as desktop */}
+            {mobileTab === 'home' && (
+              <div className="space-y-6 px-4">
+                {homeReveal.revealedItems.map((item, idx) => {
+                  if (item.type === 'category-header') {
+                    const cat = item.category;
                     const emoji = (cat === 'Hiking Partner' && '🥾') ||
                       (cat === 'Coffee Buddy' && '☕') ||
                       (cat === 'Photography Guide' && '📷') ||
@@ -2112,96 +2041,89 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       (cat === 'Local Host' && '✨') ||
                       (cat === 'Travel Companion' && '✈️') ||
                       '📌';
-
                     return (
-                      <div key={cat} className="space-y-3 text-left">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">{emoji}</span>
-                            <h3 className="text-sm font-extrabold text-text-primary">{cat}</h3>
-                          </div>
-                          <span className="text-[10px] font-bold text-primary-action cursor-pointer" onClick={() => { setSelectedCategory(cat); setMobileTab('search'); showToast(`Viewing all ${cat} guides`, 'success'); }}>See all</span>
+                      <div key={`hdr-${cat}-${idx}`} className="flex items-center justify-between pt-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{emoji}</span>
+                          <h3 className="text-sm font-extrabold text-text-primary">{cat}</h3>
                         </div>
-
-                        {companions.length > 0 && (
-                          <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1 snap-x">
-                            {companions.map((item, idx) => (
-                              <div key={`${cat}-comp-${item.data.id}-${idx}`}>
-                                <CompanionCard
-                                  companion={item.data as Companion}
-                                  isFav={favorites.includes(item.data.id)}
-                                  onToggleFavorite={toggleFavorite}
-                                  onViewCompanion={handleViewCompanion}
-                                  onShowToast={showToast}
-                                  layout="compact"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {activities.length > 0 && (
-                          <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1 snap-x">
-                            {activities.map((item, idx) => (
-                              <div key={`${cat}-act-${item.data.id}-${idx}`} className="shrink-0 w-44 bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col snap-start">
-                                <div className="relative h-24 bg-surface-elevated">
-                                  <SafeImage src={(item.data as Activity).imageUrl || (item.data as Activity).image} className="w-full h-full object-cover" alt={(item.data as Activity).title} />
-                                </div>
-                                <div className="p-2.5 space-y-1 text-left">
-                                  <h4 className="text-[11px] font-bold text-text-primary truncate">{(item.data as Activity).title}</h4>
-                                  <p className="text-[9px] text-text-secondary">NPR {(item.data as Activity).avgPrice || (item.data as Activity).price || '1,500'}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {events.length > 0 && (
-                          <div className="space-y-2">
-                            {events.slice(0, 3).map((item, idx) => (
-                              <div key={`${cat}-evt-${item.data.id}-${idx}`} className="bg-surface border border-white/5 p-3 rounded-2xl flex items-center gap-3">
-                                <div className="shrink-0 w-10 h-10 rounded-xl bg-surface-elevated flex flex-col items-center justify-center border border-white/10">
-                                  <span className="text-primary-action text-[7px] font-black leading-none uppercase">
-                                    {new Date((item.data as SathiEvent).date || Date.now()).toLocaleString('en-US', { month: 'short' })}
-                                  </span>
-                                  <span className="text-text-primary font-black text-xs leading-none mt-0.5">
-                                    {new Date((item.data as SathiEvent).date || Date.now()).getDate()}
-                                  </span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                   <h5 className="text-[11px] font-bold text-text-primary truncate">{(item.data as SathiEvent).title}</h5>
-                                   <p className="text-[9px] text-text-secondary truncate">{(item.data as SathiEvent).location}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {stories.length > 0 && (
-                          <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1 snap-x">
-                            {stories.map((item, idx) => (
-                              <div key={`${cat}-story-${item.data.id}-${idx}`} className="shrink-0 w-36 bg-surface border border-white/5 rounded-2xl overflow-hidden">
-                                <div className="relative h-24 bg-surface-elevated">
-                                  <SafeImage src={(item.data as ExperienceStory).imageUrl} className="w-full h-full object-cover" alt={(item.data as ExperienceStory).caption} />
-                                </div>
-                                <div className="p-2">
-                                  <p className="text-[10px] text-text-primary line-clamp-2">{(item.data as ExperienceStory).caption}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <span
+                          className="text-[10px] font-bold text-primary-action cursor-pointer"
+                          onClick={() => { setSelectedCategory(cat); setMobileTab('search'); showToast(`Viewing all ${cat} guides`, 'success'); }}
+                        >
+                          See all
+                        </span>
                       </div>
                     );
-                  })}
-                </div>
-              );
-            })()}
+                  }
+
+                  if (item.type === 'companion') {
+                    return (
+                      <div key={`${item.type}-${item.data.id}-${idx}`}>
+                        <CompanionCard
+                          companion={item.data as Companion}
+                          isFav={favorites.includes(item.data.id)}
+                          onToggleFavorite={toggleFavorite}
+                          onViewCompanion={handleViewCompanion}
+                          onShowToast={showToast}
+                          layout="compact"
+                        />
+                      </div>
+                    );
+                  }
+
+                  if (item.type === 'activity') {
+                    const act = item.data as Activity;
+                    return (
+                      <div key={`${item.type}-${item.data.id}-${idx}`} className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col">
+                        <div className="relative h-32 bg-surface-elevated">
+                          <SafeImage src={act.imageUrl || act.image} className="w-full h-full object-cover" alt={act.title} />
+                        </div>
+                        <div className="p-3 space-y-1 text-left">
+                          <h4 className="text-xs font-bold text-text-primary truncate">{act.title}</h4>
+                          <p className="text-[10px] text-text-secondary">NPR {act.avgPrice || act.price || '1,500'}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (item.type === 'event') {
+                    const evt = item.data as SathiEvent;
+                    return (
+                      <div key={`${item.type}-${item.data.id}-${idx}`} className="bg-surface border border-white/5 p-3 rounded-2xl flex items-center gap-3">
+                        <div className="shrink-0 w-10 h-10 rounded-xl bg-surface-elevated flex flex-col items-center justify-center border border-white/10">
+                          <span className="text-primary-action text-[7px] font-black leading-none uppercase">
+                            {new Date(evt.date || Date.now()).toLocaleString('en-US', { month: 'short' })}
+                          </span>
+                          <span className="text-text-primary font-black text-xs leading-none mt-0.5">
+                            {new Date(evt.date || Date.now()).getDate()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h5 className="text-[11px] font-bold text-text-primary truncate">{evt.title}</h5>
+                          <p className="text-[9px] text-text-secondary truncate">{evt.location}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (item.type === 'story') {
+                    return <FeedStoryCard key={`${item.type}-${item.data.id}-${idx}`} story={item.data} onToast={showToast} />;
+                  }
+
+                  if (item.type === 'post') {
+                    return <FeedPostCard key={`${item.type}-${item.data.id}-${idx}`} post={item.data} onToast={showToast} />;
+                  }
+
+                  return null;
+                })}
+              </div>
+            )}
 
             {/* Mobile progressive loading sentinel */}
-            {(visibleMobileCategoryCount < homeCategoryChunks.length || homeFeedHasMore || homeFeedLoadingMore) && (
-              <div ref={mobileSentinelRef} className="flex justify-center py-4">
-                {(homeFeedLoadingMore || visibleMobileCategoryCount < homeCategoryChunks.length) && (
+            {(homeReveal.visibleCount < homeReveal.totalChunks || homeFeedHasMore || homeFeedLoadingMore) && (
+              <div ref={homeReveal.sentinelRef} className="flex justify-center py-4">
+                {(homeFeedLoadingMore || homeReveal.visibleCount < homeReveal.totalChunks) && (
                   <div className="w-8 h-8 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin" />
                 )}
               </div>

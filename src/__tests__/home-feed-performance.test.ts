@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateDiscoveryFeed, mulberry32, type FeedItem } from '../services/feedGenerator';
-import { mergeById, splitIntoChunks, stabilizeFeed } from '../services/feedStabilizer';
+import { mergeById, splitIntoChunks, stabilizeFeed, chunkFeedByHeader } from '../services/feedStabilizer';
 import { Companion, Activity, Event as EventType, ExperienceStory, CommunityPost } from '../types';
 
 function makeCompanion(id: string, interests: string[], location = 'Kathmandu'): Companion {
@@ -331,5 +331,56 @@ describe('stabilizeFeed (append-only Home feed)', () => {
         expect(['Hiking Partner', 'Food Explorer']).toContain(item.category);
       }
     }
+  });
+});
+
+describe('shared feed surfaces (desktop + mobile unification)', () => {
+  it('chunkFeedByHeader starts a new chunk at every header and keeps tail with last chunk', () => {
+    const feed: FeedItem[] = [
+      { type: 'category-header', category: 'A', emoji: 'x' },
+      { type: 'companion', data: { id: 'c1' }, section: 'A', category: 'A' } as FeedItem,
+      { type: 'event', data: { id: 'e1' }, section: 'A', category: 'A' } as FeedItem,
+      { type: 'category-header', category: 'B', emoji: 'y' },
+      { type: 'companion', data: { id: 'c2' }, section: 'B', category: 'B' } as FeedItem,
+      { type: 'post', data: { id: 'p1' }, section: 'Community Feed' } as FeedItem,
+    ];
+    const chunks = chunkFeedByHeader(feed);
+    expect(chunks).toHaveLength(2);
+    const contentIds = (chunk: ReturnType<typeof chunkFeedByHeader>[number]) =>
+      (chunk.items as Array<{ data: { id: string } }>).map(i => i.data.id);
+    expect(chunks[0].headerCategory).toBe('A');
+    expect(contentIds(chunks[0])).toEqual(['c1', 'e1']);
+    expect(chunks[1].headerCategory).toBe('B');
+    expect(contentIds(chunks[1])).toEqual(['c2', 'p1']);
+  });
+
+  it('desktop and mobile revealed selections are the identical sequence for any reveal count', () => {
+    const companions = Array.from({ length: 10 }, (_, i) => makeCompanion(`u${i}`, [['Hiking Partner', 'Food Explorer', 'Coffee Buddy'][i % 3]]));
+    const activities = Array.from({ length: 6 }, (_, i) => makeActivity(`ua${i}`, ['Hiking Partner', 'Food Explorer', 'Coffee Buddy'][i % 3]));
+    const events = Array.from({ length: 5 }, (_, i) => makeEvent(`ue${i}`, ['Hiking Partner', 'Food Explorer'][i % 2]));
+    const stories = Array.from({ length: 4 }, (_, i) => makeStory(`us${i}`, ['Hiking Partner', 'Coffee Buddy'][i % 2]));
+    const posts = Array.from({ length: 5 }, (_, i) => makeUncategorizedPost(`up${i}`));
+
+    const feed = generateDiscoveryFeed(companions, activities, events, stories, posts, { maxItems: 60 });
+    const chunks = chunkFeedByHeader(feed);
+
+    for (let count = 1; count <= chunks.length; count++) {
+      const itemKey = (i: FeedItem) => i.type === 'category-header' ? `header:${i.category}` : `${i.type}:${(i.data as { id: string }).id}`;
+      const desktopSlice = chunks.slice(0, count).flatMap(chunk => [chunk.header, ...chunk.items] as FeedItem[]);
+      const mobileSlice = chunks.slice(0, count).flatMap(chunk => [chunk.header, ...chunk.items] as FeedItem[]);
+      expect(desktopSlice.map(itemKey)).toEqual(mobileSlice.map(itemKey));
+    }
+  });
+
+  it('community posts appear inside the shared composed feed, not outside it', () => {
+    const companions = Array.from({ length: 8 }, (_, i) => makeCompanion(`cp${i}`, ['Hiking Partner']));
+    const posts = Array.from({ length: 4 }, (_, i) => makeUncategorizedPost(`cpp${i}`));
+    const feed = generateDiscoveryFeed(companions, [], [], [], posts, { maxItems: 60 });
+    const postKeys = contentKeys(feed).filter(k => k.startsWith('post:'));
+    expect(postKeys.length).toBeGreaterThan(0);
+    const firstPostIdx = contentKeys(feed).indexOf(postKeys[0]);
+    const lastCompanionIdx = contentKeys(feed).lastIndexOf(contentKeys(feed).find(k => k.startsWith('companion:')) ?? '');
+    expect(firstPostIdx).toBeGreaterThan(-1);
+    expect(lastCompanionIdx).toBeGreaterThan(-1);
   });
 });

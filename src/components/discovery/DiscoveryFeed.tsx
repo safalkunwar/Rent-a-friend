@@ -5,6 +5,8 @@ import { SafeImage } from '../ui/SafeImage';
 import { SocialPostCard } from '../social/SocialPostCard';
 import { DiscoveryContentContainer } from './DiscoveryContentContainer';
 import { Heart, MapPin, Star, ArrowRight, ChevronRight } from 'lucide-react';
+import { chunkFeedByHeader } from '../../services/feedStabilizer';
+import { FeedStoryCard, FeedPostCard } from '../social/FeedSocialCards';
 import { useAppContext } from '../../context/AppContext';
 
 interface DiscoveryFeedProps {
@@ -17,12 +19,12 @@ interface DiscoveryFeedProps {
   onCreateStory: () => void;
   onViewStory: (story: ExperienceStory) => void;
   feedItems: FeedItem[];
+  visibleCategoryCount: number;
+  sentinelRef: React.MutableRefObject<HTMLDivElement | null>;
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
 }
-
-const SENTINEL_ROOT_MARGIN = '200px';
 
 export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   stories,
@@ -34,12 +36,12 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   onCreateStory,
   onViewStory,
   feedItems,
+  visibleCategoryCount,
+  sentinelRef,
   hasMore = false,
   loadingMore = false,
   onLoadMore,
 }) => {
-  const [visibleCategoryCount, setVisibleCategoryCount] = React.useState(2);
-  const sentinelRef = useRef<HTMLDivElement>(null);
   const [lightboxImages, setLightboxImages] = useState<string[] | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
@@ -114,78 +116,11 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
     }
   };
 
-  const feedItemsList = feedItems;
-
-  const categoryChunks = useMemo(() => {
-    const chunks: FeedItem[][] = [];
-    let currentChunk: FeedItem[] = [];
-    for (const item of feedItemsList) {
-      if (item.type === 'category-header' && currentChunk.length > 0) {
-        chunks.push(currentChunk);
-        currentChunk = [];
-      }
-      currentChunk.push(item);
-    }
-    if (currentChunk.length > 0) {
-      chunks.push(currentChunk);
-    }
-    return chunks;
-  }, [feedItemsList]);
-
-  const sentinelStateRef = useRef({ chunkCount: 0, revealed: 2, hasMore: false, loadingMore: false });
-  sentinelStateRef.current = { chunkCount: categoryChunks.length, revealed: visibleCategoryCount, hasMore, loadingMore };
-  const onLoadMoreRef = useRef(onLoadMore);
-  onLoadMoreRef.current = onLoadMore;
-
-  const advanceProgressiveLoad = React.useCallback(() => {
-    const state = sentinelStateRef.current;
-    if (state.revealed < state.chunkCount) {
-      setVisibleCategoryCount(prev => Math.min(prev + 1, state.chunkCount));
-      return;
-    }
-    if (state.hasMore && !state.loadingMore) {
-      onLoadMoreRef.current?.();
-    }
-  }, []);
-
-  React.useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    if (typeof IntersectionObserver === 'undefined') {
-      const handleScroll = () => {
-        const rect = sentinel.getBoundingClientRect();
-        if (rect.top < window.innerHeight + 200) {
-          advanceProgressiveLoad();
-        }
-      };
-      window.addEventListener('scroll', handleScroll, { passive: true });
-      return () => window.removeEventListener('scroll', handleScroll);
-    }
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries.some(entry => entry.isIntersecting)) {
-          advanceProgressiveLoad();
-        }
-      },
-      { rootMargin: SENTINEL_ROOT_MARGIN }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [advanceProgressiveLoad]);
-
-  React.useEffect(() => {
-    if (loadingMore) return;
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    const rect = sentinel.getBoundingClientRect();
-    if (rect.top < window.innerHeight + 200) {
-      advanceProgressiveLoad();
-    }
-  }, [feedItemsList, visibleCategoryCount, hasMore, loadingMore, advanceProgressiveLoad]);
+  const categoryChunks = useMemo(() => chunkFeedByHeader(feedItems), [feedItems]);
 
   const visibleItems = useMemo(() => {
     const visibleChunks = categoryChunks.slice(0, visibleCategoryCount);
-    return visibleChunks.flat();
+    return visibleChunks.flatMap(chunk => [chunk.header, ...chunk.items].filter(Boolean) as FeedItem[]);
   }, [categoryChunks, visibleCategoryCount]);
 
   const groupedVisibleItems = useMemo(() => {
@@ -352,35 +287,15 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
             if (item.type === 'story') {
               return (
                 <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
-                  <SocialPostCard
-                    post={item.data as ExperienceStory}
-                    type="story"
-                    onLike={(id) => handleLike(id, 'story')}
-                    onUnlike={(id) => handleUnlike(id, 'story')}
-                    onComment={(id) => handleComment(id)}
-                    onShare={(id) => onShowToast('Shared!', 'success')}
-                    onSave={(id) => onShowToast('Saved!', 'success')}
-                    onViewProfile={(userId) => onShowToast('View profile coming soon', 'info')}
-                    onOpenMediaViewer={openLightbox}
-                  />
+                  <FeedStoryCard story={item.data as ExperienceStory} onOpenMediaViewer={openLightbox} onToast={onShowToast} />
                 </div>
               );
             }
-            
+
             if (item.type === 'post') {
               return (
                 <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
-                  <SocialPostCard
-                    post={item.data as CommunityPost}
-                    type="post"
-                    onLike={(id) => handleLike(id, 'post')}
-                    onUnlike={(id) => handleUnlike(id, 'post')}
-                    onComment={(id) => handleComment(id)}
-                    onShare={(id) => onShowToast('Shared!', 'success')}
-                    onSave={(id) => onShowToast('Saved!', 'success')}
-                    onViewProfile={(userId) => onShowToast('View profile coming soon', 'info')}
-                    onOpenMediaViewer={openLightbox}
-                  />
+                  <FeedPostCard post={item.data as CommunityPost} onOpenMediaViewer={openLightbox} onToast={onShowToast} />
                 </div>
               );
             }

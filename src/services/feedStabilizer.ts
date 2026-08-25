@@ -23,6 +23,23 @@ export interface FeedChunk {
   items: FeedItem[];
 }
 
+export function chunkFeedByHeader(feed: FeedItem[]): FeedChunk[] {
+  const chunks: FeedChunk[] = [];
+  let current: FeedChunk | null = null;
+  for (const item of feed) {
+    if (item.type === 'category-header') {
+      if (current) chunks.push(current);
+      current = { headerCategory: item.category, header: item, items: [] };
+    } else if (current) {
+      current.items.push(item);
+    } else {
+      current = { headerCategory: '', items: [item] };
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks;
+}
+
 export function splitIntoChunks(feed: FeedItem[]): FeedChunk[] {
   const chunks: FeedChunk[] = [];
   let current: FeedChunk | null = null;
