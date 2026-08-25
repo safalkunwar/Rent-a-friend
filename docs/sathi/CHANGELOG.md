@@ -36,6 +36,17 @@ Entry format (all fields mandatory):
 
 ---
 
+## 2026-08-25 — Community post deep links (/post/:postId)
+- **Previous failure:** share buttons copied only post TEXT with no URL (Community Feed) or a `/post/{id}` URL that had no route — the catch-all redirected every deep link straight to Home, and missing `vercel.json` meant direct access/refresh of any subroute 404'd before the SPA loaded.
+- **Implemented:** dedicated route `/post/:postId` (`src/pages/PostPage.tsx`) performing a DIRECT document lookup `community_posts/{postId}` (no collection scan, no index-based guessing). Published posts render through the SAME `FeedPostCard` used everywhere else — real likes, real comments panel, ExpandableText, all existing actions. Non-published/missing/deleted IDs render a "Post not found" state (no fallback to another post, no silent redirect). Route registered before the catch-all in `App.tsx`.
+- **Sharing:** new `src/services/deepLinks.ts` → canonical `${origin}/post/${realDocId}`. CommunityFeed's Share now uses native share sheet (title+text+url) with clipboard fallback including the link; SocialPostCard share aligned to the same helper.
+- **Hosting:** added `vercel.json` SPA rewrite so direct URLs and browser refresh work on Vercel.
+- **Social preview:** client-side `document.title` + meta description update from the actual post (best-effort; crawler-side OG tags for link unfurls would need server rendering — documented limitation).
+- **Files changed:** new `src/pages/PostPage.tsx`, `vercel.json`; modified `src/App.tsx`, `src/components/social/CommunityFeed.tsx`, `src/components/social/SocialPostCard.tsx`, new `src/services/deepLinks.ts`.
+- **Verification:** production build passes; full suite 162/162; lint baseline unchanged. Live URL testing across WhatsApp/Messenger requires deployment — route, lookup and rewrite are verified structurally.
+
+---
+
 ## 2026-08-25 — Comment lifecycle fully traced & unified panel shipped
 - **Live pipeline proof:** authenticated as a REAL seeded Firebase Auth account via REST (`traveler.1@sathi.com`) and executed the exact app write against production `hamrosathi1` — rules **allowed** the create, document read-back succeeded, counter target post readable. Conclusion: Firestore/rules/path layer was never the failure point; failures were client-side UX/parity gaps.
 - **Root cause of perceived breakage:** three client gaps stacked — Home-feed cards had no per-user liked state and froze counts; mobile users had NO comment section at all after feed unification (posts fell back to `window.prompt`); CommunityFeed kept duplicated listener/state/edit logic that drifted from the shared layer.

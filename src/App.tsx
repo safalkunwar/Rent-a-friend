@@ -11,6 +11,7 @@ import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { PaymentVerifyPage } from './pages/PaymentVerifyPage';
 import { EsewaVerifyPage } from './pages/EsewaVerifyPage';
 import { EsewaFailurePage } from './pages/EsewaFailurePage';
+import { PostPage } from './pages/PostPage';
 
 function AppRoutes() {
   const { loading } = useAppContext();
@@ -67,6 +68,7 @@ function AppRoutes() {
           </AuthGuard>
         }
       />
+      <Route path="/post/:postId" element={<PostPage />} />
       <Route path="/payment/verify" element={<PaymentVerifyPage />} />
       <Route path="/payment/esewa-verify" element={<EsewaVerifyPage />} />
       <Route path="/payment/esewa-failure" element={<EsewaFailurePage />} />

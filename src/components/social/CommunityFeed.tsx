@@ -9,6 +9,7 @@ import { SafeImage } from '../ui/SafeImage';
 import { ExpandableText } from './ExpandableText';
 import { uploadImageToStorage } from '../../services/storage';
 import { firestore } from '../../services/firestore';
+import { postUrl } from '../../services/deepLinks';
 import { ReportModal } from '../modals/ReportModal';
 import { CommentsPanel } from './CommentsPanel';
 
@@ -114,10 +115,24 @@ export const CommunityFeed: React.FC = () => {
     showToast(isSaved ? 'Post saved to bookmarks!' : 'Removed from bookmarks', 'success');
   };
 
-  const handleSharePost = (post: CommunityPost) => {
-    const shareText = `Check out "${post.title}" by ${post.userName || 'SATHI Traveler'} on SATHI: ${post.content}`;
-    navigator.clipboard.writeText(shareText);
-    showToast('Post content copied to clipboard! Ready to share.', 'success');
+  const handleSharePost = async (post: CommunityPost) => {
+    const url = postUrl(post.id);
+    const shareText = `Check out "${post.title}" by ${post.userName || 'SATHI Traveler'} on SATHI`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: post.title, text: shareText, url });
+        return;
+      } catch {
+        // user dismissed the native sheet — fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(`${shareText}\n${url}`);
+      showToast('Post link copied to clipboard!', 'success');
+    } catch {
+      showToast('Could not copy the link. Please copy it from the address bar.', 'error');
+    }
   };
 
   const [reportingPostId, setReportingPostId] = useState<string | null>(null);

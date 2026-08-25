@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ExperienceStory, CommunityPost } from '../../types';
 import { SafeImage } from '../ui/SafeImage';
 import { ExpandableText } from './ExpandableText';
+import { postUrl } from '../../services/deepLinks';
 import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, MapPin } from 'lucide-react';
 
 interface SocialPostCardProps {
@@ -96,18 +97,17 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/post/${post.id}`;
+    const url = postUrl(post.id);
     if (navigator.share) {
       try {
         await navigator.share({ title: caption, url });
+        return;
       } catch {
-        await navigator.clipboard.writeText(url);
-        onShare?.(post.id);
+        // user dismissed — fall through to clipboard
       }
-    } else {
-      await navigator.clipboard.writeText(url);
-      onShare?.(post.id);
     }
+    await navigator.clipboard.writeText(url);
+    onShare?.(post.id);
   };
 
   const openViewer = (index: number) => {
