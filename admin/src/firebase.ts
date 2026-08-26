@@ -3,17 +3,16 @@ import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'fir
 import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getMessaging, type Messaging } from 'firebase/messaging';
-import appletConfig from '../../firebase-applet-config.json';
 
 const EXPECTED_PROJECT_ID = 'hamrosathi1';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || appletConfig.apiKey,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || appletConfig.authDomain,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || appletConfig.projectId,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || appletConfig.storageBucket,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || appletConfig.messagingSenderId,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || appletConfig.appId,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
 };
 
 const missingFields = Object.entries(firebaseConfig)
@@ -22,7 +21,7 @@ const missingFields = Object.entries(firebaseConfig)
 
 if (missingFields.length > 0) {
   console.error('[SATHI Admin] FATAL: Missing required Firebase config fields:', missingFields.join(', '));
-  console.error('[SATHI Admin] Provide them via firebase-applet-config.json or VITE_FIREBASE_* environment variables.');
+  console.error('[SATHI Admin] Provide them via environment variables: VITE_FIREBASE_*');
   throw new Error(`Missing Firebase config: ${missingFields.join(', ')}`);
 }
 
