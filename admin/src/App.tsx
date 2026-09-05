@@ -183,11 +183,11 @@ const AdminDashboard: React.FC = () => {
       case 'cities':
         return <AdminCities />;
       case 'hotels':
-        return <AdminHotels type="hotels" />;
+        return <AdminHotels />;
       case 'restaurants':
-        return <AdminRestaurants type="restaurants" />;
+        return <AdminRestaurants />;
       case 'cafes':
-        return <AdminCafes type="cafes" />;
+        return <AdminCafes />;
       case 'likes':
         return <AdminLikes />;
       case 'analytics':

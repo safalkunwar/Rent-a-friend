@@ -1,16 +1,16 @@
 # Project Status
 
 Current Phase:
-Phase 4 - Enterprise Admin Operations Platform
+Phase 5 - Companion KYC, Home Feed Hardening & Engagement Integrity
 
 Overall Progress:
-~85%
+~92%
 
 Current Sprint:
-Sprint 6 - Enterprise Admin & Scale Architecture
+Sprint 7 - Booking transaction atomicity + Blaze plan deployment prep
 
 Current Focus:
-Enterprise-grade admin panel, RBAC, aggregation, rate limiting, idempotency, system health, security hardening, and 10k concurrent user architecture.
+Authoritative documentation set (docs/sathi/), companion application / KYC flow, deep-linkable community posts, rebuilt comment pipeline, deterministic Home feed (cursor-paginated), and engagement-integrity purge of fabricated likes/comments from production `hamrosathi1`.
 
 Completed
 
@@ -187,33 +187,42 @@ Completed
    - Public media paths for avatars, activities, events, posts, stories.
    - Private KYC document paths accessible only by `kyc_reviewer` role.
    - Admin-only paths for sensitive operations.
-   - File size and type validation.
-✅ Main App Resilience Fixes:
+    - File size and type validation.
+✅ **MapPreview migration (2026-09-04)**: replaced Google Maps Static API with Leaflet + OpenStreetMap Nominatim; custom marker drag, reverse geocoding, theme-aware tile layers, and sanitized coordinate parsing.
+✅ **Main App Resilience Fixes:**
    - Fixed eSewa payment form submission timing.
    - Added retry button on failed messages.
    - Corrected map lock toast message.
    - Fixed Firebase messaging initialization on app reuse.
    - Wired companion dashboard stats to real Firestore data.
    - Added context to SettingsTab error logging.
+✅ **Authoritative Documentation Set (2026-08-24)**: 19 spec files under `/docs/sathi/` (master objective, product vision, core features, user flows, system/Firebase/data architecture, performance/scalability, booking concurrency, security/privacy, admin/mobile-web architecture, feed loading, failure recovery, testing strategy, non-negotiable rules, removed features) plus KYC, security model, and feed-architecture addenda. `docs/sathi/CHANGELOG.md` is the live session log with a mandatory entry format.
+✅ **Home Feed Overhaul (2026-08-24)**: Discovery collections converted from per-mount `onSnapshot` listeners to cursor-paginated one-shot `getDocs` (10–15 doc pages). New `useProgressiveReveal` hook, deterministic `feedGenerator.ts` (mulberry32 PRNG, ≤2-consecutive-item invariant, tail region), `feedStabilizer.ts` (append-only, mergeById). Initial Home reads reduced from ~130 docs across 7 listeners to 65 docs across 5 one-shot queries. Mobile and desktop share the exact same data hooks, feed generator, stabilizer, and load-more coordinator. Real-time preserved for messaging / notifications / bookings.
+✅ **Community Post Deep Links (2026-08-25)**: new route `/post/:postId` in `src/pages/PostPage.tsx` performs a direct `community_posts/{postId}` document lookup and renders through the shared `FeedPostCard`. Native share sheet via `src/services/deepLinks.ts`; canonical URL `${origin}/post/${realDocId}`. `vercel.json` SPA rewrite added for direct URLs and browser refresh on Vercel.
+✅ **Comment Pipeline Rebuild (2026-08-25)**: shared `usePostComments(postId)` hook (one realtime listener per OPENED post, optimistic pending insertion, failure revert) + `CommentsPanel` (list with edit-own / delete-own, empty state) + `CommentComposer` (auto-growing textarea, Enter=send, double-submit guard, mobile scroll-into-view). `SocialPostCard` owns live liked/likes/comments state. `ExpandableText` for one-line clamp with overflow measurement.
+✅ **Engagement Integrity Purge (2026-08-25)**: removed all fabricated likes/comments from `src/scripts/seed.ts`. `scripts/purge-fake-engagement.mjs` deleted **1,350 fake post-likes** and **838 fake story-likes** from production `hamrosathi1`; counters recomputed from remaining real records. Real user interactions preserved. `firestore.rules` hardened: counter fields require non-negative numbers; like-doc IDs `${uid}_${postId}` are idempotent-by-ID.
+✅ **Companion Application / KYC Flow (2026-08-26)**: `CompanionApplicationModal`, `CompanionApplicationCard`, `CompanionApplicationRepository`, `AdminApplicationsPage`, `services/bookingEligibility.ts` (gates booking on KYC eligibility), `services/companionDashboard.ts`. Specs: `docs/sathi/AUTH_KYC_ARCHITECTURE.md`, `docs/sathi/ADMIN_KYC_WORKFLOW.md`, `docs/sathi/SECURITY_MODEL.md`, `docs/sathi/FIREBASE_DATA_ARCHITECTURE.md`. Live verification: `scripts/verify-auth-kyc.mjs`.
+✅ **Test suite (2026-09-04)**: **164/164 passing** (126 in main app across 7 files, 38 in admin app across 5 files).
 
 In Progress
 
-🔄 Enterprise Admin Modules Expansion (Companions, Guides, Content, Moderation, Feedback)
-🔄 Documentation updates (SECURITY.md, HANDOFF.md, TASKS.md, admin README)
+🔄 Booking creation as a single Firestore transaction with idempotency keys (next recommended task from `docs/sathi/CHANGELOG.md`)
+🔄 Refreshing remaining legacy docs (`SECURITY.md`, `HANDOFF.md`, `TASKS.md`, admin README) to align with the new authoritative `docs/sathi/` set
 
 Pending
 
 ⬜ Blaze Plan account upgrade (Paused until user confirms billing status)
+⬜ Cloud Functions deployment (pending Blaze plan) — `functions/src/index.ts` already implements `onUserCreate`, `onUserDelete`, `setUserRole`, `onBookingCreate`, `onBookingUpdate`, `onMessageCreate`, `onReviewCreate`
 ⬜ Load testing with 10,000 simulated concurrent users
-⬜ Cloud Functions deployment (pending Blaze plan)
-⬜ Mobile app store deployment (Android/iOS)
+⬜ Mobile app store deployment (Android/iOS via Capacitor scaffolds)
 ⬜ Advanced search infrastructure evaluation (Algolia/Meilisearch)
 ⬜ Disaster recovery runbook and backup validation
 
 Next Milestone
 
-Production-ready SATHI with enterprise admin operations center, 10k concurrent user validation, and full documentation.
+Production-ready SATHI with companion KYC validated end-to-end, booking transaction atomicity, and 10k-concurrent-user validation against the live `hamrosathi1` database.
 
 Known Blockers
 
-None
+- Cloud Functions deployment blocked by Firebase Blaze plan (not active).
+- Counter delta-correctness on `community_posts` cannot be rule-enforced without Cloud Functions; counters are maintained transactionally in repository code (documented honest limit).

@@ -1,4 +1,7 @@
 # Security
+Last updated: 2026-09-04
+
+> **Note:** The authoritative security model lives in `docs/sathi/09_SECURITY_PRIVACY.md` and `docs/sathi/SECURITY_MODEL.md`. This file remains a brief operational summary.
 
 ## Current State
 
@@ -49,6 +52,13 @@
 - Firestore query limits via security rules
 - Client-side debouncing on search inputs
 - Atomic booking locks to prevent double-booking
+- Server-side `adminRateLimiter` and `idempotencyService` in the standalone `/admin` app
+- Repository-side `rateLimiter.ts` for high-frequency client actions
+
+## Documented Honest Limits (2026-09-04)
+
+- **Counter delta-correctness on `community_posts`:** rules enforce non-negative types; counters are maintained transactionally in `src/repositories/SocialRepository.ts`. Full server-authoritative enforcement requires Cloud Functions (Blaze plan, currently paused).
+- **Visual QA on physical devices:** not in CI; manual multi-device live concurrency QA only.
 
 ## Payment Security
 

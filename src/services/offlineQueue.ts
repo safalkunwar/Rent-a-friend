@@ -1,8 +1,10 @@
 import { firestore } from './firestore';
+import { requireUid } from './identity';
 
 const QUEUE_KEY = 'sathi_offline_write_queue';
 
 interface QueuedWrite {
+  ownerUid: string;
   id: string;
   collection: string;
   docId: string;
@@ -12,10 +14,12 @@ interface QueuedWrite {
 }
 
 export const offlineWriteQueue = {
-  async enqueue(entry: Omit<QueuedWrite, 'id' | 'timestamp'>): Promise<void> {
+  async enqueue(entry: Omit<QueuedWrite, 'id' | 'timestamp' | 'ownerUid'>): Promise<void> {
+    const ownerUid = requireUid();
     const queue = await this.getQueue();
     const item: QueuedWrite = {
       ...entry,
+      ownerUid,
       id: `offline-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       timestamp: new Date().toISOString(),
     };
@@ -41,13 +45,17 @@ export const offlineWriteQueue = {
   },
 
   async processQueue(): Promise<void> {
+    const uid = requireUid();
     const queue = await this.getQueue();
     if (queue.length === 0) return;
 
     const remaining: QueuedWrite[] = [];
 
     for (const item of queue) {
+      // Preserve legacy/unowned and other-account entries; never replay them as this user.
+      if (item.ownerUid !== uid) { remaining.push(item); continue; }
       try {
+        requireUid(uid);
         if (item.action === 'set') {
           await firestore.setDocument(`${item.collection}/${item.docId}`, item.data);
         } else if (item.action === 'update') {

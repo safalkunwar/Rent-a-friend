@@ -1,4 +1,7 @@
 # Meeting Notes
+Last updated: 2026-09-04
+
+> Most recent sync: 2026-08-26 — companion application / KYC flow shipped (see `docs/sathi/AUTH_KYC_ARCHITECTURE.md` and `docs/sathi/ADMIN_KYC_WORKFLOW.md`).
 
 ## 2026-07-11 - Initial Audit & Kickoff
 

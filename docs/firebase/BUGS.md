@@ -33,3 +33,16 @@ This document serves as a record of identified bugs, potential issues, and areas
 *   Plan for regular Firebase SDK updates.
 
 This document will be updated as new bugs are discovered or existing issues are resolved.
+
+---
+
+## 4. Resolved Issues (2026-08-12 → 2026-09-04)
+
+- **`auth/configuration-not-found`** — root cause diagnosed as missing `.firebaserc` / `firebase.json` / `VITE_FIREBASE_VAPID_KEY`. Resolved. `src/firebase.ts` now enforces strict config validation; `admin/src/firebase.ts` additionally throws if `projectId !== 'hamrosathi1'`.
+- **Notifications composite index missing** — `(userId, timestamp)` declared but not deployed. Deployed 2026-08-24; redundant single-field "composite" declarations removed.
+- **`community_posts.likesCount` / `commentsCount` accepted negative numbers** — rule now requires non-negative numbers.
+- **Fabricated engagement on `hamrosathi1`** — 1,350 fake post-likes + 838 fake story-likes + ~500 canned comments from demo personas. Purged 2026-08-25; counters recomputed from real records; seed script no longer fabricates engagement.
+- **`SocialPostCard` stale `liked/likes/comments` state** — first like toggle silently UNLIKED. Fixed 2026-08-25; live `liked` state derived from real `likes/{uid}_{postId}` lookups.
+- **eSewa modal sandbox freeze** — verified forms now open in new tabs. (Documented in `docs/sathi/CHANGELOG.md` 2026-07-21.)
+- **`BookingModal.tsx` and `BookingFlowModal.tsx` overlap** — resolved; only `BookingFlowModal` remains.
+- **Map provider** — replaced Google Maps Static API with Leaflet+OSM (2026-09-04).

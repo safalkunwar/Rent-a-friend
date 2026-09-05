@@ -1,8 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { firestore, type QueryOptions } from '../services/firestore';
 import { Companion, ExperienceStory, Activity, Event, Partner, CommunityPost } from '../types';
 import { offlineStorage } from '../services/storage';
 import { db } from '../firebase';
+import { useVisibleStories } from './useVisibleStories';
+import { visibleEventImage } from '../services/mediaContract';
+import { getDocsFromServer } from 'firebase/firestore';
+import { eventSummaryQuery } from '../services/mediaQueries';
 
 export interface PaginationState {
   loading: boolean;
@@ -30,7 +34,6 @@ const COMPANIONS_PAGE_SIZE = 15;
 const DEFAULT_PAGE_SIZE = 10;
 
 const COMPANIONS_QUERY: QueryOptions = {};
-const STORIES_QUERY: QueryOptions = {};
 const ACTIVITIES_QUERY: QueryOptions = {};
 const EVENTS_QUERY: QueryOptions = {};
 const PARTNERS_QUERY: QueryOptions = {};
@@ -63,8 +66,12 @@ const fetchPage = <T extends { id: string }>(
     limitCount: pageSize,
     ...(cursorId ? { startAfter: [cursorId] } : {}),
   };
-  const promise = firestore
-    .getDocumentsPaginated<T>(collectionName, options)
+  const source: Promise<PageResult<T>> = collectionName === 'events' && db
+    ? getDocsFromServer(eventSummaryQuery(db,pageSize,cursorId)).then(snapshot => ({
+        items: snapshot.docs.map(document => ({ ...document.data(), id: document.id } as T)), hasMore: snapshot.size === pageSize,
+      })).catch(() => ({ items: [], hasMore: false, failed: true }))
+    : firestore.getDocumentsPaginated<T>(collectionName, options);
+  const promise = source
     .finally(() => {
       inflightPages.delete(key);
     });
@@ -76,8 +83,9 @@ const usePaginatedCollection = <T extends { id: string }>(
   collectionName: string,
   pageSize: number,
   baseOptions: QueryOptions
-): { items: T[]; loading: boolean; loadingMore: boolean; hasMore: boolean; loadMore: () => void } => {
-  const cachedEntry = sessionCache.get(collectionName) as SessionEntry<T> | undefined;
+): { items: T[]; loading: boolean; loadingMore: boolean; hasMore: boolean; loadMore: () => void; setItems: Dispatch<SetStateAction<T[]>> } => {
+  // Event image visibility must be revalidated; never paint persisted media status on remount.
+  const cachedEntry = (collectionName === 'events' ? undefined : sessionCache.get(collectionName)) as SessionEntry<T> | undefined;
   const [items, setItems] = useState<T[]>(() => cachedEntry?.items ?? []);
   const [hasMore, setHasMore] = useState<boolean>(() => !cachedEntry?.exhausted);
   const [loading, setLoading] = useState<boolean>(() => !cachedEntry);
@@ -85,7 +93,7 @@ const usePaginatedCollection = <T extends { id: string }>(
   const loadingMoreRef = useRef(false);
 
   useEffect(() => {
-    if (sessionCache.has(collectionName)) return;
+    if (collectionName === 'events' || sessionCache.has(collectionName)) return;
     let cancelled = false;
     offlineStorage.getCachedCollection<T>(collectionName).then(cached => {
       if (cancelled || cached.length === 0) return;
@@ -97,7 +105,7 @@ const usePaginatedCollection = <T extends { id: string }>(
   }, [collectionName]);
 
   useEffect(() => {
-    if (sessionCache.has(collectionName)) return;
+    if (collectionName !== 'events' && sessionCache.has(collectionName)) return;
     let cancelled = false;
     fetchPage<T>(collectionName, undefined, pageSize, baseOptions)
       .then(result => {
@@ -112,10 +120,10 @@ const usePaginatedCollection = <T extends { id: string }>(
           lastId: uniqueItems.length > 0 ? uniqueItems[uniqueItems.length - 1].id : undefined,
           exhausted: !result.hasMore || uniqueItems.length === 0,
         });
-        setItems(prev => mergeCached(uniqueItems, prev));
+        setItems(prev => collectionName === 'events' ? uniqueItems : mergeCached(uniqueItems, prev));
         setHasMore(result.hasMore && uniqueItems.length > 0);
         setLoading(false);
-        offlineStorage.cacheCollection(collectionName, uniqueItems);
+        if (collectionName !== 'events') offlineStorage.cacheCollection(collectionName, uniqueItems);
       })
       .catch(() => {
         if (!cancelled) setLoading(false);
@@ -144,7 +152,7 @@ const usePaginatedCollection = <T extends { id: string }>(
         });
         setItems(merged);
         setHasMore(result.hasMore);
-        offlineStorage.cacheCollection(collectionName, merged);
+        if (collectionName !== 'events') offlineStorage.cacheCollection(collectionName, merged);
       })
       .catch(() => {})
       .finally(() => {
@@ -153,7 +161,7 @@ const usePaginatedCollection = <T extends { id: string }>(
       });
   }, [collectionName, pageSize, baseOptions]);
 
-  return { items, loading, loadingMore, hasMore, loadMore };
+  return { items, loading, loadingMore, hasMore, loadMore, setItems };
 };
 
 const mergeCached = <T extends { id: string }>(fetched: T[], previouslyPainted: T[]): T[] => {
@@ -168,10 +176,7 @@ export const useCompanions = () => {
   return { companions: items, loading, loadingMore, hasMore, loadMore };
 };
 
-export const useStories = () => {
-  const { items, loading, loadingMore, hasMore, loadMore } = usePaginatedCollection<ExperienceStory>('stories', DEFAULT_PAGE_SIZE, STORIES_QUERY);
-  return { stories: items, loading, loadingMore, hasMore, loadMore };
-};
+export const useStories = useVisibleStories;
 
 export const useActivities = () => {
   const { items, loading, loadingMore, hasMore, loadMore } = usePaginatedCollection<Activity>('activities', DEFAULT_PAGE_SIZE, ACTIVITIES_QUERY);
@@ -180,7 +185,8 @@ export const useActivities = () => {
 
 export const useEvents = () => {
   const { items, loading, loadingMore, hasMore, loadMore } = usePaginatedCollection<Event>('events', DEFAULT_PAGE_SIZE, EVENTS_QUERY);
-  return { events: items, loading, loadingMore, hasMore, loadMore };
+  const events = useMemo(() => items.map(event => ({ ...event, imageUrl: visibleEventImage(event), image: visibleEventImage(event) })), [items]);
+  return { events, loading, loadingMore, hasMore, loadMore };
 };
 
 export const usePartners = () => {

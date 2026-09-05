@@ -1,4 +1,4 @@
-import { initializeApp, getApps, type FirebaseApp } from 'firebase-admin/app';
+import { initializeApp, getApps, type App as FirebaseApp } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
@@ -35,7 +35,7 @@ const printBanner = () => {
   }
 };
 
-const prompt = (question: string): string => {
+const prompt = (question: string): Promise<string> => {
   const readline = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout,

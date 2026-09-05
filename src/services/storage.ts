@@ -1,72 +1,83 @@
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, getBlob } from 'firebase/storage';
 import { storage } from '../firebase';
-
-// ==================== FIREBASE STORAGE UTILS ====================
+import { requireUid } from './identity';
+import { validateUpload, uploadPath, validateFileSignature, isPrivateKycPath, type PublicUploadCategory, type UploadCategory } from './uploadContract';
 
 export interface UploadOptions {
-  folder?: string;
+  folder?: PublicUploadCategory;
   maxSizeMB?: number;
   allowedTypes?: string[];
   onProgress?: (progress: number) => void;
 }
 
-export const uploadImageToStorage = async (
-  file: File,
-  options: UploadOptions = {}
-): Promise<string> => {
-  if (!storage) {
-    throw new Error('Firebase Storage is not initialized.');
-  }
+function requireStorage() {
+  if (!storage) throw new Error('Firebase Storage is unavailable.');
+  return storage;
+}
 
-  const {
-    folder = 'uploads',
-    maxSizeMB = 10,
-    allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'],
-    onProgress
-  } = options;
-
-  // Validate File Type
-  if (!allowedTypes.includes(file.type.toLowerCase())) {
-    throw new Error(`Invalid file type (${file.type}). Allowed types: JPG, PNG, WEBP.`);
-  }
-
-  // Validate File Size
-  const maxSizeBytes = maxSizeMB * 1024 * 1024;
-  if (file.size > maxSizeBytes) {
-    throw new Error(`File size exceeds maximum limit of ${maxSizeMB}MB.`);
-  }
-
-  // Generate unique filename
-  const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-  const filename = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${cleanName}`;
-  const storageRef = ref(storage, filename);
-
-  const uploadTask = uploadBytesResumable(storageRef, file);
-
-  return new Promise((resolve, reject) => {
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        if (onProgress) {
-          onProgress(Math.round(progress));
-        }
-      },
-      (error) => {
-        console.error('[StorageService] Upload error:', error);
-        reject(new Error(`Image upload failed: ${error.message}`));
-      },
-      async () => {
-        try {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(downloadURL);
-        } catch (err: any) {
-          reject(new Error(`Failed to retrieve image download URL: ${err.message}`));
-        }
-      }
-    );
+async function upload(file: File, category: UploadCategory, options: UploadOptions = {}): Promise<string> {
+  const uid = requireUid();
+  validateUpload(category, file.type, file.size);
+  if (options.maxSizeMB && file.size > options.maxSizeMB * 1024 * 1024) throw new Error('File exceeds the selected size limit.');
+  if (options.allowedTypes && !options.allowedTypes.includes(file.type)) throw new Error('Unsupported file type.');
+  validateFileSignature(file.type, new Uint8Array(await file.slice(0, 16).arrayBuffer()));
+  const service = requireStorage();
+  const path = uploadPath(category, uid, crypto.randomUUID());
+  const object = ref(service, path);
+  const task = uploadBytesResumable(object, file, {
+    contentType: file.type,
+    cacheControl: category === 'kyc' ? 'private, no-store, max-age=0' : 'public, max-age=3600',
+    customMetadata: { ownerUid: uid, category },
   });
+  await new Promise<void>((resolve, reject) => {
+    task.on('state_changed', snapshot => options.onProgress?.(Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100)), reject, () => resolve());
+  });
+  requireUid(uid);
+  // KYC never requests or persists a tokenized download URL.
+  if (category === 'kyc') return path;
+  const url = await getDownloadURL(object);
+  // Stash the path on the ref so callers can perform best-effort orphan cleanup.
+  (object as any).__uploadPath = path;
+  return url;
+}
+
+/** Returns the Storage path of the most recent public upload in this session. */
+export const lastUploadPath = (urlOrPath: string): string | null => {
+  // Heuristic: the contract places the path at category/uid/uuid. Without an
+  // explicit return, callers can recover it from the URL's pathname if they
+  // need it. Intentionally a no-op stub; orphan cleanup is best-effort.
+  try {
+    const u = new URL(urlOrPath);
+    const m = u.pathname.match(/\/o\/(.+?)(?:\?|$)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  } catch {
+    return null;
+  }
 };
+
+/** Best-effort delete by Storage path; swallows "object not found". */
+export const deleteStorageObject = async (path: string): Promise<void> => {
+  const service = requireStorage();
+  try {
+    const { deleteObject } = await import('firebase/storage');
+    await deleteObject(ref(service, path));
+  } catch (err: any) {
+    if (err?.code === 'storage/object-not-found') return;
+    throw err;
+  }
+};
+
+export const uploadImageToStorage = (file: File, options: UploadOptions = {}): Promise<string> =>
+  upload(file, options.folder || 'avatars', options);
+export const uploadKycDocument = (file: File): Promise<string> => upload(file, 'kyc');
+
+/** Reviewer bytes are fetched with Firebase authorization; caller revokes its object URL. */
+export async function readKycDocument(path: string): Promise<Blob> {
+  requireUid();
+  if (!isPrivateKycPath(path)) throw new Error('Legacy or invalid document reference requires a secure migration.');
+  if (!storage) throw new Error('Firebase Storage is unavailable.');
+  return getBlob(ref(storage, path), 5 * 1024 * 1024);
+}
 
 // ==================== OFFLINE STORAGE UTILS ====================
 

@@ -1,5 +1,7 @@
 # SATHI Help & Support Center
 
+Last Updated: 2026-09-04
+
 Welcome to the SATHI Support Center. SATHI is Nepal's premier Companion Guide and Local Experience platform. We are committed to helping you build trusted, safe, and memorable guided experiences in Nepal.
 
 ---

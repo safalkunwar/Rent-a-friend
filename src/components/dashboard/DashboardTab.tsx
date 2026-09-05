@@ -1,19 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { useCompanions } from '../../hooks/useFirestoreData';
 import { useEvents } from '../../hooks/useFirestoreData';
-import { companionDashboardService } from '../../services/companionDashboard';
+import { companionDashboardService, type CompanionBookingRequest } from '../../services/companionDashboard';
 import { eventParticipantsService } from '../../services/eventParticipants';
 import { Star, ShieldCheck, Heart, MapPin, Settings, Calendar, X, Bell } from 'lucide-react';
 import * as motion from 'motion/react-client';
 import { SafeImage } from '../ui/SafeImage';
+import { selectCustomerDashboard } from '../../services/dashboardData';
 
 export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string) => void }> = ({ onMessageCompanion }) => {
   const { currentUser, favorites, toggleFavorite, bookings, setCurrentUser, notifications } = useAppContext();
   const { showToast } = useToast();
   const { companions: fetchedCompanions } = useCompanions();
   const { events: fetchedEvents } = useEvents();
+  const { myBookings, favoriteCompanions, totalBookedValue } = selectCustomerDashboard(
+    currentUser?.id, bookings, fetchedCompanions, favorites,
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(currentUser?.name || '');
   const [editEmail, setEditEmail] = useState(currentUser?.email || '');
@@ -79,10 +83,59 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
     return () => { cancelled = true; };
   }, [currentUser?.id, currentUser?.role, fetchedEvents]);
 
+  // Incoming booking requests for companions (real snapshot contact info)
+  const myCompanionIds = useMemo(
+    () => fetchedCompanions.filter(c => currentUser && c.userId === currentUser.id).map(c => c.id),
+    [fetchedCompanions, currentUser?.id]
+  );
+  const [incomingBookings, setIncomingBookings] = useState<CompanionBookingRequest[]>([]);
+
+  useEffect(() => {
+    if (currentUser?.role !== 'companion' || myCompanionIds.length === 0) {
+      setIncomingBookings([]);
+      return;
+    }
+    let cancelled = false;
+    Promise.all(myCompanionIds.map(id => companionDashboardService.getBookingRequests(id)))
+      .then(groups => {
+        if (!cancelled) {
+          setIncomingBookings(
+            groups.flat().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 10)
+          );
+        }
+      })
+      .catch(err => console.error('[DashboardTab] Failed to load incoming bookings:', err));
+    return () => { cancelled = true; };
+  }, [currentUser?.id, currentUser?.role, myCompanionIds.join(',')]);
+
   if (!currentUser) return <div className="text-text-primary p-8">Please log in to view dashboard</div>;
 
   return (
     <div className="space-y-8">
+      {/* Incoming booking requests (companion view) */}
+      {currentUser.role === 'companion' && incomingBookings.length > 0 && (
+        <div className="bg-surface border border-border-token rounded-3xl p-8">
+          <h2 className="text-xl font-bold text-text-primary mb-5 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-primary-action" /> Incoming Booking Requests
+          </h2>
+          <div className="space-y-3">
+            {incomingBookings.map(b => (
+              <div key={b.id} className="border border-border-token/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="text-left min-w-0">
+                  <p className="text-sm font-bold text-text-primary truncate">{b.userName}</p>
+                  {b.userPhone && <p className="text-xs text-text-secondary">{b.userPhone}</p>}
+                  <p className="text-xs text-text-muted mt-1"><Calendar className="w-3 h-3 inline mr-1" />{b.date} at {b.time} · {b.duration}h · {b.participants}p</p>
+                  {b.meetingPoint && <p className="text-[11px] text-text-muted truncate">📍 {b.meetingPoint}</p>}
+                </div>
+                <span className={`text-xs px-2.5 py-1 rounded-full border self-start sm:self-center ${b.status === 'confirmed' ? 'bg-success/10 border-success/50 text-success' : b.status === 'cancelled' ? 'bg-danger/10 border-danger/50 text-danger' : 'bg-warning/10 border-warning/50 text-warning'}`}>
+                  {b.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Profile Header */}
       <div className="bg-surface border border-border-token rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary-action/5 rounded-full blur-3xl" />
@@ -131,8 +184,8 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-surface border border-border-token rounded-2xl p-6">
-              <h3 className="text-text-secondary text-sm uppercase tracking-wider mb-2">Total Spent</h3>
-              <p className="text-3xl font-bold text-text-primary">NPR {totalSpent.toFixed(2)}</p>
+              <h3 className="text-text-secondary text-sm uppercase tracking-wider mb-2">Loaded Booking Value (Unverified)</h3>
+              <p className="text-3xl font-bold text-text-primary">NPR {totalBookedValue.toFixed(2)}</p>
             </div>
             <div className="bg-surface border border-border-token rounded-2xl p-6">
               <h3 className="text-text-secondary text-sm uppercase tracking-wider mb-2">Saved Favorites</h3>

@@ -1,6 +1,8 @@
 # AI Memory
 
-Last Updated: 2026-07-24
+Last Updated: 2026-09-04
+
+> **Note:** This file is a high-level history of SATHI. The authoritative project specification and session-by-session log live in `docs/sathi/CHANGELOG.md` and the 19 spec files under `docs/sathi/`. Read those first when resuming work.
 
 ## Business Vision
 
@@ -19,17 +21,17 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 
 - Frontend: React 19, TypeScript, Vite 6, Tailwind CSS v4
 - State: React Context (AppContext, ToastContext)
-- Animation: motion (Framer Motion)
+- Animation: motion (Framer Motion successor)
 - Icons: lucide-react
-- Routing: React Router DOM v7 (BrowserRouter)
-- Backend: Firebase Auth, Firestore, Storage, Cloud Functions (Implemented, Pending Blaze Plan for Deployment)
-- Auth: Firebase Auth (email/password, Google) with custom claims and strict config validation
-- Database: Firestore (real-time subscriptions via service layer, production-grade security rules and composite indexes)
-- Maps: Google Maps Static API via `MapPreview` component
-- Offline: IndexedDB via `offlineStorage` service
-- Payments: Khalti REST API + eSewa form redirect
-- Notifications: Web Notifications + FCM foreground listener
-- Testing: Vitest + React Testing Library + jsdom
+- Routing: React Router DOM v7 (BrowserRouter) — main app; also used in `/admin`
+- Backend: Firebase Auth, Firestore, Storage, Cloud Functions (implemented; deployment paused — Blaze plan not active)
+- Auth: Firebase Auth (email/password, Google) with custom claims and strict config validation. Both `src/firebase.ts` and `admin/src/firebase.ts` throw on missing/invalid config; admin additionally hard-checks `projectId === 'hamrosathi1'`.
+- Database: Firestore with production RBAC rules, composite indexes, and 11-role admin permission system.
+- Maps: Leaflet + OpenStreetMap Nominatim (replaces Google Maps static preview in `MapPreview`); user-selectable markers with reverse geocoding.
+- Offline: IndexedDB via `enableIndexedDbPersistence` + `offlineStorage` service.
+- Payments: Khalti REST API + eSewa form redirect.
+- Notifications: Web Notifications + FCM foreground listener.
+- Testing: Vitest + React Testing Library + jsdom. **126 main-app tests across 7 files** + **38 admin tests across 5 files** = **164 total passing** as of 2026-09-04.
 
 ## Coding Standards
 
@@ -138,6 +140,40 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
   - Configured `admin/vitest.config.ts` with jsdom environment and setup file for proper test isolation.
   - Fixed Firebase project ID validation in admin to prevent accidental cross-project data access.
 
+- **Home Feed Overhaul (2026-08-24):**
+  - Replaced per-mount `onSnapshot` listeners with cursor-paginated one-shot `getDocs` queries (10–15 doc pages) on discovery collections. Real-time listeners preserved for messaging, notifications, bookings.
+  - New `useProgressiveReveal` hook (IntersectionObserver sentinel) instantiated once in ClientApp and shared by desktop and mobile.
+  - New `feedGenerator.ts` (deterministic mulberry32 PRNG, category chunks, ≤2-consecutive-item invariant) and `feedStabilizer.ts` (append-only, mergeById, tail region support).
+  - Reduced initial Home reads from ~130 docs across 7 listeners to 65 docs across 5 one-shot queries.
+  - Feed mixing now weaves companions into a non-companion stream (`weaveCompanionsIntoStream`); community posts integrated into every layer; no type-block dumps.
+  - Mobile and desktop now share the exact same cards and ordering; breakpoint resize no longer resets reveal position.
+  - PWA branding fixed: `vite.config.ts` and `index.html` now point to the real `public/sathi-logo.jpeg`; corrupt `icon*.jpg` files no longer referenced. Pre-hydration splash and `LoadingScreen` redesigned around the real logo.
+  - Rules-of-Hooks crash fixed: `useCompanionCategories` hoisted to top of `ClientApp.tsx` (was conditionally invoked). Notifications composite index `(userId, timestamp)` deployed to `hamrosathi1`; redundant single-field "composites" removed (covered by auto indexes).
+- **Community Post Deep Links (2026-08-25):**
+  - New route `/post/:postId` (`src/pages/PostPage.tsx`) performs a direct document lookup on `community_posts/{postId}` and renders through the shared `FeedPostCard`.
+  - Native share sheet via `src/services/deepLinks.ts`; canonical URL `${origin}/post/${realDocId}`.
+  - `vercel.json` SPA rewrite added so direct URLs and browser refresh work.
+  - 404 state for missing/unpublished posts (no silent redirect to home).
+- **Comment Pipeline Rebuild (2026-08-25):**
+  - Shared `usePostComments(postId)` hook with one realtime listener per OPENED post, optimistic pending insertion, and failure revert.
+  - Shared `CommentsPanel` (list with avatars, relative timestamps, edit-own / delete-own, empty state) and `CommentComposer` (auto-growing textarea, Enter=send, Shift+Enter=newline, max 500 chars, double-submit guard, optimistic "Sending…" comment, scroll-into-view on mobile).
+  - Verified end-to-end against production `hamrosathi1` with a real seeded Auth account (WRITE 200 → READ 200, content match).
+  - `SocialPostCard` now owns live `liked/likes/comments` state; per-user liked state derived from real `likes/{uid}_{postId}` lookups.
+  - `ExpandableText` for one-line clamp with real overflow measurement.
+- **Engagement Integrity Purge (2026-08-25):**
+  - All fabricated likes/comments removed from `src/scripts/seed.ts`. Seeded posts now start at 0/0 and only grow from real activity.
+  - `scripts/purge-fake-engagement.mjs` (REST + gcloud credentials) deleted 1,350 fake post-likes and 838 fake story-likes from production `hamrosathi1`; counters recomputed from remaining real records. Real user interactions preserved (cp2, cp10, cp38, etc.).
+  - `firestore.rules` hardened: `community_posts.likesCount`/`commentsCount` must be non-negative numbers; like-doc IDs `${uid}_${postId}` are idempotent-by-ID.
+  - Honest limit: without Cloud Functions, rules cannot enforce delta-correctness; counters remain repository-managed.
+- **Companion Application / KYC Flow (2026-08-26):**
+  - `CompanionApplicationModal`, `CompanionApplicationCard`, `CompanionApplicationRepository`, `AdminApplicationsPage` (main app shell), `services/bookingEligibility.ts`, `services/companionDashboard.ts`.
+  - Booking gated on KYC eligibility through `bookingEligibility.ts`.
+  - Specs published: `docs/sathi/AUTH_KYC_ARCHITECTURE.md`, `docs/sathi/ADMIN_KYC_WORKFLOW.md`, `docs/sathi/SECURITY_MODEL.md`, `docs/sathi/FIREBASE_DATA_ARCHITECTURE.md`.
+  - `scripts/verify-auth-kyc.mjs` provided for live verification.
+- **Authoritative Documentation Set (2026-08-24):**
+  - 19 spec files created in `docs/sathi/`: `00_MASTER_OBJECTIVE` through `16_REMOVED_FEATURES`, plus `AUTH_KYC_ARCHITECTURE`, `ADMIN_KYC_WORKFLOW`, `SECURITY_MODEL`, `FIREBASE_DATA_ARCHITECTURE`, `HOME_FEED_ARCHITECTURE`.
+  - `docs/sathi/CHANGELOG.md` is the authoritative session log. **Every code change must append an entry in the defined format.**
+
 - **Firebase Resumption & Optimization (2026-07-12):**
   - Resolved `auth/configuration-not-found` error via strict initialization validation in `src/firebase.ts`.
   - Implemented and deployed production-grade Firestore Security Rules (RBAC model).
@@ -147,9 +183,10 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 
 ## Current Priorities
 
-1. Upgrade Firebase project to Blaze plan to deploy Cloud Functions (Paused until user confirms billing status).
-2. Continue expanding unit and integration test assertions for both main and admin apps.
-3. Enhance client-side UX: booking flow, messaging, dashboard, and map interactions.
+1. **Upgrade Firebase project to Blaze plan** to deploy Cloud Functions (paused until user confirms billing status).
+2. **Booking creation as a single Firestore transaction with idempotency keys** (next recommended task from `docs/sathi/CHANGELOG.md`).
+3. Continue expanding unit and integration test assertions for both main and admin apps.
+4. Visual QA on physical devices (currently not in CI); multi-device live concurrency testing remains manual.
 
 ## Rejected Ideas
 
@@ -160,8 +197,11 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 ## Known Limitations
 
 - **Cloud Functions require Blaze plan upgrade for deployment.**
-- FCM foreground listener works; push notifications require Cloud Functions/Messaging
-- Internationalization not implemented
+- FCM foreground listener works; push notifications require Cloud Functions/Messaging.
+- Internationalization not implemented.
+- **Counter delta-correctness** on `community_posts.likesCount` / `commentsCount` cannot be rule-enforced without Cloud Functions — these are maintained transactionally by repository code.
+- **Visual QA on physical devices** is not part of CI; multi-device live concurrency QA is manual.
+- **Booking creation is not yet a single atomic transaction** (open task: idempotency-keyed transaction).
 
 ## File Map (Current)
 
@@ -184,7 +224,27 @@ SATHI is a trusted Social Experiences Marketplace in Nepal. Mission: help people
 - `src/components/guards/AuthGuard.tsx` - Route protection
 - `src/components/guards/AdminGuard.tsx` - Admin route protection with custom claims
 - `src/components/LoadingScreen.tsx` - Auth initialization screen
-- `src/components/maps/MapPreview.tsx` - Google Maps static preview
+- `src/components/maps/MapPreview.tsx` - Leaflet+OSM interactive map preview (replaces Google Static)
+- `src/components/modals/CompanionApplicationModal.tsx` - Companion KYC application form
+- `src/components/companions/CompanionApplicationModal.tsx` - Companion KYC application UI
+- `src/components/settings/CompanionApplicationCard.tsx` - Settings dashboard KYC status card
+- `src/components/social/CommentsPanel.tsx`, `CommentComposer.tsx`, `ExpandableText.tsx` - Comment pipeline (2026-08-25)
+- `src/hooks/usePostComments.ts` - Shared realtime comments hook (one listener per open post)
+- `src/hooks/useProgressiveReveal.ts` - Home feed reveal coordinator (IntersectionObserver)
+- `src/hooks/useDiscoveryFeed.ts` - Cursor-paginated Home feed hook
+- `src/services/feedGenerator.ts` - Deterministic home feed composer (mulberry32 PRNG)
+- `src/services/feedStabilizer.ts` - Append-only feed stabilizer (chunkFeedByHeader)
+- `src/services/deepLinks.ts` - `/post/:postId` URL builder + native share
+- `src/services/bookingEligibility.ts` - KYC/eligibility gate for booking
+- `src/services/companionDashboard.ts` - Companion dashboard data
+- `src/pages/PostPage.tsx` - Direct-lookup community post deep-link route
+- `src/pages/AdminApplicationsPage.tsx` - Admin KYC review page (legacy in main app; equivalent workflow in `/admin`)
+- `src/repositories/CompanionApplicationRepository.ts` - KYC repository
+- `vercel.json` - SPA rewrite for direct deep-link URLs
+- `scripts/purge-fake-engagement.mjs` - One-shot script that purged 1,350 fake post-likes and 838 fake story-likes from `hamrosathi1` (2026-08-25)
+- `scripts/verify-comment-pipeline.mjs`, `scripts/verify-auth-kyc.mjs` - Live verification scripts
+- `admin/` - Standalone admin app: 25 pages, 7 services, 11 RBAC roles, 38 tests
+- `docs/sathi/CHANGELOG.md` - **Authoritative session log** (mandatory append on every code change)
 - `src/components/notifications/NotificationProvider.tsx` - FCM registration and permission request
 - `src/App.tsx` - React Router entry point with NotificationProvider
 - `src/main.tsx` - React entry

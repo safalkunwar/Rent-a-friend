@@ -5,7 +5,7 @@ export interface AuditLogEntry {
   action: string;
   actorId: string;
   actorName: string;
-  targetType: 'user' | 'companion' | 'booking' | 'guideApplication' | 'content' | 'security' | 'comment' | 'report' | 'feedback' | 'notification' | 'sos' | 'post' | 'story' | 'kyc' | 'admin';
+  targetType: 'user' | 'companion' | 'booking' | 'guideApplication' | 'content' | 'security' | 'comment' | 'report' | 'feedback' | 'notification' | 'sos' | 'post' | 'story' | 'kyc' | 'admin' | 'city' | 'partner' | 'support_ticket' | 'hotels' | 'restaurants' | 'cafes';
   targetId?: string;
   details?: Record<string, unknown>;
   timestamp: string;

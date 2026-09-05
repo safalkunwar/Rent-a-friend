@@ -47,3 +47,15 @@ This document outlines the remaining tasks for the SATHI Firebase Architecture, 
 7.  Performance improvements.
 8.  A production readiness checklist.
 9.  Any remaining risks or follow-up tasks.
+
+---
+
+## Status as of 2026-09-04
+
+Items 1–9 above are largely complete. Outstanding work tracked in `docs/sathi/CHANGELOG.md`:
+
+- **Booking creation as a single Firestore transaction with idempotency keys** — next recommended task.
+- **Cloud Functions deployment** — blocked on Firebase Blaze plan upgrade (functions implemented in `functions/src/index.ts`).
+- **Load testing with 10,000 simulated concurrent users** — pending Blaze plan + completion of booking transaction work.
+- **Counter delta-correctness on `community_posts`** — cannot be rule-enforced without Cloud Functions; maintained transactionally in repository code as a documented honest limit.
+- **Visual QA on physical devices** — currently not in CI.

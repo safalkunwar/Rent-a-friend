@@ -1,6 +1,7 @@
 import { firestore } from './firestore';
 import { db } from '../firebase';
 import { runTransaction, doc } from 'firebase/firestore';
+import { requireUid } from './identity';
 
 const TYPING_TIMEOUT_MS = 3000;
 
@@ -66,6 +67,7 @@ export const messagingService = {
   typingManager: new TypingManager(),
 
   async sendMessage(conversationId: string, senderId: string, text: string): Promise<string> {
+    requireUid(senderId);
     const messageId = `msg-${Date.now()}`;
     const timestamp = new Date().toISOString();
 
@@ -122,6 +124,7 @@ export const messagingService = {
   },
 
   async markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
+    requireUid(userId);
     const messages = await firestore.getDocuments<any>('messages', {
       where: [
         { field: 'conversationId', operator: '==', value: conversationId },
@@ -151,16 +154,30 @@ export const messagingService = {
   },
 
   async createConversation(participantIds: string[]): Promise<string> {
+    const uid = requireUid();
+    if (participantIds.length !== 2 || new Set(participantIds).size !== 2 || !participantIds.includes(uid)) {
+      throw new Error('A conversation requires the authenticated user and one other participant.');
+    }
     const convoId = participantIds.sort().join('_');
     const timestamp = new Date().toISOString();
 
-    await firestore.setDocument(`conversations/${convoId}`, {
+    const initial = {
       id: convoId,
       participantIds,
       unreadCount: 0,
       createdAt: timestamp,
       updatedAt: timestamp,
-    }, true);
+    };
+    if (!db) {
+      await firestore.setDocument(`conversations/${convoId}`, initial, true);
+    } else {
+      await runTransaction(db, async transaction => {
+        const ref = doc(db, 'conversations', convoId);
+        const existing = await transaction.get(ref);
+        if (!existing.exists()) transaction.set(ref, initial);
+        // Existing conversations retain timestamps, membership and unread state.
+      });
+    }
 
     return convoId;
   },

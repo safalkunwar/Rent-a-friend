@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, Clock, MapPin, Users, Check, CreditCard } from 'lucide-react';
 import { Companion, Booking } from '../../types';
@@ -8,7 +8,7 @@ import { MeetingLocationSelector } from '../maps/MeetingLocationSelector';
 import { MAP_CENTER } from '../../services/maps';
 import { paymentService, type PaymentProvider } from '../../services/payments';
 import { useToast } from '../ui/Toast';
-
+import { canBook } from '../../services/bookingEligibility';
 interface BookingFlowModalProps {
   companion: Companion;
   onClose: () => void;
@@ -17,7 +17,7 @@ interface BookingFlowModalProps {
 }
 
 export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, onClose, onComplete, onMessageCompanion }) => {
-  const { addBooking, currentUser } = useAppContext();
+  const { addBooking, currentUser, updateUserProfile } = useAppContext();
   const { showToast } = useToast();
   const [step, setStep] = useState(1);
   const [date, setDate] = useState('');
@@ -29,6 +29,7 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
   const [paymentMethod, setPaymentMethod] = useState<PaymentProvider | ''>('');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const bookingIdRef = useRef(crypto.randomUUID());
   const getCompanionCoords = (coords: any): { lat: number; lng: number } | null => {
     if (!coords) return null;
     const lat = coords.latitude ?? coords._lat ?? coords.lat;
@@ -49,14 +50,22 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
   const [clientPhone, setClientPhone] = useState(currentUser?.phone || '');
   const [clientEmail, setClientEmail] = useState(currentUser?.email || '');
 
-  // Synchronize with logged in user details dynamically
+  // Track which contact fields were MISSING on the user's profile at open
+  // time. If the user fills one of these during booking, it is saved back to
+  // their SATHI profile so future bookings prefill automatically.
+  const profileMissingRef = useRef({
+    name: !currentUser?.name,
+    phone: !currentUser?.phone,
+    email: !currentUser?.email,
+  });
+
+  // Hard reset of contact fields whenever the authenticated account changes —
+  // guarantees zero cross-account leakage between sessions.
   React.useEffect(() => {
-    if (currentUser) {
-      if (!clientName) setClientName(currentUser.name || '');
-      if (!clientEmail) setClientEmail(currentUser.email || '');
-      if (!clientPhone) setClientPhone(currentUser.phone || '');
-    }
-  }, [currentUser]);
+    setClientName(currentUser?.name || '');
+    setClientPhone(currentUser?.phone || '');
+    setClientEmail(currentUser?.email || '');
+  }, [currentUser?.id]);
 
   // Pre-fill date/time selection to the closest matching hour when booking process starts
   React.useEffect(() => {
@@ -98,11 +107,25 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
   const grandTotal = baseTotal + serviceFee;
 
   const handleConfirm = async () => {
-    const bookingId = `bk-${Date.now()}`;
+    if (!currentUser) {
+      showToast('Please sign in to book.', 'error');
+      return;
+    }
+    const eligibility = canBook({
+      uid: currentUser.id,
+      id: currentUser.id,
+      name: clientName || currentUser.name,
+      phone: clientPhone || currentUser.phone,
+    });
+    if (!eligibility.eligible) {
+      showToast(eligibility.reasons[0], 'error');
+      return;
+    }
+    const bookingId = bookingIdRef.current;
     const booking: Booking = {
       id: bookingId,
       companionId: companion.id,
-      userId: currentUser?.id || 'guest',
+      userId: currentUser.id,
       date,
       time,
       duration,
@@ -112,7 +135,10 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
       meetingPoint: location,
       meetingCoordinates: meetingCoords,
       specialRequests: requests,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      userNameAtBooking: clientName || currentUser.name || '',
+      userPhoneAtBooking: clientPhone || currentUser.phone || '',
+      userEmailAtBooking: clientEmail || currentUser.email || '',
     };
 
     await addBooking(booking);
@@ -133,8 +159,8 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
         returnUrl: requestUrl,
         webhookUrl: requestUrl,
         customerInfo: {
-          name: clientName || currentUser?.name || 'Guest User',
-          email: clientEmail || currentUser?.email || 'guest@example.com',
+          name: clientName || currentUser.name,
+          email: clientEmail || currentUser.email,
           phone: clientPhone,
         },
       });
@@ -237,21 +263,30 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                      />
                    </div>
 
-                   <div>
-                     <label htmlFor="booking-client-name" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Your Name</label>
-                     <input id="booking-client-name" type="text" placeholder="Full Name" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action" aria-required="true" />
-                   </div>
+                    <div>
+                      <label htmlFor="booking-client-name" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Your Name</label>
+                      <input id="booking-client-name" type="text" placeholder="Full Name" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action" aria-required="true" />
+                      {profileMissingRef.current.name && clientName.trim() && (
+                        <p className="text-[10px] text-primary-action mt-1.5">Will be saved to your SATHI profile.</p>
+                      )}
+                    </div>
 
-                   <div className="grid grid-cols-2 gap-4">
-                     <div>
-                       <label htmlFor="booking-client-phone" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Phone Number</label>
-                       <input id="booking-client-phone" type="tel" placeholder="e.g. 98XXXXXXXX" value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action" aria-required="true" />
-                     </div>
-                     <div>
-                       <label htmlFor="booking-client-email" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Email Address</label>
-                       <input id="booking-client-email" type="email" placeholder="email@domain.com" value={clientEmail} onChange={e => setClientEmail(e.target.value)} className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action" aria-required="true" />
-                     </div>
-                   </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="booking-client-phone" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Phone Number</label>
+                        <input id="booking-client-phone" type="tel" placeholder="e.g. 98XXXXXXXX" value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action" aria-required="true" />
+                        {profileMissingRef.current.phone && clientPhone.trim() && (
+                          <p className="text-[10px] text-primary-action mt-1.5">Will be saved to your SATHI profile.</p>
+                        )}
+                      </div>
+                      <div>
+                        <label htmlFor="booking-client-email" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Email Address</label>
+                        <input id="booking-client-email" type="email" placeholder="email@domain.com" value={clientEmail} onChange={e => setClientEmail(e.target.value)} className="w-full bg-surface-elevated border border-border-token rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-primary-action" aria-required="true" />
+                        {profileMissingRef.current.email && clientEmail.trim() && (
+                          <p className="text-[10px] text-primary-action mt-1.5">Will be saved to your SATHI profile.</p>
+                        )}
+                      </div>
+                    </div>
 
                    <div>
                      <label htmlFor="booking-requests" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Special Requests (Optional)</label>
@@ -393,10 +428,27 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
             )}
 
             {step === 2 && (
-              <button 
+              <button
                 type="button"
-                disabled={!location || !clientName || !clientPhone || !clientEmail}
-                onClick={() => setStep(3)}
+                disabled={!location || !clientName.trim() || !clientPhone.trim() || !clientEmail.trim()}
+                onClick={async () => {
+                  // Persist contact fields that were MISSING on the profile and
+                  // were filled during this booking (explicit save, single source
+                  // of truth stays users/{uid}).
+                  const updates: Record<string, string> = {};
+                  if (profileMissingRef.current.name && clientName.trim()) updates.name = clientName.trim();
+                  if (profileMissingRef.current.phone && clientPhone.trim()) updates.phone = clientPhone.trim();
+                  if (profileMissingRef.current.email && clientEmail.trim()) updates.email = clientEmail.trim();
+                  if (Object.keys(updates).length > 0 && currentUser) {
+                    try {
+                      await updateUserProfile(updates);
+                      showToast('Contact details saved to your profile.', 'success');
+                    } catch {
+                      showToast('Could not save details to your profile — booking will still use them.', 'error');
+                    }
+                  }
+                  setStep(3);
+                }}
                 className="flex-1 py-3.5 bg-primary-action text-background rounded-xl font-bold hover:bg-primary-action-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
               >
                 Review Booking

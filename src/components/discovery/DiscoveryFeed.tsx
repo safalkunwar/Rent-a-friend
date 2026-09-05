@@ -17,6 +17,7 @@ interface DiscoveryFeedProps {
   onShowToast: (message: string, type?: string) => void;
   onNavigateExplore: (category?: string) => void;
   onCreateStory: () => void;
+  onApplyAsCompanion: () => void;
   onViewStory: (story: ExperienceStory) => void;
   feedItems: FeedItem[];
   visibleCategoryCount: number;
@@ -34,6 +35,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   onShowToast,
   onNavigateExplore,
   onCreateStory,
+  onApplyAsCompanion,
   onViewStory,
   feedItems,
   visibleCategoryCount,
@@ -255,12 +257,19 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                             <h4 className="text-sm font-bold text-text-primary">{companion.name}</h4>
                             <p className="text-xs text-text-secondary flex items-center gap-1">
                               <MapPin className="w-3 h-3 text-primary-action" />
-                              {companion.location || 'Nepal'} • NPR {companion.hourlyRate}/hr
+                              {companion.location || 'Location unavailable'}
+                              {companion.hourlyRate ? ` • NPR ${companion.hourlyRate}/hr` : ' • Rate unavailable'}
                             </p>
                             <div className="flex justify-between items-center pt-1.5 border-t border-white/5">
                               <div className="flex items-center gap-0.5 text-xs text-primary-action font-bold">
-                                <Star className="w-3 h-3 fill-current" />
-                                <span>{companion.rating || 5.0}</span>
+                                {companion.rating > 0 ? (
+                                  <>
+                                    <Star className="w-3 h-3 fill-current" />
+                                    <span>{companion.rating}</span>
+                                  </>
+                                ) : (
+                                  <span className="text-text-secondary">New</span>
+                                )}
                               </div>
                               <button
                                 onClick={(e) => {
@@ -282,8 +291,6 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
             }
 
             const item = group.item;
-            const idx2 = visibleItems.indexOf(item);
-
             if (item.type === 'story') {
               return (
                 <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
@@ -317,14 +324,15 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                       <h4 className="text-sm font-bold text-text-primary">{(item.data as Activity).title}</h4>
                       <p className="text-xs text-text-secondary flex items-center gap-1">
                         <MapPin className="w-3 h-3 text-primary-action" />
-                        {(item.data as Activity).location || 'Nepal'} • {(item.data as Activity).duration}
+                        {(item.data as Activity).location || 'Location unavailable'}
+                        {(item.data as Activity).duration ? ` • ${(item.data as Activity).duration}` : ''}
                       </p>
                       <div className="flex justify-between items-center pt-2 border-t border-white/5">
-                        <span className="text-sm font-black text-primary-action">NPR {(item.data as Activity).avgPrice || (item.data as Activity).price || '1,500'}</span>
-                        <div className="flex items-center gap-0.5 text-xs text-primary-action font-bold">
-                          <Star className="w-3 h-3 fill-current" />
-                          <span>4.8</span>
-                        </div>
+                        <span className="text-sm font-black text-primary-action">
+                          {((item.data as Activity).avgPrice || (item.data as Activity).price)
+                            ? `NPR ${(item.data as Activity).avgPrice || (item.data as Activity).price}`
+                            : 'Price unavailable'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -384,7 +392,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
               <h3 className="text-sm font-extrabold text-text-primary leading-tight">Become a SATHI Companion</h3>
               <p className="text-[10px] text-gray-300 leading-relaxed max-w-[240px]">Share your favorite local spots, guide travelers, and earn up to <span className="text-text-primary font-bold">NPR 15,000/week</span> on your own schedule.</p>
               <button
-                onClick={onCreateStory}
+                onClick={onApplyAsCompanion}
                 className="w-max px-4 py-2 bg-primary-action hover:bg-primary-action-hover active:scale-95 text-background rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
               >
                 Apply Now

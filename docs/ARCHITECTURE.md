@@ -1,5 +1,7 @@
 # Architecture
 
+> **Last reviewed: 2026-09-04.** For the authoritative architecture, see `docs/sathi/04_SYSTEM_ARCHITECTURE.md` and `docs/sathi/05_FIREBASE_ARCHITECTURE.md`. This file is a high-level folder map.
+
 ## Folder Structure
 
 ```

@@ -11,7 +11,7 @@ export const AdminGuard: React.FC<{ children: React.ReactNode; requiredPermissio
     return <LoadingScreen />;
   }
 
-  const role = (currentUser?.claims?.adminRole as AdminRole) || (currentUser?.role === 'admin' ? 'platform_admin' : null);
+  const role = (currentUser?.claims?.adminRole as AdminRole) || (currentUser?.claims?.admin === true ? 'super_admin' : null);
   if (!role || !hasPermission(role, requiredPermission || 'users.read')) {
     return <Navigate to="/" replace />;
   }

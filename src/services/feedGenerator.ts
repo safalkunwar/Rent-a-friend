@@ -258,23 +258,25 @@ export function interleaveByType(
       }
     }
     const chosen = candidates[chosenIdx];
-    result.push(chosen.shift()!);
-    lastType = chosen[0]?.type ?? lastType;
+    const emitted = chosen.shift()!;
+    result.push(emitted);
+    lastType = emitted.type;
   }
   return result;
 }
 
-function scoreActivity(a: Activity, contextCategory?: string): number {
+function scoreActivity(a: Activity, contextCategory?: string, userLocation?: string): number {
   let score = 0;
-  score += getLocationMatch(a, contextCategory);
+  score += getLocationMatch(a, userLocation);
   if (contextCategory && a.category === contextCategory) score += 3;
   score += getFreshness(a);
   return score;
 }
 
-function scoreEvent(e: Event, contextCategory?: string): number {
+function scoreEvent(e: Event, contextCategory?: string, userLocation?: string): number {
   let score = 0;
-  score += getLocationMatch(e, contextCategory);
+  score += getLocationMatch(e, userLocation);
+  if (contextCategory && e.category === contextCategory) score += 3;
   score += getFreshness(e);
   return score;
 }
@@ -355,11 +357,17 @@ export function generateDiscoveryFeed(
   }
 
   const categoryGroups = buildCategoryGroups(companions, usedCompanionIds, userLocation);
-  const sortedCategories = shuffledBy(Array.from(categoryGroups.keys()), rng);
+  const shuffledCategories = shuffledBy(Array.from(categoryGroups.keys()), rng);
+  const normalizedInterests = new Set(userInterests.map(interest => interest.toLowerCase()));
+  const sortedCategories = shuffledCategories.sort((a, b) => {
+    const aPreferred = normalizedInterests.has(a.toLowerCase()) ? 1 : 0;
+    const bPreferred = normalizedInterests.has(b.toLowerCase()) ? 1 : 0;
+    return bPreferred - aPreferred;
+  });
   const selectedCategories = sortedCategories.slice(0, categoriesPerFeed);
 
-  const allActivities = [...activities].sort((a, b) => scoreActivity(b) - scoreActivity(a));
-  const allEvents = [...events].sort((a, b) => scoreEvent(b) - scoreEvent(a));
+  const allActivities = [...activities].sort((a, b) => scoreActivity(b, undefined, userLocation) - scoreActivity(a, undefined, userLocation));
+  const allEvents = [...events].sort((a, b) => scoreEvent(b, undefined, userLocation) - scoreEvent(a, undefined, userLocation));
   const allStories = [...stories].sort((a, b) => getFreshness(b) - getFreshness(a));
   const allPosts = [...posts];
 
@@ -368,6 +376,7 @@ export function generateDiscoveryFeed(
     const groupCompanions = categoryGroups.get(category) || [];
     const sectionTitles = SECTION_TITLES[category] || { companion: category, activity: category, event: category };
 
+    const headerIndex = feed.length;
     feed.push({ type: 'category-header', category, emoji: CATEGORY_EMOJIS[category] });
 
     const relatedActivities = allActivities
@@ -408,15 +417,19 @@ export function generateDiscoveryFeed(
     );
     const orderedCategoryItems = weaveCompanionsIntoStream(
       companionEntries.slice(0, companionBudget),
-      nonCompanionStream
+      nonCompanionStream,
+      rng
     );
 
+    let lastAddedType: string | null = null;
     for (const item of orderedCategoryItems) {
-      addItem(item);
+      if (addItem(item)) lastAddedType = item.type;
     }
 
-    if (orderedCategoryItems.length > 0) {
-      carryLastType = orderedCategoryItems[orderedCategoryItems.length - 1].type;
+    if (lastAddedType) {
+      carryLastType = lastAddedType;
+    } else {
+      feed.splice(headerIndex, 1);
     }
   }
 

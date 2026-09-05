@@ -1,5 +1,7 @@
 # Features
 
+> **Last reviewed: 2026-09-04.** This legacy file predates the authoritative `docs/sathi/02_CORE_FEATURES.md`. Use that for current state. Most items below were completed before 2026-08-12.
+
 Legend: Not Started | Planning | In Development | Testing | Completed
 
 ## Authentication

@@ -1,6 +1,6 @@
 # Terms of Service
 
-Last Updated: July 16, 2026
+Last Updated: September 4, 2026
 
 Welcome to SATHI ("the Platform"). By using our services, you agree to comply with and be bound by the following Terms of Service. Please read them carefully.
 

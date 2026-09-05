@@ -3,6 +3,10 @@ export interface User {
   name: string;
   email: string;
   avatar: string;
+  photoPath?: string;
+  photoUpdatedAt?: string;
+  photoModerationStatus?: 'ACTIVE' | 'UNDER_REVIEW' | 'RESTRICTED' | 'REMOVED';
+  photoVisibilityStatus?: 'PUBLIC' | 'PRIVATE';
   role: 'guest' | 'customer' | 'companion' | 'admin';
   favorites: string[]; // Companion IDs
   claims?: Record<string, unknown>;
@@ -24,10 +28,16 @@ export interface ExperienceStory {
   id: string;
   userId?: string;
   createdAt?: string;
+  expiresAt?: string | import('firebase/firestore').Timestamp;
+  moderationStatus?: 'ACTIVE' | 'UNDER_REVIEW' | 'RESTRICTED' | 'REMOVED';
+  visibilityStatus?: 'PUBLIC' | 'PRIVATE';
+  contentType?: 'story';
+  status?: 'active' | 'expired';
   companionName: string;
   userName: string;
   userAvatar: string;
   imageUrl: string;
+  mediaPath?: string;
   timeAgo: string;
   caption: string;
   likes?: number;
@@ -61,6 +71,11 @@ export interface Companion {
 }
 
 export interface Booking {
+  policyVersion?: number;
+  companionUid?: string;
+  quotedTotalPaisa?: number;
+  paymentStatus?: 'not_started' | 'pending' | 'verification_required' | 'verified' | 'failed';
+  startAt?: import('firebase/firestore').Timestamp;
   id: string;
   companionId: string;
   userId: string;
@@ -73,6 +88,71 @@ export interface Booking {
   meetingPoint: string;
   meetingCoordinates?: { latitude: number; longitude: number };
   specialRequests?: string;
+  createdAt: string;
+  userNameAtBooking?: string;
+  userPhoneAtBooking?: string;
+  userEmailAtBooking?: string;
+}
+
+// ==================== COMPANION APPLICATION / KYC ====================
+
+export type CompanionApplicationStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'CHANGES_REQUIRED'
+  | 'APPROVED'
+  | 'REJECTED';
+
+export type UserCompanionStatus =
+  | 'NOT_APPLIED'
+  | 'PENDING'
+  | 'UNDER_REVIEW'
+  | 'CHANGES_REQUIRED'
+  | 'APPROVED'
+  | 'REJECTED';
+
+export interface CompanionApplication {
+  id: string;
+  userId: string;
+  status: CompanionApplicationStatus;
+  // Public companion profile data (becomes companions/{id} on approval)
+  applicationData: {
+    displayName: string;
+    bio: string;
+    categories: string[];
+    languages: string[];
+    location: string;
+    hourlyRate: number;
+    imageUrl?: string;
+    yearsExperience?: number;
+  };
+  // KYC metadata only — actual documents live in Firebase Storage.
+  kyc: {
+    legalFullName: string;
+    documentType: 'citizenship' | 'passport' | 'driving_license';
+    documentNumberMasked: string;
+    documentFileUrl?: string; // Canonical private kyc/UID/object path, never a download URL.
+    selfieWithDocumentUrl?: string;
+    verificationStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'FAILED';
+  };
+  rejectionReason?: string;
+  requestedChanges?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  submittedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminAuditLog {
+  id: string;
+  action: string; // e.g. 'application.approved'
+  actorId: string;
+  actorRole: string;
+  targetType: string; // 'companion_application' | 'user' | ...
+  targetId: string;
+  details?: Record<string, unknown>;
   createdAt: string;
 }
 
@@ -109,6 +189,10 @@ export interface Activity {
 
 export interface Event {
   id: string;
+  imagePath?: string;
+  imageOwnerId?: string;
+  mediaModerationStatus?: 'ACTIVE' | 'UNDER_REVIEW' | 'RESTRICTED' | 'REMOVED';
+  mediaVisibilityStatus?: 'PUBLIC' | 'PRIVATE';
   date: string;
   time: string;
   title: string;

@@ -5,6 +5,12 @@ import { CommunityPost, ExperienceStory } from '../types';
 import { doc, runTransaction, writeBatch, collection, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { offlineWriteQueue } from '../services/offlineQueue';
+import { requireUid } from '../services/identity';
+import { getDocsFromServer, getDocFromServer } from 'firebase/firestore';
+import { visibleStoriesQuery } from '../services/mediaQueries';
+import { visibleStory } from '../services/mediaContract';
+import { saveAppMedia } from '../services/mediaUploads';
+import type { MediaDraft } from '../services/mediaUploadCore';
 
 export interface Comment {
   id: string;
@@ -58,6 +64,7 @@ export class SocialRepository extends BaseRepository {
   }
 
   async createPost(post: Omit<CommunityPost, 'id'>): Promise<string> {
+    requireUid(post.userId);
     const id = `post-${Date.now()}`;
     const timestamp = new Date().toISOString();
     const newPost: CommunityPost = {
@@ -111,7 +118,8 @@ export class SocialRepository extends BaseRepository {
   // ==================== LIKES (Scalable Design) ====================
 
   async likePost(userId: string, postId: string): Promise<void> {
-    if (!db) return;
+    requireUid(userId);
+    if (!db) throw new Error('Social service unavailable.');
     this.invalidateLikedState('post', userId, postId);
     const likeId = `${userId}_${postId}`;
     const likeRef = doc(db, 'likes', likeId);
@@ -148,7 +156,8 @@ export class SocialRepository extends BaseRepository {
   }
 
   async unlikePost(userId: string, postId: string): Promise<void> {
-    if (!db) return;
+    requireUid(userId);
+    if (!db) throw new Error('Social service unavailable.');
     this.invalidateLikedState('post', userId, postId);
     const likeId = `${userId}_${postId}`;
     const likeRef = doc(db, 'likes', likeId);
@@ -216,7 +225,9 @@ export class SocialRepository extends BaseRepository {
   }
 
   async createComment(comment: Omit<Comment, 'id' | 'createdAt'>): Promise<string> {
-    const id = `comment-${Date.now()}`;
+    requireUid(comment.userId);
+    if (!db) throw new Error('Social service unavailable.');
+    const id = doc(collection(db, 'comments')).id;
     const timestamp = new Date().toISOString();
     const newComment: Comment = {
       ...comment,
@@ -235,6 +246,7 @@ export class SocialRepository extends BaseRepository {
       async () => {
         await runTransaction(db!, async (transaction) => {
           const postDoc = await transaction.get(postRef);
+          if (!postDoc.exists() || postDoc.data().status !== 'published') throw new Error('Post is unavailable for comments.');
           const currentComments = postDoc.exists() ? (postDoc.data()?.commentsCount || 0) : 0;
 
           transaction.set(doc(db!, 'comments', id), newComment);
@@ -242,6 +254,7 @@ export class SocialRepository extends BaseRepository {
           if (postDoc.exists()) {
             transaction.update(postRef, {
               commentsCount: currentComments + 1,
+              lastCommentMutationId: id,
               updatedAt: new Date().toISOString()
             });
           }
@@ -268,6 +281,7 @@ export class SocialRepository extends BaseRepository {
   }
 
   async deleteComment(id: string, postId: string): Promise<void> {
+    requireUid();
     if (!db) {
       try {
         await firestore.deleteDocument(`comments/${id}`);
@@ -284,6 +298,10 @@ export class SocialRepository extends BaseRepository {
       await this.executeWithRetry(
         async () => {
           await runTransaction(db!, async (transaction) => {
+            const commentRef = doc(db!, 'comments', id);
+            const commentDoc = await transaction.get(commentRef);
+            if (!commentDoc.exists()) return;
+            if (commentDoc.data().postId !== postId) throw new Error('Comment target mismatch.');
             const postDoc = await transaction.get(postRef);
             const currentComments = postDoc.exists() ? (postDoc.data()?.commentsCount || 0) : 0;
 
@@ -292,6 +310,7 @@ export class SocialRepository extends BaseRepository {
             if (postDoc.exists() && currentComments > 0) {
               transaction.update(postRef, {
                 commentsCount: currentComments - 1,
+                lastCommentMutationId: id,
                 updatedAt: new Date().toISOString()
               });
             }
@@ -309,44 +328,37 @@ export class SocialRepository extends BaseRepository {
   // ==================== STORIES ====================
 
   async getStories(limitCount = 20): Promise<ExperienceStory[]> {
-    return this.executeWithRetry(
-      () => firestore.getDocuments<ExperienceStory>('stories', {
-        orderByField: 'createdAt',
-        orderDirection: 'desc',
-        limitCount
-      }),
-      OperationType.LIST,
-      'stories'
-    );
+    if (!db) throw new Error('Stories unavailable.');
+    const result = await getDocsFromServer(visibleStoriesQuery(db,Date.now(),limitCount));
+    return result.docs.map(document => ({...document.data(),id:document.id} as ExperienceStory));
   }
 
-  async uploadStory(story: Omit<ExperienceStory, 'id'>): Promise<string> {
-    const id = `story-${Date.now()}`;
-    const newStory = {
-      ...story,
-      id,
-      createdAt: new Date().toISOString()
-    };
-    await this.executeWithRetry(
-      () => firestore.setDocument(`stories/${id}`, newStory as any),
-      OperationType.CREATE,
-      `stories/${id}`
-    );
-    return id;
+  async getVisibleStory(id: string): Promise<ExperienceStory | null> {
+    if (!db) throw new Error('Stories unavailable.');
+    const result = await getDocFromServer(doc(db,'stories',id));
+    if (!result.exists()) return null;
+    const story = {...result.data(),id:result.id} as ExperienceStory;
+    return visibleStory(story) ? story : null;
+  }
+
+  async uploadStory(draft: MediaDraft, fields: { caption: string; userName: string }, onProgress?: (value: number) => void): Promise<ExperienceStory> {
+    requireUid(draft.uid);
+    if (draft.kind !== 'story') throw new Error('Expected a Story media draft.');
+    return await saveAppMedia(draft,fields,onProgress) as unknown as ExperienceStory;
   }
 
   async deleteStory(id: string): Promise<void> {
-    await this.executeWithRetry(
-      () => firestore.deleteDocument(`stories/${id}`),
-      OperationType.DELETE,
-      `stories/${id}`
-    );
+    requireUid();
+    if (!db) throw new Error('Stories are unavailable.');
+    // Propagate failure; a failed delete must not remove the item from UI as success.
+    await deleteDoc(doc(db,'stories',id));
   }
 
   // ==================== STORY LIKES ====================
 
   async likeStory(userId: string, storyId: string): Promise<void> {
-    if (!db) return;
+    requireUid(userId);
+    if (!db) throw new Error('Social service unavailable.');
     this.invalidateLikedState('story', userId, storyId);
     const likeId = `${userId}_${storyId}`;
     const likeRef = doc(db, 'story_likes', likeId);
@@ -384,7 +396,8 @@ export class SocialRepository extends BaseRepository {
   }
 
   async unlikeStory(userId: string, storyId: string): Promise<void> {
-    if (!db) return;
+    requireUid(userId);
+    if (!db) throw new Error('Social service unavailable.');
     this.invalidateLikedState('story', userId, storyId);
     const likeId = `${userId}_${storyId}`;
     const likeRef = doc(db, 'story_likes', likeId);

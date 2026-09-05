@@ -12,7 +12,7 @@ import { adminRateLimiter } from '../services/rateLimiter';
 const PAGE_SIZE = 50;
 const ROW_HEIGHT = 72;
 
-type BookingAction = 'confirm' | 'cancel' | 'complete' | 'reject';
+type BookingAction = 'confirm' | 'cancel' | 'start' | 'complete' | 'reject';
 
 export function AdminBookings() {
   const { user: adminUser, hasPerm } = useAdminAuth();
@@ -60,7 +60,8 @@ export function AdminBookings() {
 
     setProcessing(true);
     try {
-      await adminRepository.updateBookingStatus(bookingId, action === 'confirm' ? 'confirmed' : action === 'cancel' ? 'cancelled' : action === 'complete' ? 'completed' : 'rejected');
+      const nextStatus = action === 'confirm' ? 'confirmed' : action === 'start' ? 'active' : action === 'complete' ? 'completed' : 'cancelled';
+      await adminRepository.updateBookingStatus(bookingId, nextStatus);
       await idempotencyService.set(idempotencyKey, action, bookingId, { success: true });
 
       await auditService.log({
@@ -73,7 +74,7 @@ export function AdminBookings() {
       });
 
       if (selectedBooking?.id === bookingId) {
-        setSelectedBooking({ ...selectedBooking, status: action === 'confirm' ? 'confirmed' : action === 'cancel' ? 'cancelled' : action === 'complete' ? 'completed' : 'rejected' });
+        setSelectedBooking({ ...selectedBooking, status: nextStatus });
       }
     } catch (err: any) {
       console.error(`Failed to ${action} booking:`, err);
@@ -164,13 +165,13 @@ export function AdminBookings() {
                       </button>
                     </div>
                   )}
-                  {hasPerm('bookings.write') && booking.status === 'confirmed' && (
+                  {hasPerm('bookings.write') && ['confirmed','active'].includes(booking.status) && (
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => executeBookingAction(booking.id, 'complete')}
+                        onClick={() => executeBookingAction(booking.id, booking.status === 'confirmed' ? 'start' : 'complete')}
                         disabled={processing}
                         className="p-1.5 text-blue-400 hover:text-blue-300 rounded-lg hover:bg-blue-500/10 transition-colors disabled:opacity-50"
-                        title="Complete"
+                        title={booking.status === 'confirmed' ? 'Start' : 'Complete'}
                       >
                         <Check className="w-4 h-4" />
                       </button>

@@ -2,9 +2,11 @@ import { firestore } from '../services/firestore';
 import { BaseRepository } from './base';
 import { OperationType } from '../services/firestore-errors';
 import { User } from '../types';
+import { requireUid, assertEditableProfile } from '../services/identity';
 
 export class UserRepository extends BaseRepository {
   async getUserProfile(id: string): Promise<User | null> {
+    requireUid(id);
     return this.executeWithRetry(
       () => firestore.getDocument<User>(`users/${id}`),
       OperationType.GET,
@@ -32,6 +34,8 @@ export class UserRepository extends BaseRepository {
     interests?: string[];
     location?: string;
   }>): Promise<void> {
+    requireUid(id);
+    assertEditableProfile(updates);
     await this.executeWithRetry(
       () => firestore.updateDocument(`users/${id}`, {
         ...updates,
@@ -43,6 +47,7 @@ export class UserRepository extends BaseRepository {
   }
 
   async updateFavorites(id: string, favorites: string[]): Promise<void> {
+    requireUid(id);
     await this.executeWithRetry(
       () => firestore.updateDocument(`users/${id}`, {
         favorites,

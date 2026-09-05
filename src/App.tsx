@@ -4,6 +4,7 @@ import { AppProvider, useAppContext } from './context/AppContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ClientApp } from './ClientApp';
 import { AuthGuard } from './components/guards/AuthGuard';
+import { AdminGuard } from './components/guards/AdminGuard';
 import { LoadingScreen } from './components/LoadingScreen';
 import { NotificationProvider } from './components/notifications/NotificationProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -12,6 +13,7 @@ import { PaymentVerifyPage } from './pages/PaymentVerifyPage';
 import { EsewaVerifyPage } from './pages/EsewaVerifyPage';
 import { EsewaFailurePage } from './pages/EsewaFailurePage';
 import { PostPage } from './pages/PostPage';
+import { AdminApplicationsPage } from './pages/AdminApplicationsPage';
 
 function AppRoutes() {
   const { loading } = useAppContext();
@@ -69,6 +71,14 @@ function AppRoutes() {
         }
       />
       <Route path="/post/:postId" element={<PostPage />} />
+      <Route
+        path="/admin/applications"
+        element={
+          <AdminGuard requiredPermission="companions.verify">
+            <AdminApplicationsPage />
+          </AdminGuard>
+        }
+      />
       <Route path="/payment/verify" element={<PaymentVerifyPage />} />
       <Route path="/payment/esewa-verify" element={<EsewaVerifyPage />} />
       <Route path="/payment/esewa-failure" element={<EsewaFailurePage />} />

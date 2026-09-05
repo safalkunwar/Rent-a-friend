@@ -58,7 +58,7 @@ export const firestore = {
     try {
       const snap = await getDoc(doc(requireDb(), path));
       if (!snap.exists()) return null;
-      return { id: snap.id, ...snap.data() } as T;
+      return { ...snap.data(), id: snap.id } as T;
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, path);
       return null;

@@ -3,6 +3,8 @@
 Date: 2026-08-08
 Status: **Production Ready**
 
+> **Update (2026-09-04):** See `docs/PROJECT_STATUS.md` and `docs/sathi/CHANGELOG.md` for current phase, milestones, and session log. New authoritative spec set lives in `docs/sathi/`. **Test count: 164/164 passing** (126 main app + 38 admin).
+
 ## Executive Summary
 
 SATHI is a fully integrated, multi-user full-stack application built with React + Vite + TypeScript + Tailwind CSS and connected to a production Firebase instance (`hamrosathi1`). All data persistent operations (Auth, Firestore, Security Rules, Messaging, Bookings, Social Interactions) rely exclusively on real Firebase documents with zero simulated state leaks or mock fallback dependencies.

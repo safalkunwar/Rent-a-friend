@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Upload, Sparkles, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
-import { uploadImageToStorage } from '../../services/storage';
+import { createMediaDraft, type MediaDraft } from '../../services/mediaUploadCore';
 import { socialRepository } from '../../repositories/SocialRepository';
+import { requireUid } from '../../services/identity';
+import { imageExtension } from '../../services/mediaContract';
+import type { ExperienceStory } from '../../types';
 
 interface CreateStoryModalProps {
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (story: ExperienceStory) => void;
 }
 
 export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onSuccess }) => {
@@ -21,6 +24,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const draft = useRef<MediaDraft | null>(null);
+  const submitGuard = useRef(false);
+  useEffect(() => () => { if (imagePreview) URL.revokeObjectURL(imagePreview); },[imagePreview]);
+
   if (!currentUser) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -30,7 +37,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           <p className="text-xs text-text-secondary">Join SATHI to post authentic co-experience stories with local companions.</p>
           <div className="flex gap-3 justify-center pt-2">
             <button
-              onClick={onClose}
+              disabled={submitting} onClick={onClose}
               className="px-4 py-2 bg-surface-elevated rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary"
             >
               Cancel
@@ -55,68 +62,30 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-    if (!allowedTypes.includes(file.type.toLowerCase())) {
-      setErrorMessage('Please select a JPG, PNG, or WEBP image file.');
-      return;
-    }
-
-    // Validate size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setErrorMessage('Image size must be less than 10MB.');
-      return;
-    }
-
-    setSelectedFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      imageExtension(file);
+      draft.current = createMediaDraft('story',requireUid(currentUser.id),file);
+      setSelectedFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    } catch (error) { setErrorMessage(error instanceof Error ? error.message : 'Invalid image.'); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile) {
-      setErrorMessage('Please select a photo to upload.');
-      return;
-    }
-
+    if (!draft.current || submitGuard.current) return;
+    submitGuard.current = true;
     setSubmitting(true);
     setErrorMessage(null);
-
     try {
-      // 1. Upload photo to Firebase Storage
-      const imageUrl = await uploadImageToStorage(selectedFile, {
-        folder: 'stories',
-        maxSizeMB: 10,
-        onProgress: (progress) => setUploadProgress(progress)
-      });
-
-      // 2. Save story metadata to Firestore
-      const defaultAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=C8A25E&color=0F1113';
-      
-      await socialRepository.uploadStory({
-        userId: currentUser.id,
-        userName: currentUser.name || 'SATHI Traveler',
-        userAvatar: currentUser.avatar || defaultAvatar,
-        companionName: 'SATHI Companion',
-        caption: caption.trim() || 'Co-experience moment in Nepal',
-        imageUrl,
-        timeAgo: 'Just now',
-        createdAt: new Date().toISOString(),
-        likes: 0,
-        likesCount: 0
-      });
-
-      showToast('Your SATHI moment published live!', 'success');
-      if (onSuccess) onSuccess();
+      const saved = await socialRepository.uploadStory(draft.current, { caption, userName: currentUser.name }, setUploadProgress);
+      requireUid(currentUser.id);
+      onSuccess?.(saved as unknown as ExperienceStory);
+      showToast('Story saved. It is visible under the current moderation policy.', 'success');
       onClose();
-    } catch (err: any) {
-      console.error('[CreateStoryModal] Error creating story:', err);
-      setErrorMessage(err.message || 'Failed to upload story. Please try again.');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Upload failed. Your selection is preserved for retry.');
     } finally {
+      submitGuard.current = false;
       setSubmitting(false);
       setUploadProgress(null);
     }
@@ -130,7 +99,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           <h3 className="text-sm font-extrabold text-text-primary flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary-action" /> Share Story Moment
           </h3>
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-all">
+          <button disabled={submitting} onClick={onClose} className="text-text-secondary hover:text-text-primary transition-all">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -153,7 +122,9 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                 <button
                   type="button"
+                  disabled={submitting}
                   onClick={() => {
+                    draft.current = null;
                     setSelectedFile(null);
                     setImagePreview(null);
                   }}
@@ -169,7 +140,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 <span className="text-[10px] text-text-secondary mt-1">JPG, PNG, WEBP (Max 10MB)</span>
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                  accept="image/jpeg,image/png,image/webp" disabled={submitting}
                   onChange={handleFileSelect}
                   className="hidden"
                 />
@@ -212,7 +183,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           <div className="pt-2 flex gap-3 justify-end">
             <button
               type="button"
-              onClick={onClose}
+              disabled={submitting} onClick={onClose}
               className="px-4 py-2 bg-surface-elevated border border-border-token/60 rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary"
             >
               Cancel

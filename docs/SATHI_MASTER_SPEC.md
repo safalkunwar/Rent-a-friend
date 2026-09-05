@@ -1,6 +1,8 @@
 # SATHI Master Specification
 
-Last Updated: 2026-08-22
+Last Updated: 2026-08-22 (reaffirmed 2026-09-04; see `docs/sathi/CHANGELOG.md` for the live session log and `docs/sathi/00_MASTER_OBJECTIVE.md` for the authoritative master objective)
+
+> **Status (2026-09-04):** 164/164 tests passing (126 main app across 7 files, 38 admin app across 5 files). Production Firebase project `hamrosathi1`. Cloud Functions implemented in `functions/src/index.ts` (deployment paused — Blaze plan not active).
 
 ## 1. Current Architecture
 

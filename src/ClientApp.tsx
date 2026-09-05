@@ -24,6 +24,7 @@ import { DocumentModal } from './components/modals/DocumentModal';
 import { MapPreview } from './components/maps/MapPreview';
 import { Companion, ExperienceStory, Activity, Event as SathiEvent } from './types';
 import { socialRepository } from './repositories/SocialRepository';
+import { visibleStory } from './services/mediaContract';
 import { CreateStoryModal } from './components/modals/CreateStoryModal';
 import { 
   MapPin, Star, ShieldCheck, Languages, Search, Play, Clock, 
@@ -43,7 +44,6 @@ import { type FeedItem } from './services/feedGenerator';
 import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
 import { saveStoredPreferences } from './services/preferences';
-import { paymentService } from './services/payments';
 import { eventParticipantsService } from './services/eventParticipants';
 import { firestore } from './services/firestore';
 
@@ -54,7 +54,7 @@ interface ClientAppProps {
 export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { bookings, currentUser, updateBookingStatus, favorites, toggleFavorite, notifications, markNotificationRead, logout, openAuthModal } = useAppContext();
+  const { bookings, currentUser, updateBookingStatus, favorites, toggleFavorite, notifications, markNotificationRead, markAllNotificationsRead, logout, openAuthModal } = useAppContext();
   const { showToast } = useToast();
 
   // Sync state with URL path
@@ -86,7 +86,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   }, [location.pathname]);
   
   const { companions: fetchedCompanions, loading: companionsLoading, hasMore: companionsHasMore, loadingMore: companionsLoadingMore, loadMore: loadMoreCompanions } = useCompanions();
-  const { stories: fetchedStories, loading: storiesLoading, hasMore: storiesHasMore, loadingMore: storiesLoadingMore, loadMore: loadMoreStories } = useStories();
+  const { stories: fetchedStories, loading: storiesLoading, hasMore: storiesHasMore, loadingMore: storiesLoadingMore, loadMore: loadMoreStories, prependStory, removeStory } = useStories();
   const { activities, loading: activitiesLoading, hasMore: activitiesHasMore, loadingMore: activitiesLoadingMore, loadMore: loadMoreActivities } = useActivities();
   const { events, loading: eventsLoading, hasMore: eventsHasMore, loadingMore: eventsLoadingMore, loadMore: loadMoreEvents } = useEvents();
   const { partners, loading: partnersLoading } = usePartners();
@@ -122,6 +122,23 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingStory, setViewingStory] = useState<ExperienceStory | null>(null);
+  const storyRequest = useRef(0);
+  const openVisibleStory = useCallback(async (story: ExperienceStory | null) => {
+    const request = ++storyRequest.current;
+    setViewingStory(null);
+    if (!story) return;
+    try {
+      const current = await socialRepository.getVisibleStory(story.id);
+      if (request === storyRequest.current) {
+        if (current) setViewingStory(current);
+        else showToast('This Story is no longer available.','info');
+      }
+    } catch { if (request === storyRequest.current) showToast('Story unavailable. Refresh or try again online.','error'); }
+  },[showToast]);
+  useEffect(() => {
+    if (!viewingStory) return;
+    if (!visibleStory(viewingStory) || !fetchedStories.some(story => story.id === viewingStory.id)) void openVisibleStory(null);
+  },[fetchedStories,viewingStory,openVisibleStory]);
   const [joinedEvents, setJoinedEvents] = useState<Record<string, boolean>>({});
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [storyLiked, setStoryLiked] = useState<Record<string, boolean>>({});
@@ -374,28 +391,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     showToast(`Filtering experiences in ${city}`, 'info');
   };
 
-  const handleTriggerInvite = () => {
-    navigator.clipboard.writeText("https://sathi.com/invite?ref=safal_kunwar");
-    showToast("Invite link copied to clipboard! Share with friends to earn NPR 5,000.", "success");
-  };
-
-  const handleWalletTopUp = async () => {
-    try {
-      const result = await paymentService.initiatePayment({
-        provider: 'khalti',
-        amount: 1000,
-        currency: 'NPR',
-        companionId: 'wallet',
-        bookingId: `wallet-topup-${Date.now()}`,
-        returnUrl: window.location.origin,
-      });
-      window.open(result.paymentUrl, '_blank');
-      showToast('Redirecting to secure Khalti Gateway for wallet top up...', 'info');
-    } catch (error) {
-      showToast('Wallet top-up is currently unavailable. Please try again later.', 'error');
-    }
-  };
-
   const activeFilterCount = (selectedCity !== 'All' ? 1 : 0) +
     (selectedCategory !== 'All' ? 1 : 0) +
     (selectedLanguage !== 'All' ? 1 : 0) +
@@ -584,14 +579,14 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             <div className="flex items-center gap-1.5 text-primary-action text-[10px] font-black uppercase tracking-wider">
               <Coins className="w-3.5 h-3.5 animate-pulse text-primary-action" /> Invite & Earn
             </div>
-            <span className="text-[9px] text-primary-action font-mono bg-primary-action/15 px-1.5 py-0.5 rounded-md font-bold">NPR 5K</span>
+            <span className="text-[9px] text-primary-action font-mono bg-primary-action/15 px-1.5 py-0.5 rounded-md font-bold">SOON</span>
           </div>
-          <p className="text-[9px] text-text-secondary leading-relaxed mt-1.5">Earn referral bonus for signups.</p>
+          <p className="text-[9px] text-text-secondary leading-relaxed mt-1.5">Referral rewards are not active yet.</p>
           <button 
-            onClick={handleTriggerInvite}
-            className="w-full mt-2 py-1.5 bg-primary-action hover:bg-primary-action-hover active:scale-95 text-background rounded-lg text-[9px] font-bold uppercase tracking-wide transition-all shadow-md"
+            disabled
+            className="w-full mt-2 py-1.5 bg-surface-elevated text-text-muted rounded-lg text-[9px] font-bold uppercase tracking-wide cursor-not-allowed"
           >
-            Invite Now
+            Coming Soon
           </button>
         </div>
       </aside>
@@ -659,8 +654,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </div>
 
               <div className="bg-surface-elevated rounded-2xl p-4 text-center space-y-2">
-                <p className="text-xs text-text-secondary">Share & Earn NPR 5,000</p>
-                <button onClick={handleTriggerInvite} className="w-full py-2 bg-primary-action text-background rounded-xl text-xs font-bold">Invite Contacts</button>
+                <p className="text-xs text-text-secondary">Referral rewards are coming soon.</p>
+                <button disabled className="w-full py-2 bg-surface text-text-muted rounded-xl text-xs font-bold cursor-not-allowed">Coming Soon</button>
               </div>
             </motion.div>
           </div>
@@ -858,7 +853,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                           </button>
                         )}
                         {currentUser?.role === 'admin' && (
-                          <button onClick={() => { window.open('http://localhost:3001', '_blank'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
+                          <button onClick={() => { navigate('/admin/applications'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                             <ShieldAlert className="w-4 h-4 text-red-400" /> Admin Panel
                           </button>
                         )}
@@ -959,7 +954,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 onShowToast={showToast}
                 onNavigateExplore={(category) => { setMobileTab('explore'); if (category) setSelectedCategory(category); }}
                 onCreateStory={() => setShowCreateStoryModal(true)}
-                onViewStory={setViewingStory}
+                onApplyAsCompanion={() => setAuthMode('guide')}
+                onViewStory={openVisibleStory}
                 feedItems={homeFeedItems}
                 visibleCategoryCount={homeReveal.visibleCount}
                 sentinelRef={homeReveal.sentinelRef}
@@ -1648,7 +1644,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary">Upcoming Group Events</h4>
-                  <button onClick={() => showToast('Events calendar loaded', 'info')} className="text-[10px] text-primary-action font-bold hover:underline">View All</button>
+                  <button onClick={() => navigate('/explore')} className="text-[10px] text-primary-action font-bold hover:underline">View All</button>
                 </div>
 
                 <div className="space-y-3.5">
@@ -1725,25 +1721,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   </div>
                 </div>
 
-                {/* Social Impact widget */}
-                <div className="bg-surface/80 border border-border-token/40 rounded-2xl p-4 text-left space-y-3 relative overflow-hidden">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary">Your Social Impact</h4>
-                  <p className="text-[10px] text-text-secondary font-light">Connections and cultural adventures built by you this month in Nepal.</p>
-                  <div className="grid grid-cols-3 gap-2 text-center pt-1.5">
-                    <div className="p-2 bg-black/40 rounded-xl border border-white/5">
-                      <span className="text-base font-black text-text-primary block">12</span>
-                      <span className="text-[8px] uppercase tracking-wider text-text-secondary block font-semibold">Matched</span>
-                    </div>
-                    <div className="p-2 bg-black/40 rounded-xl border border-white/5">
-                      <span className="text-base font-black text-primary-action block">5</span>
-                      <span className="text-[8px] uppercase tracking-wider text-text-secondary block font-semibold">Trips</span>
-                    </div>
-                    <div className="p-2 bg-black/40 rounded-xl border border-white/5">
-                      <span className="text-base font-black text-text-primary block">3</span>
-                      <span className="text-[8px] uppercase tracking-wider text-text-secondary block font-semibold">Friends</span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -1756,7 +1733,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             <div id="events-section" className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary">Upcoming Group Events</h4>
-                <button onClick={() => showToast('Events calendar loaded', 'info')} className="text-[10px] text-primary-action font-bold hover:underline">View All</button>
+                <button onClick={() => navigate('/explore')} className="text-[10px] text-primary-action font-bold hover:underline">View All</button>
               </div>
 
               <div className="space-y-3.5">
@@ -1814,7 +1791,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             <div className="bg-surface-elevated/40 border border-border-token/50 rounded-2xl p-5 text-left relative overflow-hidden flex flex-col justify-between h-44">
               <div className="space-y-1.5 z-10">
                 <span className="text-[9px] uppercase tracking-widest text-primary-action font-bold">Guiding Careers</span>
-                <h4 className="text-sm font-bold text-text-primary">Become a SATHI Companion Mating Host</h4>
+                <h4 className="text-sm font-bold text-text-primary">Become a SATHI Companion Host</h4>
                 <p className="text-[10px] text-text-secondary leading-relaxed">Host experiences, meet world travelers, and earn secure NPR rates.</p>
               </div>
               <button 
@@ -1846,34 +1823,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     <span className="text-xs text-text-secondary block font-normal leading-relaxed">{item.desc}</span>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* 4. USER CONNECTIONS IMPACT WIDGET */}
-            <div className="bg-gradient-to-tr from-surface-elevated to-surface border border-border-token/40 rounded-2xl p-4 text-left space-y-3 relative overflow-hidden">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary">Your Social Impact</h4>
-              <p className="text-[10px] text-text-secondary font-light">Connections and cultural adventures built by you this month in Nepal.</p>
-              
-              <div className="grid grid-cols-3 gap-2 text-center pt-1.5">
-                <div className="p-2 bg-black/40 rounded-xl border border-white/5">
-                  <span className="text-base font-black text-text-primary block">12</span>
-                  <span className="text-[8px] uppercase tracking-wider text-text-secondary block font-semibold">Matched</span>
-                </div>
-                <div className="p-2 bg-black/40 rounded-xl border border-white/5">
-                  <span className="text-base font-black text-primary-action block">5</span>
-                  <span className="text-[8px] uppercase tracking-wider text-text-secondary block font-semibold">Trips</span>
-                </div>
-                <div className="p-2 bg-black/40 rounded-xl border border-white/5">
-                  <span className="text-base font-black text-text-primary block">3</span>
-                  <span className="text-[8px] uppercase tracking-wider text-text-secondary block font-semibold">Friends</span>
-                </div>
-              </div>
-
-              {/* Decorative Vector Path (Matches bottom ambient waves) */}
-              <div className="h-6 w-full pt-2 opacity-30">
-                <svg className="w-full h-full text-primary-action" viewBox="0 0 100 20" fill="none" preserveAspectRatio="none">
-                  <path d="M0 10 C 25 15, 25 5, 50 10 C 75 15, 75 5, 100 10 L 100 20 L 0 20 Z" fill="currentColor"/>
-                </svg>
               </div>
             </div>
 
@@ -1980,12 +1929,15 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     )}
                   </button>
 
-                  <img
-                    src={currentUser?.avatar || "https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?q=80&w=300&auto=format&fit=crop"}
-                    className="w-9 h-9 rounded-full object-cover border-2 border-primary-action cursor-pointer shrink-0"
-                    alt="Profile"
-                    onClick={() => { setShowProfileDropdown(true); }}
-                  />
+                  <button type="button" onClick={() => setShowProfileDropdown(true)} aria-label="Open profile menu" className="shrink-0 rounded-full">
+                    <SafeImage
+                      src={currentUser?.avatar}
+                      className="w-9 h-9 rounded-full object-cover border-2 border-primary-action"
+                      alt="Profile"
+                      fallbackType="avatar"
+                      textForInitials={currentUser?.name || 'Guest User'}
+                    />
+                  </button>
                 </div>
 
             {/* Instagram-style Stories */}
@@ -2006,7 +1958,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 {fetchedStories.map((st, i) => (
                   <div 
                     key={`${st.id}-${i}`} 
-                    onClick={() => setViewingStory(st)}
+                    onClick={() => openVisibleStory(st)}
                     className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start"
                   >
                     <div className="relative p-[2px] rounded-full bg-gradient-to-tr from-[#C8A25E] via-pink-600 to-purple-600">
@@ -2074,6 +2026,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
                   if (item.type === 'activity') {
                     const act = item.data as Activity;
+                    const price = act.avgPrice || act.price;
                     return (
                       <div key={`${item.type}-${item.data.id}-${idx}`} className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col">
                         <div className="relative h-32 bg-surface-elevated">
@@ -2081,7 +2034,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         </div>
                         <div className="p-3 space-y-1 text-left">
                           <h4 className="text-xs font-bold text-text-primary truncate">{act.title}</h4>
-                          <p className="text-[10px] text-text-secondary">NPR {act.avgPrice || act.price || '1,500'}</p>
+                          <p className="text-[10px] text-text-secondary">{price ? `NPR ${price}` : 'Price unavailable'}</p>
                         </div>
                       </div>
                     );
@@ -2089,14 +2042,16 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
                   if (item.type === 'event') {
                     const evt = item.data as SathiEvent;
+                    const eventDate = evt.date ? new Date(evt.date) : null;
+                    const hasValidDate = !!eventDate && !Number.isNaN(eventDate.getTime());
                     return (
                       <div key={`${item.type}-${item.data.id}-${idx}`} className="bg-surface border border-white/5 p-3 rounded-2xl flex items-center gap-3">
                         <div className="shrink-0 w-10 h-10 rounded-xl bg-surface-elevated flex flex-col items-center justify-center border border-white/10">
                           <span className="text-primary-action text-[7px] font-black leading-none uppercase">
-                            {new Date(evt.date || Date.now()).toLocaleString('en-US', { month: 'short' })}
+                            {hasValidDate ? eventDate.toLocaleString('en-US', { month: 'short' }) : 'TBA'}
                           </span>
                           <span className="text-text-primary font-black text-xs leading-none mt-0.5">
-                            {new Date(evt.date || Date.now()).getDate()}
+                            {hasValidDate ? eventDate.getDate() : '—'}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -2129,14 +2084,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </div>
             )}
 
-            {/* Community Feed */}
-            <div className="px-4 py-1 space-y-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-xs font-black uppercase tracking-wider text-text-secondary">Community Feed</h3>
-              </div>
-              <CommunityFeed />
-            </div>
-
             {/* Activities Section */}
             <div className="px-4 py-1 space-y-3">
               <div className="flex justify-between items-center">
@@ -2149,23 +2096,22 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   <div 
                     key={`${exp.id || 'exp'}-${i}`} 
                     className="shrink-0 w-44 bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col snap-start cursor-pointer hover:border-primary-action/30 transition-all"
-                    onClick={() => showToast(`Opening ${exp.title} details...`, 'info')}
+                    onClick={() => { setSelectedCategory(exp.category || 'All'); setMobileTab('explore'); }}
                   >
                     <div className="relative h-24 bg-surface-elevated">
-                      <img src={exp.imageUrl || exp.image || 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=600'} className="w-full h-full object-cover" alt={exp.title} loading="lazy" />
+                      <SafeImage src={exp.imageUrl || exp.image} className="w-full h-full object-cover" alt={exp.title} fallbackType="thumbnail" loading="lazy" />
                       <span className="absolute top-2 left-2 bg-primary-action text-background text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
                         {exp.category || 'EXPERIENCE'}
                       </span>
                     </div>
                     <div className="p-2.5 space-y-1 text-left">
                       <h4 className="text-[11px] font-bold text-text-primary truncate">{exp.title}</h4>
-                      <p className="text-[9px] text-text-secondary truncate">{exp.duration} • {exp.companionCount || 10} buddies</p>
+                      <p className="text-[9px] text-text-secondary truncate">
+                        {exp.duration || 'Duration unavailable'}
+                        {exp.companionCount > 0 ? ` • ${exp.companionCount} buddies` : ''}
+                      </p>
                       <div className="flex justify-between items-center pt-1 border-t border-white/5">
-                        <span className="text-[10px] font-black text-primary-action">NPR {exp.avgPrice}</span>
-                        <div className="flex items-center gap-0.5 text-[9px] text-primary-action font-bold">
-                          <Star className="w-2.5 h-2.5 fill-current" />
-                          <span>4.8</span>
-                        </div>
+                        <span className="text-[10px] font-black text-primary-action">{exp.avgPrice ? `NPR ${exp.avgPrice}` : 'Price unavailable'}</span>
                       </div>
                     </div>
                   </div>
@@ -2177,17 +2123,18 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             <div className="px-4 py-1 space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black uppercase tracking-wider text-text-secondary">Upcoming Events</h3>
-                 <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => { setMobileTab('explore'); showToast('Showing all upcoming events', 'success'); }}>See all</span>
+                 <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => setMobileTab('explore')}>See all</span>
               </div>
               
               <div className="space-y-3">
                 {events.slice(0, 5).map((ev, idx) => {
-                  const dateObj = new Date(ev.date || Date.now());
-                  const monthStr = dateObj.toLocaleString('en-US', { month: 'short' }).toUpperCase() || 'JUL';
-                  const dayStr = String(dateObj.getDate() || '16');
-                  const attendeesCount = ev.participants 
-                    ? (Array.isArray(ev.participants) ? ev.participants.length : (typeof ev.participants === 'number' ? ev.participants : 8))
-                    : 8;
+                  const dateObj = ev.date ? new Date(ev.date) : null;
+                  const hasValidDate = !!dateObj && !Number.isNaN(dateObj.getTime());
+                  const monthStr = hasValidDate ? dateObj.toLocaleString('en-US', { month: 'short' }).toUpperCase() : 'TBA';
+                  const dayStr = hasValidDate ? String(dateObj.getDate()) : '—';
+                  const attendeesCount = Array.isArray(ev.participants)
+                    ? ev.participants.length
+                    : (typeof ev.participants === 'number' ? ev.participants : 0);
 
                   return (
                     <div key={`${ev.id || 'ev'}-${idx}`} className="bg-surface border border-white/5 p-3.5 rounded-2xl flex items-center justify-between gap-4">
@@ -2198,8 +2145,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         </div>
                         <div className="space-y-0.5">
                           <h5 className="text-[11px] font-bold text-text-primary truncate max-w-[160px]">{ev.title}</h5>
-                          <p className="text-[9px] text-text-secondary truncate max-w-[160px]">{ev.location} • {ev.time || "10:00 AM"}</p>
-                          <span className="text-[8px] text-primary-action font-bold">{attendeesCount} buddies attending</span>
+                          <p className="text-[9px] text-text-secondary truncate max-w-[160px]">{ev.location || 'Location unavailable'}{ev.time ? ` • ${ev.time}` : ''}</p>
+                          {attendeesCount > 0 && <span className="text-[8px] text-primary-action font-bold">{attendeesCount} buddies attending</span>}
                         </div>
                       </div>
                        <button 
@@ -3273,7 +3220,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       {/* ==================== ACTIVE MODALS & DIALOG OVERLAYS ==================== */}
 
       {/* Story View Modal */}
-      {viewingStory && (
+      {viewingStory && viewingStory.id && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setViewingStory(null)}>
           <div className="relative w-full max-w-sm aspect-[9/16] bg-surface rounded-3xl overflow-hidden border border-border-token/80" onClick={e => e.stopPropagation()}>
             <SafeImage src={viewingStory.imageUrl} className="w-full h-full object-cover" alt="SATHI Story" fallbackType="thumbnail" />
@@ -3291,17 +3238,18 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               
               <div className="flex items-center gap-2">
                 {currentUser && currentUser.id === viewingStory.userId && (
-                  <button 
+                  <button
                     onClick={async (e) => {
                       e.stopPropagation();
                       try {
                         await socialRepository.deleteStory(viewingStory.id);
+                        removeStory(viewingStory.id);
                         showToast('Story deleted', 'success');
                         setViewingStory(null);
                       } catch (err) {
                         showToast('Failed to delete story', 'error');
                       }
-                    }} 
+                    }}
                     className="text-text-primary/80 hover:text-red-500 bg-black/40 rounded-full w-7 h-7 flex items-center justify-center backdrop-blur-sm"
                     title="Delete Story"
                   >
@@ -3313,8 +3261,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             </div>
 
             {/* Nav click zones */}
-            <div className="absolute inset-y-20 left-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = fetchedStories.findIndex(s => s.id === viewingStory.id); if (idx > 0) setViewingStory(fetchedStories[idx - 1]); }}></div>
-            <div className="absolute inset-y-20 right-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = fetchedStories.findIndex(s => s.id === viewingStory.id); if (idx < fetchedStories.length - 1) setViewingStory(fetchedStories[idx + 1]); else setViewingStory(null); }}></div>
+            <div className="absolute inset-y-20 left-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = fetchedStories.findIndex(s => s.id === viewingStory.id); if (idx > 0) void openVisibleStory(fetchedStories[idx - 1]); }}></div>
+            <div className="absolute inset-y-20 right-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = fetchedStories.findIndex(s => s.id === viewingStory.id); if (idx < fetchedStories.length - 1) void openVisibleStory(fetchedStories[idx + 1]); else void openVisibleStory(null); }}></div>
 
             {/* Bottom story details */}
             <div className="absolute bottom-6 inset-x-0 p-5 flex flex-col justify-end text-left space-y-3 z-10">
@@ -3367,7 +3315,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                           className="absolute inset-y-0 left-0 bg-primary-action"
                           onAnimationComplete={() => {
                             if (activeIdx < stories.length - 1) {
-                              setViewingStory(stories[activeIdx + 1]);
+                              void openVisibleStory(stories[activeIdx + 1]);
                             } else {
                               setViewingStory(null);
                             }
@@ -3408,55 +3356,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 <button onClick={() => setShowWalletModal(false)} className="text-text-secondary hover:text-text-primary rounded-full p-1.5 hover:bg-surface-elevated">✕</button>
               </div>
 
-              {/* NPR wallet metrics */}
-              <div className="bg-surface-elevated/50 border border-border-token/40 rounded-2xl p-5 text-center space-y-2 relative overflow-hidden">
-                <span className="text-[10px] uppercase text-text-secondary tracking-wider block font-medium">Available Escrow Balance</span>
-                <span className="text-3xl font-black text-primary-action block">NPR 12,500.00</span>
-                <span className="text-[9px] text-text-secondary block font-light">Escrow protection active for all current bookings</span>
-              </div>
-
-              <div className="space-y-3.5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary">Recent Escrow Ledger</h4>
-                
-                <div className="space-y-2 max-h-36 overflow-y-auto divide-y divide-border-token-light">
-                  <div className="py-2.5 flex justify-between text-xs">
-                    <div>
-                      <span className="text-text-primary font-bold block">Top-up via Khalti</span>
-                      <span className="text-[10px] text-text-secondary">Jul 14, 2026</span>
-                    </div>
-                    <span className="text-green-500 font-bold">+NPR 5,000.00</span>
-                  </div>
-                  <div className="py-2.5 flex justify-between text-xs">
-                    <div>
-                      <span className="text-text-primary font-bold block">Booking paid (Aarav Thapa)</span>
-                      <span className="text-[10px] text-text-secondary">Jul 10, 2026</span>
-                    </div>
-                    <span className="text-red-400 font-bold">-NPR 1,500.00</span>
-                  </div>
-                  <div className="py-2.5 flex justify-between text-xs">
-                    <div>
-                      <span className="text-text-primary font-bold block">Booking paid (Priya Gurung)</span>
-                      <span className="text-[10px] text-text-secondary">Jul 06, 2026</span>
-                    </div>
-                    <span className="text-red-400 font-bold">-NPR 1,800.00</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="grid grid-cols-2 gap-3.5 pt-3">
-                <button 
-                  onClick={handleWalletTopUp}
-                  className="py-2.5 bg-primary-action hover:bg-primary-action-hover text-background rounded-xl text-xs font-bold transition-all text-center"
-                >
-                  Top Up with Khalti
-                </button>
-                <button 
-                  onClick={() => { showToast("eSewa gateway is ready", "success"); }}
-                  className="py-2.5 bg-surface-elevated hover:bg-border-token text-text-primary border border-border-token/60 rounded-xl text-xs font-semibold transition-all text-center"
-                >
-                  Top Up with eSewa
-                </button>
+              <div className="bg-surface-elevated/50 border border-border-token/40 rounded-2xl p-6 text-center space-y-3">
+                <Wallet className="w-8 h-8 mx-auto text-primary-action/60" />
+                <h4 className="text-sm font-bold text-text-primary">Wallet balance unavailable</h4>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Secure wallet balances and ledger entries will appear here after server-side payment verification is enabled.
+                </p>
               </div>
             </motion.div>
           </div>
@@ -3865,7 +3770,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       </AnimatePresence>
 
       {showCreateStoryModal && (
-        <CreateStoryModal onClose={() => setShowCreateStoryModal(false)} />
+        <CreateStoryModal onClose={() => setShowCreateStoryModal(false)} onSuccess={(s) => prependStory(s)} />
       )}
 
     </div>

@@ -86,6 +86,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, string[]> = {
     'audit.read',
   ],
   kyc_reviewer: [
+    'companions.verify',
     'kyc.read', 'kyc.write',
     'users.read',
     'companions.read',

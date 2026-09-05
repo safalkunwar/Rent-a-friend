@@ -1,6 +1,6 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'firebase/firestore';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getMessaging, type Messaging } from 'firebase/messaging';
 import appletConfig from '../firebase-applet-config.json';
@@ -33,21 +33,8 @@ console.log('[SATHI] Firebase config loaded:', {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId || 'none',
 });
 
-const enablePersistenceGracefully = (firestoreDb: Firestore) => {
-  if (typeof window !== 'undefined') {
-    enableIndexedDbPersistence(firestoreDb)
-      .then(() => console.log('[SATHI] Firestore offline persistence enabled successfully.'))
-      .catch((err) => {
-        if (err.code === 'failed-precondition') {
-          console.warn('[SATHI] Firestore offline persistence failed-precondition (multiple tabs open).');
-        } else if (err.code === 'unimplemented') {
-          console.warn('[SATHI] Firestore offline persistence unimplemented in this browser.');
-        } else {
-          console.error('[SATHI] Firestore offline persistence failed:', err);
-        }
-      });
-  }
-};
+// Private Firestore data uses the SDK's default memory cache. Account-scoped
+// durable offline storage needs a separate reviewed contract before re-enabling it.
 
 if (hasValidConfig && !getApps().length) {
   try {
@@ -57,7 +44,6 @@ if (hasValidConfig && !getApps().length) {
       .then(() => console.log('[SATHI] Firebase Auth persistence configured: LOCAL'))
       .catch((err) => console.error('[SATHI] Failed to set Firebase Auth persistence:', err));
     db = getFirestore(app);
-    enablePersistenceGracefully(db);
     storage = getStorage(app);
     console.log('[SATHI] Firebase initialized:', { app: !!app, auth: !!auth, db: !!db, storage: !!storage });
     try {
@@ -76,7 +62,6 @@ if (hasValidConfig && !getApps().length) {
       .then(() => console.log('[SATHI] Firebase Auth persistence configured for reused app: LOCAL'))
       .catch((err) => console.error('[SATHI] Failed to set Firebase Auth persistence on reuse:', err));
     db = getFirestore(app);
-    enablePersistenceGracefully(db);
     storage = getStorage(app);
     console.log('[SATHI] Firebase reused existing app:', { app: !!app, auth: !!auth, db: !!db, storage: !!storage });
     try {

@@ -15,6 +15,8 @@ export interface CompanionBookingRequest {
   id: string;
   userId: string;
   userName: string;
+  userPhone?: string;
+  userEmail?: string;
   userAvatar: string;
   date: string;
   time: string;
@@ -23,6 +25,7 @@ export interface CompanionBookingRequest {
   totalPrice: number;
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   specialRequests?: string;
+  meetingPoint?: string;
   createdAt: string;
 }
 
@@ -61,7 +64,9 @@ export const companionDashboardService = {
     return bookings.map(b => ({
       id: b.id,
       userId: b.userId,
-      userName: '',
+      userName: (b as Booking & { userNameAtBooking?: string }).userNameAtBooking || 'Traveler',
+      userPhone: (b as Booking & { userPhoneAtBooking?: string }).userPhoneAtBooking,
+      userEmail: (b as Booking & { userEmailAtBooking?: string }).userEmailAtBooking,
       userAvatar: '',
       date: b.date,
       time: b.time,
@@ -70,6 +75,7 @@ export const companionDashboardService = {
       totalPrice: b.totalPrice,
       status: b.status,
       specialRequests: b.specialRequests,
+      meetingPoint: b.meetingPoint,
       createdAt: b.createdAt,
     }));
   },

@@ -4,6 +4,14 @@
 
 The SATHI Admin application is a completely separate frontend application for platform administration, moderation, and operations. It is **not** a subdirectory of the main SATHI user application.
 
+## Status (2026-09-04)
+
+- **38/38 unit tests passing** across 5 files (`aggregation`, `health`, `admin-rbac`, `rate-limiter`, `idempotency`).
+- 11 RBAC roles enforced in `admin/src/services/admin.ts` and `firestore.rules`.
+- `admin/src/firebase.ts` validates config strictly and throws if `projectId !== 'hamrosathi1'`.
+- 25 page components under `admin/src/pages/`.
+- Hardened `firestore.rules` and `storage.rules` deployed to `hamrosathi1`.
+
 ## Architecture
 
 ```
@@ -65,6 +73,14 @@ npm run build
 ```
 
 Output goes to `admin/dist/`
+
+## Tests
+
+```bash
+npx vitest run
+```
+
+Expected: 38/38 passing across 5 files (`admin/src/__tests__/`).
 
 ## Environment Variables
 
@@ -156,6 +172,9 @@ Configure `firebase.json` with a separate hosting target for the admin app.
 - `docs/DATABASE_SCHEMA.md` - Firestore collection schemas
 - `docs/firestore.rules` - Production security rules
 - `docs/storage.rules` - Firebase Storage rules
+- `docs/sathi/10_ADMIN_ARCHITECTURE.md` - Authoritative admin spec
+- `docs/sathi/SECURITY_MODEL.md` - Authoritative security model
+- `docs/sathi/CHANGELOG.md` - Session-by-session log (mandatory append on every code change)
 
 ## Maintenance
 

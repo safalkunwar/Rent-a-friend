@@ -20,6 +20,8 @@ import {
 } from '../../services/preferences';
 import { SupportModal } from '../modals/SupportModal';
 import { FeedbackModal } from '../modals/FeedbackModal';
+import { CompanionApplicationCard } from './CompanionApplicationCard';
+import { ProfilePhotoUpload } from '../modals/ProfilePhotoUpload';
 import * as motion from 'motion/react-client';
 
 type ActiveSection = 'appearance' | 'account' | 'privacy' | 'notifications' | 'security' | 'about';
@@ -217,7 +219,7 @@ export const SettingsTab: React.FC = () => {
           {currentUser && (
             <div className="bg-surface border border-border-token/40 rounded-3xl p-5 flex items-center gap-4 text-left">
               <img 
-                src={currentUser.avatar} 
+                src={currentUser.avatar || undefined}
                 alt={currentUser.name} 
                 className="w-12 h-12 rounded-full border-2 border-primary-action object-cover bg-surface-elevated"
                 referrerPolicy="no-referrer"
@@ -302,8 +304,19 @@ export const SettingsTab: React.FC = () => {
                 </p>
               </div>
 
+              {/* Companion application status + profile completeness */}
+              {currentUser && (
+                <CompanionApplicationCard
+                  userId={currentUser.id}
+                  role={currentUser.role}
+                  userName={currentUser.name}
+                  onToast={showToast}
+                />
+              )}
+
               {currentUser ? (
                 <form onSubmit={handleSaveProfile} className="space-y-4 pt-2">
+                  <ProfilePhotoUpload />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] uppercase tracking-wider font-extrabold text-text-secondary block mb-2 px-1">Full Name</label>

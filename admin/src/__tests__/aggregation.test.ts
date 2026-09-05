@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { aggregationService } from '../services/aggregation';
 
+vi.mock('../services/firestore', () => ({ firestore: { getDocuments: vi.fn().mockResolvedValue([]) } }));
+
 describe('aggregationService', () => {
   it('should have platform metrics method', () => {
     expect(typeof aggregationService.getPlatformMetrics).toBe('function');

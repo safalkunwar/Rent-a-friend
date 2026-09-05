@@ -64,7 +64,7 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
       const idTokenResult = await firebaseUser.getIdTokenResult();
       const claimRole = idTokenResult.claims.adminRole as AdminRole | undefined;
       
-      if (claimRole && hasPermission(claimRole, 'users.read')) {
+      if (claimRole && ADMIN_ROLES.includes(claimRole)) {
         return claimRole;
       }
 
@@ -75,10 +75,6 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
         if (role && ADMIN_ROLES.includes(role)) {
           return role;
         }
-      }
-
-      if (firebaseUser.email === 'admin1@gmail.com') {
-        return 'super_admin';
       }
 
       return null;
@@ -128,6 +124,7 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
       }
 
       const role = await verifyAdminRole(firebaseUser);
+      if (cancelled || auth.currentUser?.uid !== firebaseUser.uid) return;
       if (!role) {
         setSession(null);
         setStatus('access_restricted');

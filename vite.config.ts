@@ -21,7 +21,7 @@ export default defineConfig(() => {
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
-              handler: 'NetworkFirst',
+              handler: 'NetworkOnly',
               options: {
                 cacheName: 'firestore-data',
                 expiration: {
@@ -35,7 +35,7 @@ export default defineConfig(() => {
             },
             {
               urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
-              handler: 'StaleWhileRevalidate',
+              handler: 'NetworkOnly',
               options: {
                 cacheName: 'firebase-storage-images',
                 expiration: {

@@ -1,6 +1,6 @@
 import { vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../src/firebase', () => ({
+vi.mock('../firebase', () => ({
   app: { name: '[DEFAULT]' },
   auth: {
     currentUser: null,

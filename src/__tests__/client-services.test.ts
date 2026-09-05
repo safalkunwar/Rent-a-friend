@@ -94,6 +94,7 @@ describe('messaging service', () => {
     }));
     vi.doMock('../firebase', () => ({
       db: null,
+      auth: { currentUser: { uid: 'user1', isAnonymous: false } },
     }));
     const { messagingService } = await import('../services/messaging');
     const msgId = await messagingService.sendMessage('convo1', 'user1', 'Hello');
@@ -103,6 +104,7 @@ describe('messaging service', () => {
   });
 
   it('createConversation creates idempotent conversation', async () => {
+    vi.doMock('../firebase', () => ({ db: null, auth: { currentUser: { uid: 'u1', isAnonymous: false } } }));
     const setDocument = vi.fn();
     vi.doMock('../services/firestore', () => ({
       firestore: {
@@ -204,7 +206,7 @@ describe('companion dashboard service', () => {
 
   it('getBookingRequests returns mapped booking data', async () => {
     const bookings = [
-      { id: 'b1', userId: 'u1', date: '2025-01-01', time: '10:00', duration: 2, participants: 1, totalPrice: 1000, status: 'pending', specialRequests: 'Near mall', createdAt: '2025-01-01T08:00:00Z' },
+      { id: 'b1', userId: 'u1', userNameAtBooking: 'Safal Kunwar', userPhoneAtBooking: '9800000000', date: '2025-01-01', time: '10:00', duration: 2, participants: 1, totalPrice: 1000, status: 'pending', specialRequests: 'Near mall', meetingPoint: 'Thamel', createdAt: '2025-01-01T08:00:00Z' },
     ];
     vi.doMock('../services/firestore', () => ({
       firestore: {
@@ -214,7 +216,9 @@ describe('companion dashboard service', () => {
     const { companionDashboardService } = await import('../services/companionDashboard');
     const requests = await companionDashboardService.getBookingRequests('c1');
     expect(requests).toHaveLength(1);
-    expect(requests[0].userName).toBe('');
+    expect(requests[0].userName).toBe('Safal Kunwar');
+    expect(requests[0].userPhone).toBe('9800000000');
+    expect(requests[0].meetingPoint).toBe('Thamel');
     expect(requests[0].specialRequests).toBe('Near mall');
   });
 });

@@ -1,9 +1,16 @@
 import { firestore } from '../services/firestore';
 import { auditService } from '../services/audit';
 import { adminService, type AdminRole } from '../services/admin';
+import { auth, db } from '../firebase';
+import { transitionBooking } from '../../../src/services/bookingTransactions';
+import type { Booking } from '../../../src/types';
 import { AdminUserRow, AdminBookingRow, AdminReportRow, AdminCompanionRow, AdminNotificationRow, AdminContentRow, AdminPostRow, AdminCommentRow, AdminGuideApplication } from '../types';
 
 export class AdminRepository {
+  async createContent(collection: 'activities' | 'events', id: string, data: Record<string, unknown>) {
+    return firestore.setDocument(`${collection}/${id}`, data);
+  }
+
   async listUsers(limitCount = 20, startAfter?: unknown[]) {
     const result = await firestore.getDocumentsPaginated<AdminUserRow>('users', { limitCount, startAfter, orderByField: 'name', orderDirection: 'asc' });
     return result;
@@ -43,7 +50,9 @@ export class AdminRepository {
   }
 
   async updateBookingStatus(bookingId: string, status: string) {
-    await firestore.updateDocument(`bookings/${bookingId}`, { status, updatedAt: new Date().toISOString() });
+    if (!auth.currentUser || !db) throw new Error('Authenticated booking operator required.');
+    if (!['pending','confirmed','active','completed','cancelled'].includes(status)) throw new Error('Invalid booking state.');
+    await transitionBooking(db, auth.currentUser.uid, bookingId, status as Booking['status']);
   }
 
   async listReports(limitCount = 100) {

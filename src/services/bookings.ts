@@ -1,5 +1,6 @@
 import { firestore } from './firestore';
 import { Companion } from '../types';
+import { bookingRepository } from '../repositories/BookingRepository';
 
 export interface AvailabilityCheck {
   isAvailable: boolean;
@@ -36,7 +37,7 @@ export const bookingService = {
       const lockId = `lock_${companionId}_${date.replace(/[^a-zA-Z0-9]/g, '_')}`;
       const lockDoc = await firestore.getDocument<any>(`booking_locks/${lockId}`);
 
-      if (lockDoc && (lockDoc.status === 'confirmed' || lockDoc.status === 'pending')) {
+      if (lockDoc && lockDoc.status !== 'cancelled') {
         return { isAvailable: false, reason: 'This date is already reserved' };
       }
 
@@ -67,22 +68,7 @@ export const bookingService = {
         return { success: false, message: `Booking is already ${booking.status}` };
       }
 
-      const timestamp = new Date().toISOString();
-      const sanitizeDate = (booking.date || 'today').replace(/[^a-zA-Z0-9]/g, '_');
-      const lockId = `lock_${booking.companionId}_${sanitizeDate}`;
-
-      await firestore.updateDocument(`bookings/${bookingId}`, {
-        status: 'confirmed',
-        updatedAt: timestamp,
-      });
-
-      await firestore.setDocument(`booking_locks/${lockId}`, {
-        companionId: booking.companionId,
-        date: booking.date,
-        bookingId,
-        status: 'confirmed',
-        updatedAt: timestamp,
-      }, true);
+      await bookingRepository.updateBookingStatus(bookingId, 'confirmed');
 
       return { success: true, message: 'Booking accepted', bookingId };
     } catch (error) {
@@ -102,16 +88,7 @@ export const bookingService = {
         return { success: false, message: `Booking is already ${booking.status}` };
       }
 
-      const timestamp = new Date().toISOString();
-      const sanitizeDate = (booking.date || 'today').replace(/[^a-zA-Z0-9]/g, '_');
-      const lockId = `lock_${booking.companionId}_${sanitizeDate}`;
-
-      await firestore.updateDocument(`bookings/${bookingId}`, {
-        status: 'cancelled',
-        updatedAt: timestamp,
-      });
-
-      await firestore.deleteDocument(`booking_locks/${lockId}`);
+      await bookingRepository.updateBookingStatus(bookingId, 'cancelled');
 
       return { success: true, message: 'Booking declined', bookingId };
     } catch (error) {

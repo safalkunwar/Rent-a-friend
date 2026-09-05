@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { generateDiscoveryFeed, type FeedItem } from '../services/feedGenerator';
 import { Companion, Activity, Event, ExperienceStory, CommunityPost } from '../types';
 
@@ -375,5 +375,48 @@ describe('generateDiscoveryFeed', () => {
 
     const feed = generateDiscoveryFeed(companions, activities, events, stories, posts, { maxItems: 40 });
     expect(feed.length).toBe(0);
+  });
+
+  it('uses only the supplied session RNG while composing a feed', () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => {
+      throw new Error('unexpected global randomness');
+    });
+
+    try {
+      const feed = generateDiscoveryFeed(
+        [makeCompanion('c1', ['Hiking Partner']), makeCompanion('c2', ['Hiking Partner'])],
+        [makeActivity('a1', 'Hiking Partner')],
+        [makeEvent('e1', 'Hiking Event', 'Kathmandu', 'Hiking Partner')],
+        [makeStory('s1', 'Hiking Partner')],
+        [makePost('p1')],
+        { maxItems: 20, rng: () => 0.25 }
+      );
+
+      expect(feed.length).toBeGreaterThan(0);
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+
+  it('does not emit category headers that have no accepted content', () => {
+    const feed = generateDiscoveryFeed(
+      [
+        makeCompanion('c1', ['Hiking Partner']),
+        makeCompanion('c2', ['Travel Companion']),
+        makeCompanion('c3', ['Food Explorer']),
+      ],
+      [],
+      [],
+      [],
+      [],
+      { maxItems: 4, categoriesPerFeed: 3, rng: () => 0.5 }
+    );
+
+    feed.forEach((item, index) => {
+      if (item.type === 'category-header') {
+        expect(feed[index + 1]?.type).not.toBe('category-header');
+        expect(feed[index + 1]).toBeDefined();
+      }
+    });
   });
 });

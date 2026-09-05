@@ -1,12 +1,13 @@
 # Tasks
+Last updated: 2026-09-04
 
 ## TODO
 
-- None
+- Booking creation as a single Firestore transaction with idempotency keys (next recommended task from `docs/sathi/CHANGELOG.md`)
 
 ## IN PROGRESS
 
-- None
+- Refreshing remaining legacy docs (`SECURITY.md`, `HANDOFF.md`, `TASKS.md`, admin README) to align with the new authoritative `docs/sathi/` set
 
 ## COMPLETED
 
@@ -79,3 +80,20 @@
 - Admin Application Separation — Extracted admin panel from `src/admin/` into a completely standalone `/admin` application with independent `package.json`, `vite.config.ts`, `tsconfig.json`, and build process. Both apps share the same Firebase backend but remain fully isolated.
 - Rate Limiting — Added `src/services/rateLimiter.ts` for client-side abuse protection on high-frequency actions.
 - Admin Dashboard Improvements — Enhanced `AdminOverview` with active bookings, SOS incidents, community posts, and comments metrics; added `AdminAuditLogs` tab for privileged action review.
+
+## COMPLETED (2026-08-12 → 2026-09-04)
+
+- **Admin Application Separation (2026-08-12)** — Extracted admin panel into a standalone `/admin` app with independent build, routing, RBAC, and 38-test suite.
+- **Admin RBAC + Aggregation + Health + Rate Limiting + Idempotency (2026-08-12)** — 11 roles, `aggregationService`, `healthService`, `adminRateLimiter`, `idempotencyService`; virtualized tables; offline write queue; error boundaries.
+- **Production Rules & Indexes (2026-08-12)** — Deployed `firestore.rules` with granular RBAC helpers, `booking_locks` admin-only writes, removed anonymous user content creation, strict field validation. `firestore.indexes.json` extended for `sosAlerts`, `guideApplications`, `suspiciousActivity`, `auditLogs`, `users.lastActive`, `likes`, `story_likes`, `booking_locks`, and messages by status/sender. `storage.rules` with path-based access and KYC document protection.
+- **Authoritative Documentation Set (2026-08-24)** — 19 spec files under `docs/sathi/`; `docs/sathi/CHANGELOG.md` is the live session log with mandatory entry format.
+- **Home Feed Overhaul (2026-08-24)** — Cursor-paginated one-shot `getDocs` (10–15 doc pages), `useProgressiveReveal` hook, deterministic `feedGenerator.ts` (mulberry32 PRNG, ≤2-consecutive-item invariant, tail region), `feedStabilizer.ts` (append-only, mergeById). Initial Home reads reduced from ~130 docs across 7 listeners to 65 docs across 5 one-shot queries. Mobile and desktop share identical cards/ordering.
+- **Rules-of-Hooks crash fix + Notifications index deploy (2026-08-24)** — `useCompanionCategories` hoisted to top of `ClientApp.tsx`; composite `(userId, timestamp)` index deployed; redundant single-field "composites" removed.
+- **Mobile Header Restoration + PWA Branding (2026-08-24)** — Real `public/sathi-logo.jpeg` (1254×1254) wired into `vite.config.ts`, `index.html`, `PWAInstallPrompt`; pre-hydration splash + redesigned `LoadingScreen`; corrupt `icon*.jpg` binaries no longer referenced.
+- **Community Post Deep Links (2026-08-25)** — `/post/:postId` route with direct document lookup; native share sheet via `src/services/deepLinks.ts`; `vercel.json` SPA rewrite.
+- **Comment Pipeline Rebuild (2026-08-25)** — Shared `usePostComments(postId)` hook (one listener per open post), `CommentsPanel`, `CommentComposer` (auto-growing textarea, double-submit guard, mobile scroll-into-view), `ExpandableText`. Live verified against `hamrosathi1` with a real seeded Auth account.
+- **Genuine-Interaction Hardening (2026-08-25)** — `SocialPostCard` owns live liked/likes/comments state; per-user liked state derived from real `likes/{uid}_{postId}` lookups; comment button awaits success before incrementing count.
+- **Engagement Integrity Purge (2026-08-25)** — `src/scripts/seed.ts` no longer fabricates likes/comments. `scripts/purge-fake-engagement.mjs` deleted 1,350 fake post-likes and 838 fake story-likes from production `hamrosathi1`; counters recomputed from real records. `firestore.rules` hardened: counter fields require non-negative numbers; like-doc IDs `${uid}_${postId}` are idempotent-by-ID.
+- **Companion Application / KYC Flow (2026-08-26)** — `CompanionApplicationModal`, `CompanionApplicationCard`, `CompanionApplicationRepository`, `AdminApplicationsPage`, `services/bookingEligibility.ts` (gates booking on KYC eligibility), `services/companionDashboard.ts`. Specs: `docs/sathi/AUTH_KYC_ARCHITECTURE.md`, `docs/sathi/ADMIN_KYC_WORKFLOW.md`, `docs/sathi/SECURITY_MODEL.md`, `docs/sathi/FIREBASE_DATA_ARCHITECTURE.md`. Live verification: `scripts/verify-auth-kyc.mjs`.
+- **MapPreview migration (2026-09-04)** — Replaced Google Maps Static API with Leaflet + OpenStreetMap Nominatim; custom marker drag, reverse geocoding, theme-aware tile layers, sanitized coordinate parsing.
+- **Test suite (2026-09-04)** — **164/164 passing** (126 in main app across 7 files, 38 in admin app across 5 files).

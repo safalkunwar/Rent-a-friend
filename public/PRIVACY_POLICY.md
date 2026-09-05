@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last Updated: July 16, 2026
+Last Updated: September 4, 2026
 
 Your privacy is important to us. This Privacy Policy describes how SATHI ("the Platform") collects, uses, stores, and protects your personal data when you use our service.
 

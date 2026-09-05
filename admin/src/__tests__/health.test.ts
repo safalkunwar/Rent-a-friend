@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { healthService } from '../services/health';
 
+vi.mock('../services/firestore', () => ({ firestore: { getDocuments: vi.fn().mockResolvedValue([]) } }));
+vi.mock('../firebase', () => ({ auth: { currentUser: null }, storage: null }));
+
 describe('healthService', () => {
   it('should have checkFirestore method', () => {
     expect(typeof healthService.checkFirestore).toBe('function');

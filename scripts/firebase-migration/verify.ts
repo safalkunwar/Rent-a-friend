@@ -49,7 +49,7 @@ export const verifyMigration = async (reports: MigrationReport[]): Promise<void>
   console.log('\n=== Orphaned References ===');
   for (const report of reports) {
     for (const orphan of report.orphans) {
-      console.log(`  ${orphan.docId} in ${orphan.collection}: missing ${orphan.missingRef}`);
+      console.log(`  ${orphan.id} in ${report.collection}: ${orphan.reason}`);
     }
   }
 

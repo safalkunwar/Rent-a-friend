@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Plus, Pencil, Trash2, Eye, X } from 'lucide-react';
 import { AdminContentRow } from '../types';
 import { useToast } from '../components/ui/Toast';
@@ -7,6 +7,8 @@ import { useAdminAuth } from '../hooks/useAdmin';
 import { auditService } from '../services/audit';
 import { idempotencyService } from '../services/idempotency';
 import { adminRateLimiter } from '../services/rateLimiter';
+import { auth, db, storage } from '../firebase';
+import { createMediaDraft, saveMedia, type MediaDraft } from '../../../src/services/mediaUploadCore';
 
 interface ContentFormData {
   title: string;
@@ -46,6 +48,12 @@ export function AdminContent() {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<ContentFormData>(emptyForm);
+  const imageDraft = useRef<MediaDraft | null>(null);
+  const imageBusy = useRef(false);
+  const [imagePreview,setImagePreview] = useState('');
+  const [imageProgress,setImageProgress] = useState<number | null>(null);
+  const [imageError,setImageError] = useState('');
+  useEffect(() => () => { if (imagePreview) URL.revokeObjectURL(imagePreview); },[imagePreview]);
 
   useEffect(() => {
     const load = async () => {
@@ -69,12 +77,14 @@ export function AdminContent() {
   }, [activities, events, search, tab]);
 
   const openCreateForm = () => {
+    imageDraft.current = null; setImagePreview(''); setImageError('');
     setEditingItem(null);
     setFormData(emptyForm);
     setShowForm(true);
   };
 
   const openEditForm = (item: any) => {
+    imageDraft.current = null; setImagePreview(''); setImageError('');
     setEditingItem(item);
     setFormData({
       title: item.title || '',
@@ -93,6 +103,21 @@ export function AdminContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (tab === 'events' && imageDraft.current) {
+      if (imageBusy.current || !adminUser || !hasPerm('content.write')) return;
+      if (!adminRateLimiter.checkAction('content_save',adminUser.uid,10)) { setImageError('Rate limit exceeded. Please wait before retrying.'); return; }
+      imageBusy.current = true; setProcessing(true); setImageProgress(0); setImageError('');
+      try {
+        if (!auth || !db || !storage) throw new Error('Firebase media upload unavailable.');
+        const saved = await saveMedia({auth,db,storage},imageDraft.current,{...formData},setImageProgress);
+        // Use the acknowledged summary; no list-all refresh and no false failure after commit.
+        setEvents(previous => [saved as unknown as AdminContentRow,...previous.filter(item => item.id !== saved.id)]);
+        showToast('Event image and metadata saved.','success');
+        imageDraft.current = null; setImagePreview(''); setShowForm(false);
+      } catch (error) { setImageError(error instanceof Error ? error.message : 'Image upload failed. Retry with this selection.'); }
+      finally { imageBusy.current = false; setProcessing(false); setImageProgress(null); }
+      return;
+    }
     if (!adminUser || !hasPerm('content.write')) {
       alert('Insufficient permissions');
       return;
@@ -113,8 +138,9 @@ export function AdminContent() {
     setProcessing(true);
     try {
       const collection = tab === 'activities' ? 'activities' : 'events';
+      const { imageUrl, ...withoutImage } = formData;
       const data = {
-        ...formData,
+        ...(tab === 'events' ? withoutImage : formData),
         updatedAt: new Date().toISOString(),
         ...(editingItem ? {} : { createdAt: new Date().toISOString() }),
       };
@@ -124,7 +150,7 @@ export function AdminContent() {
         showToast('Item updated successfully', 'success');
       } else {
         const id = `${tab === 'activities' ? 'a' : 'e'}${Date.now()}`;
-        await adminRepository.setDocument(`${collection}/${id}`, { id, ...data });
+        await adminRepository.createContent(collection, id, { id, ...data });
         showToast('Item created successfully', 'success');
       }
 
@@ -250,11 +276,11 @@ export function AdminContent() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => { setShowForm(false); setEditingItem(null); setFormData(emptyForm); }}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => { if (imageBusy.current) return; setShowForm(false); setEditingItem(null); setFormData(emptyForm); }}>
           <div className="bg-background border border-border-token rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-border-token flex justify-between items-center">
               <h2 className="text-xl font-bold text-text-primary">{editingItem ? 'Edit' : 'New'} {tab === 'activities' ? 'Activity' : 'Event'}</h2>
-              <button onClick={() => { setShowForm(false); setEditingItem(null); setFormData(emptyForm); }} className="text-text-secondary hover:text-text-primary transition-colors">✕</button>
+              <button onClick={() => { if (imageBusy.current) return; setShowForm(false); setEditingItem(null); setFormData(emptyForm); }} className="text-text-secondary hover:text-text-primary transition-colors">✕</button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
@@ -304,11 +330,22 @@ export function AdminContent() {
                 </div>
               )}
               <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wider mb-2 block">Image URL</label>
-                <input type="text" value={formData.imageUrl} onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })} className="w-full bg-surface border border-border-token rounded-xl p-3 text-sm text-text-primary outline-none focus:border-primary-action" />
+                <label className="text-xs text-gray-500 uppercase tracking-wider mb-2 block">{tab === 'events' ? 'Event image' : 'Image URL'}</label>
+                {tab === 'events' ? <div className="space-y-2">
+                  <input type="file" accept="image/jpeg,image/png,image/webp" disabled={processing} onChange={event => {
+                    const file = event.target.files?.[0];
+                    if (!file || !adminUser) return;
+                    try { imageDraft.current = createMediaDraft('event',adminUser.uid,file,editingItem?.id); setImagePreview(URL.createObjectURL(file)); setImageError(''); }
+                    catch (error) { setImageError(error instanceof Error ? error.message : 'Invalid image.'); }
+                  }} />
+                  {imagePreview && <img src={imagePreview} alt="Selected event image preview" className="w-32 h-24 object-cover rounded-xl" />}
+                  <p className="text-xs text-text-secondary">JPG, PNG or WebP, up to 10 MB. Image is saved with this event.</p>
+                  {imageProgress !== null && <p role="status">Uploading {imageProgress}%</p>}
+                  {imageError && <p role="alert">{imageError}</p>}
+                </div> : <input type="text" value={formData.imageUrl} onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })} className="w-full bg-surface border border-border-token rounded-xl p-3 text-sm text-text-primary outline-none focus:border-primary-action" />}
               </div>
               <div className="flex gap-4 pt-4">
-                <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setFormData(emptyForm); }} className="flex-1 py-3 bg-surface-elevated text-text-secondary rounded-xl font-bold hover:bg-border-token transition-colors uppercase tracking-wider text-sm border border-border-token">Cancel</button>
+                <button type="button" onClick={() => { if (imageBusy.current) return; setShowForm(false); setEditingItem(null); setFormData(emptyForm); }} className="flex-1 py-3 bg-surface-elevated text-text-secondary rounded-xl font-bold hover:bg-border-token transition-colors uppercase tracking-wider text-sm border border-border-token">Cancel</button>
                 <button type="submit" disabled={processing} className="flex-1 py-3 bg-primary-action text-background rounded-xl font-bold hover:bg-primary-action-hover transition-colors uppercase tracking-wider text-sm disabled:opacity-50">{processing ? 'Saving...' : editingItem ? 'Update' : 'Create'}</button>
               </div>
             </form>

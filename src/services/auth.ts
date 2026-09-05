@@ -85,7 +85,8 @@ export const authService = {
             return;
           }
           const claims = await getIdTokenResult(firebaseUser).then(r => r.claims).catch(() => ({}));
-          callback({ ...authService.toAuthUser(firebaseUser), claims });
+          if (auth.currentUser?.uid !== firebaseUser.uid) return;
+          callback({ ...authService.toAuthUser(firebaseUser), claims: { ...claims, anonymous: firebaseUser.isAnonymous } });
         } catch (err) {
           console.error('[SATHI] Auth state change error:', err);
           callback(null);

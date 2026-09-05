@@ -41,3 +41,43 @@ This changelog documents the significant changes, decisions, and progress made d
 ### Project Status Updates
 
 *   `PROJECT_STATUS.md` has been regularly updated to reflect progress and next steps.
+
+---
+
+## 2026-08-12 → 2026-09-04 (summary)
+
+> Detailed session-by-session entries live in `docs/sathi/CHANGELOG.md`. This file remains the high-level Firebase track record.
+
+### Rules & indexes
+- `firestore.rules` hardened: granular role helper functions (`isSuperAdmin`, `isSafetyAdmin`, `isModerationAdmin`, `isBookingAdmin`, `isKYCReviewer`, `isContentAdmin`); `booking_locks` admin-only writes; removed anonymous user content creation permissions; strict field validation for user updates.
+- `community_posts` counter rules: `likesCount` and `commentsCount` must be non-negative numbers; like-doc IDs `${uid}_${postId}` make duplicate like creation idempotent-by-ID.
+- `storage.rules` introduced with path-based access control: public media paths for avatars/activities/events/posts/stories; private KYC document paths accessible only by `kyc_reviewer`; admin-only paths for sensitive operations; file size and type validation.
+- `firestore.indexes.json` extended for `sosAlerts`, `guideApplications`, `suspiciousActivity`, `auditLogs`, `users.lastActive`, `likes`, `story_likes`, `booking_locks`, `messages` by status/sender, and notifications `(userId, timestamp)`.
+- Composite `(userId, timestamp)` index for notifications deployed 2026-08-24; redundant single-field "composite" declarations removed (covered by auto indexes).
+
+### Cloud Functions
+- `functions/src/index.ts` (205 lines) implements `onUserCreate`, `onUserDelete`, `setUserRole` (admin-only), `onBookingCreate`, `onBookingUpdate`, `onMessageCreate`, `onReviewCreate` (running average rating update via transaction).
+- **Deployment paused**: Blaze plan not active on `hamrosathi1`.
+
+### Companion Application / KYC (2026-08-26)
+- New repository `src/repositories/CompanionApplicationRepository.ts`; new services `bookingEligibility.ts` (gates booking on KYC) and `companionDashboard.ts`.
+- `firestore.indexes.json` and `firestore.rules` updated for KYC collections and rules.
+- Live verification: `scripts/verify-auth-kyc.mjs`.
+
+### Home Feed Performance (2026-08-24)
+- Discovery collections converted from per-mount `onSnapshot` listeners to cursor-paginated one-shot `getDocs` (10–15 doc pages). Initial Home reads reduced from ~130 docs across 7 listeners to 65 docs across 5 one-shot queries. Real-time preserved for messaging / notifications / bookings.
+- `useProgressiveReveal` (IntersectionObserver), `feedGenerator.ts` (mulberry32 PRNG, ≤2-consecutive-item invariant, tail region), `feedStabilizer.ts` (append-only, mergeById).
+
+### Comment Pipeline (2026-08-25)
+- `usePostComments(postId)` hook (one realtime listener per OPENED post), `CommentsPanel`, `CommentComposer` (auto-growing textarea, double-submit guard, optimistic pending insertion).
+- Live verified against production `hamrosathi1` with a real seeded Auth account via `scripts/verify-comment-pipeline.mjs`.
+
+### Community Post Deep Links (2026-08-25)
+- `src/pages/PostPage.tsx` direct `community_posts/{postId}` lookup; `src/services/deepLinks.ts`; `vercel.json` SPA rewrite.
+
+### Engagement Integrity (2026-08-25)
+- `src/scripts/seed.ts` no longer fabricates likes/comments.
+- `scripts/purge-fake-engagement.mjs` deleted **1,350 fake post-likes** and **838 fake story-likes** from `hamrosathi1`; counters recomputed from real records.
+
+### Tests
+- **164/164 passing** (126 main-app across 7 files, 38 admin across 5 files).

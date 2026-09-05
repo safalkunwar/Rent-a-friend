@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "reservationUnit": "companion-local-date",
+  "timezone": "Asia/Kathmandu",
+  "transitions": {
+    "pending": { "confirmed": ["companion", "operator"], "cancelled": ["booker", "companion", "operator"] },
+    "confirmed": { "active": ["companion", "operator"], "cancelled": ["booker", "companion", "operator"] },
+    "active": { "completed": ["companion", "operator"], "cancelled": ["operator"] },
+    "completed": {},
+    "cancelled": {}
+  }
+}

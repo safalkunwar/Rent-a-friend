@@ -9,6 +9,7 @@ import { companionRepository } from '../repositories/CompanionRepository';
 import { bookingRepository } from '../repositories/BookingRepository';
 import { socialRepository, Comment } from '../repositories/SocialRepository';
 import { messagingService } from '../services/messaging';
+import { loadAuthenticatedProfile } from '../services/profileBootstrap';
 
 interface AppState {
   currentUser: User | null;
@@ -16,8 +17,8 @@ interface AppState {
   favorites: string[];
   toggleFavorite: (companionId: string) => void;
   bookings: Booking[];
-  addBooking: (booking: Booking) => void;
-  updateBookingStatus: (id: string, status: Booking['status']) => void;
+  addBooking: (booking: Booking) => Promise<void>;
+  updateBookingStatus: (id: string, status: Booking['status']) => Promise<void>;
   getConversationId: (otherUserId: string) => string;
   notifications: Notification[];
   markNotificationRead: (id: string) => void;
@@ -46,7 +47,7 @@ interface AppState {
   checkUserLikedStory: (storyId: string) => Promise<boolean>;
   createComment: (comment: Omit<Comment, 'id' | 'createdAt'>) => Promise<string>;
   deleteComment: (id: string, postId: string) => Promise<void>;
-  uploadStory: (story: Omit<ExperienceStory, 'id'>) => Promise<string>;
+  uploadStory: typeof socialRepository.uploadStory;
   deleteStory: (id: string) => Promise<void>;
   openAuthModal: () => void;
 }
@@ -81,8 +82,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     console.log('[SATHI] AppProvider auth effect starting');
     let cancelled = false;
+    let generation = 0;
     const unsubscribe = authService.onAuthStateChanged(async (authUser) => {
       if (cancelled) return;
+      const requestGeneration = ++generation;
+      const isCurrent = () => !cancelled && requestGeneration === generation;
+      setCurrentUser(null);
+      setFavorites([]);
+      setBookings([]);
+      setNotifications([]);
+      setLoading(true);
+      // Old cached profiles are not an authorization source (or retained private PII).
+      Object.keys(localStorage).filter(key => key.startsWith('sathi_user_profile_')).forEach(key => localStorage.removeItem(key));
+      if ('caches' in window) {
+        void Promise.all(['firestore-data','firebase-storage-images'].map(name => caches.delete(name)))
+          .catch(() => console.warn('[SATHI] Could not clear legacy private-media caches.'));
+      }
       try {
         const user = mapAuthUserToUser(authUser);
         console.log('[SATHI] AppProvider auth user:', user ? `uid=${user.id}` : 'null');
@@ -90,66 +105,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           const isAnonymous = authUser.claims?.anonymous === true;
 
           if (!isAnonymous) {
-            let profile: User | null = null;
-            try {
-              profile = await firestore.getDocument<User>(`users/${user.id}`);
-              console.log('[SATHI] Firestore user profile loaded:', profile ? 'found' : 'not found');
-            } catch (docErr) {
-              console.warn('[SATHI] Failed to get user profile from Firestore, attempting local cache fallback:', docErr);
-            }
-
-            if (!profile) {
-              try {
-                const cachedProfileStr = localStorage.getItem(`sathi_user_profile_${user.id}`);
-                if (cachedProfileStr) {
-                  profile = JSON.parse(cachedProfileStr);
-                  console.log('[SATHI] Fallback user profile loaded from localStorage:', profile);
-                }
-              } catch (cacheErr) {
-                console.error('[SATHI] Failed to load user profile from localStorage:', cacheErr);
-              }
-            }
-
-            if (profile && !cancelled) {
-              const mergedUser: User = {
-                ...user,
-                ...profile,
-                id: user.id,
-                email: profile.email || user.email,
-                name: profile.name || user.name,
-                avatar: profile.avatar || user.avatar,
-                role: profile.role || (authUser.claims?.admin ? 'admin' : authUser.claims?.role === 'companion' ? 'companion' : 'customer'),
-                favorites: profile.favorites || []
-              };
-              setCurrentUser(mergedUser);
-              setFavorites(profile.favorites || []);
-              try {
-                localStorage.setItem(`sathi_user_profile_${user.id}`, JSON.stringify(profile));
-              } catch (cacheWriteErr) {
-                console.warn('[SATHI] Failed to cache user profile in localStorage:', cacheWriteErr);
-              }
-            } else if (!cancelled) {
-              const defaultUser: User = { ...user, role: 'customer', favorites: [] };
-              try {
-                await firestore.setDocument(`users/${user.id}`, {
-                  name: user.name,
-                  email: user.email,
-                  avatar: user.avatar,
-                  role: 'customer',
-                  favorites: [],
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                });
-              } catch (writeErr) {
-                console.warn('[SATHI] Could not save new user document to Firestore (offline?):', writeErr);
-              }
-              if (!cancelled) {
-                setCurrentUser(defaultUser);
-                setFavorites([]);
-                try {
-                  localStorage.setItem(`sathi_user_profile_${user.id}`, JSON.stringify(defaultUser));
-                } catch (e) {}
-              }
+            const profile = await loadAuthenticatedProfile(authUser);
+            if (isCurrent()) {
+              setCurrentUser(profile);
+              setFavorites(profile.favorites);
             }
           } else {
             if (!cancelled) {
@@ -165,12 +124,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       } catch (err) {
         console.error('[SATHI] Failed to load user profile:', err);
-        if (!cancelled) {
+        if (isCurrent()) {
           setCurrentUser(null);
           setFavorites([]);
         }
       } finally {
-        if (!cancelled) {
+        if (isCurrent()) {
           console.log('[SATHI] AppProvider loading=false');
           setLoading(false);
         }
@@ -254,93 +213,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [currentUser]);
 
   const addBooking = useCallback(async (booking: Booking) => {
-    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
-
-    if (!isOnline) {
-      await offlineStorage.cacheItem('pendingBookings', { ...booking, _pending: true });
-      setBookings(prev => {
-        const filtered = prev.filter(b => b.id !== booking.id);
-        return [...filtered, { ...booking, _pending: true }];
-      });
-      return;
-    }
-
-    setBookings(prev => {
-      const filtered = prev.filter(b => b.id !== booking.id);
-      return [...filtered, { ...booking, status: 'pending' }];
-    });
-
-    try {
-      await bookingRepository.createBooking({
-        ...booking,
-        status: 'pending',
-      });
-
-      const convoId = getConversationId(booking.userId, booking.companionId);
-      await messagingService.createConversation([booking.userId, booking.companionId]);
-    } catch (err) {
-      console.error('[SATHI] Failed to create booking:', err);
-      setBookings(prev => prev.filter(b => b.id !== booking.id));
-      throw err;
-    }
-
+    await bookingRepository.createBooking(booking);
+    // Committed snapshots own booking state; ancillary failure never rolls it back.
     const notification: Notification = {
-      id: `notif-${Date.now()}`,
-      userId: currentUser?.id || 'guest',
-      title: 'Booking Requested',
-      message: `Your booking for ${booking.date} is now pending.`,
-      type: 'booking',
-      isRead: false,
-      timestamp: new Date().toISOString(),
+      id: `notif_booking_${booking.id}`, userId: booking.userId,
+      title: 'Booking Requested', message: `Your reservation for ${booking.date} is pending. No payment is verified.`,
+      type: 'booking', isRead: false, timestamp: new Date().toISOString(),
     };
-    setNotifications(prev => {
-      const filtered = prev.filter(n => n.id !== notification.id);
-      return [notification, ...filtered];
-    });
-    await firestore.setDocument(`notifications/${notification.id}`, notification as any);
-  }, [currentUser]);
+    const effects = await Promise.allSettled([
+      messagingService.createConversation([booking.userId, booking.companionId]),
+      firestore.setDocument(`notifications/${notification.id}`, { ...notification }),
+    ]);
+    if (effects.some(result => result.status === 'rejected')) {
+      console.warn('[SATHI] Reservation saved; conversation/notification follow-up needs retry.');
+    }
+  }, []);
 
   const updateBookingStatus = useCallback(async (id: string, status: Booking['status']) => {
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
-    await firestore.updateDocument(`bookings/${id}`, { status, updatedAt: new Date().toISOString() });
-    const booking = bookings.find(b => b.id === id);
-    if (booking && currentUser) {
-      const notification: Notification = {
-        id: `notif-${Date.now()}`,
-        userId: currentUser.id,
-        title: `Booking ${status}`,
-        message: `Your booking for ${booking.date} has been ${status}.`,
-        type: 'booking',
-        isRead: false,
-        timestamp: new Date().toISOString(),
-      };
-      setNotifications(prev => [notification, ...prev]);
-      await firestore.setDocument(`notifications/${notification.id}`, notification as any);
-
-      // SATHI Business Rule: Auto-create conversation on accepted/confirmed booking
-      if (status === 'confirmed') {
-        const convoId = getConversationId(booking.userId, booking.companionId);
-        try {
-          const existingConvo = await firestore.getDocument<any>(`conversations/${convoId}`);
-          if (!existingConvo) {
-            await firestore.setDocument(`conversations/${convoId}`, {
-              id: convoId,
-              participantIds: [booking.userId, booking.companionId],
-              unreadCount: 0,
-              lastMessage: {
-                text: 'Your booking is accepted! You can now chat directly.',
-                timestamp: new Date().toISOString(),
-              },
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-          }
-        } catch (e) {
-          console.warn('[SATHI] Error checking/creating booking conversation:', e);
-        }
-      }
-    }
-  }, [bookings, currentUser]);
+    await bookingRepository.updateBookingStatus(id, status);
+  }, []);
 
   const sendMessage = useCallback(async (conversationId: string, text: string) => {
     if (!currentUser) return;
@@ -406,12 +297,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [currentUser]);
 
   const becomeCompanion = useCallback(async (companion: Omit<Companion, 'id'>, customId?: string) => {
-    if (!currentUser) throw new Error('Must be logged in to apply to become a companion.');
-    const id = await companionRepository.createCompanionProfile(companion, customId);
-    // Update local role
-    await userRepository.updateUserProfile(currentUser.id, { role: 'companion' });
-    setCurrentUser(prev => prev ? { ...prev, role: 'companion' } : null);
-    return id;
+    throw new Error('Companion activation requires an approved application. Apply from Settings.');
   }, [currentUser]);
 
   const createPost = useCallback(async (post: Omit<CommunityPost, 'id'>) => {
@@ -456,8 +342,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await socialRepository.deleteComment(id, postId);
   }, []);
 
-  const uploadStory = useCallback(async (story: Omit<ExperienceStory, 'id'>) => {
-    return await socialRepository.uploadStory(story);
+  const uploadStory = useCallback((...args: Parameters<typeof socialRepository.uploadStory>) => {
+    return socialRepository.uploadStory(...args);
   }, []);
 
   const deleteStory = useCallback(async (id: string) => {

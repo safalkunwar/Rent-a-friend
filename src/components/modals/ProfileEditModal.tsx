@@ -4,6 +4,7 @@ import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { companionRepository } from '../../repositories/CompanionRepository';
 import { useCompanions } from '../../hooks/useFirestoreData';
+import { ProfilePhotoUpload } from './ProfilePhotoUpload';
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -101,6 +102,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
           {/* Section 1: Account Details */}
           <div className="space-y-4">
             <h4 className="text-[10px] font-black uppercase tracking-wider text-primary-action">Account Details</h4>
+            <ProfilePhotoUpload />
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>

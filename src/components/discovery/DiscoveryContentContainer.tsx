@@ -10,7 +10,7 @@ export const DiscoveryContentContainer: React.FC<DiscoveryContentContainerProps>
   className = '',
 }) => {
   return (
-    <div className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${className}`}>
+    <div className={`w-full max-w-2xl mx-auto ${className}`}>
       {children}
     </div>
   );

@@ -1,5 +1,47 @@
 # Changelog
 
+## v6.2.0 - 2026-08-26
+
+### Added
+- **Companion Application / KYC Flow**: end-to-end KYC pipeline for companions and admin review.
+  - `CompanionApplicationModal`, `CompanionApplicationCard`, `CompanionApplicationRepository`; `AdminApplicationsPage` (main app shell for review).
+  - New services: `services/bookingEligibility.ts` (gates booking on KYC eligibility), `services/companionDashboard.ts` (companion dashboard data).
+  - `firestore.indexes.json` and `firestore.rules` updated for the new collections and rules.
+  - Authoritative specs published under `docs/sathi/`: `AUTH_KYC_ARCHITECTURE.md`, `ADMIN_KYC_WORKFLOW.md`, `SECURITY_MODEL.md`, `FIREBASE_DATA_ARCHITECTURE.md`.
+  - Live verification script: `scripts/verify-auth-kyc.mjs`.
+- **Authoritative Documentation Set (2026-08-24)**: 19 spec files under `docs/sathi/` capturing master objective, product vision, core features, user flows, system/Firebase/data architecture, performance/scalability, booking concurrency, security/privacy, admin/mobile-web architecture, feed loading, failure recovery, testing strategy, non-negotiable rules, removed features, plus the new KYC, security, and feed-architecture documents. `docs/sathi/CHANGELOG.md` is the live session log with a mandatory entry format.
+
+### Changed
+- Map implementation: `MapPreview.tsx` migrated from Google Maps Static API to **Leaflet + OpenStreetMap Nominatim** with custom marker drag, reverse geocoding, and theme-aware tile layers.
+
+### Tests
+- Full suite: **164/164 passing** (126 in main app across 7 files, 38 in admin app across 5 files). The main-app test count grew with new cases in `home-feed-performance.test.ts` (16 tests, 3 unification cases) and additional composition tests for the deterministic feed generator. `client-services.test.ts` was extended for KYC services (37 tests).
+
+## v6.1.0 - 2026-08-25
+
+### Added
+- **Community post deep links (`/post/:postId`)**: new `src/pages/PostPage.tsx` performs a direct `community_posts/{postId}` document lookup and renders through the shared `FeedPostCard`. Missing/unpublished posts render a 404 state (no silent redirect). `vercel.json` SPA rewrite added so direct URLs and refreshes work on Vercel. Canonical share URLs via `src/services/deepLinks.ts`; native share sheet with clipboard fallback.
+- **Unified comment pipeline**: new shared `usePostComments(postId)` hook (one realtime listener per OPENED post, optimistic pending insertion, failure revert), `CommentsPanel` (list, edit-own / delete-own, empty state, pinned composer) and `CommentComposer` (auto-growing textarea, Enter=send, Shift+Enter=newline, max 500 chars, double-submit guard, refocus after success, mobile scroll-into-view). `SocialPostCard` now owns live `liked/likes/comments` state seeded from real Firestore fields. `ExpandableText` for true one-line clamp with overflow measurement.
+- **Unified Home feed (desktop + mobile)**: new `useProgressiveReveal` hook (IntersectionObserver sentinel) instantiated once in ClientApp. Mobile now renders `homeReveal.revealedItems` in composer order using the same card components as desktop. Mobile's separate Community Feed block removed from Home. Breakpoint resize no longer reshuffles or resets reveal position.
+- **Deterministic feed generator & stabilizer**: `feedGenerator.ts` (mulberry32 session PRNG, `weaveCompanionsIntoStream`, ≤2-consecutive-item invariant, tail region for leftovers). `feedStabilizer.ts` upgraded with append-only `chunkFeedByHeader`, mergeById, tail↔chunk migrations.
+- **Mobile header restoration & PWA branding**: mobile Home header (logo, search, Filters button, profile avatar) restored as a single row. `vite.config.ts` and `index.html` now point to `public/sathi-logo.jpeg` (real 1254×1254 PNG, maskable). Pre-hydration splash + `LoadingScreen` redesigned around the real logo. Corrupt `icon*.jpg` binaries no longer referenced.
+
+### Fixed
+- **Rules-of-Hooks crash**: `useCompanionCategories` was conditionally invoked in `ClientApp.tsx`; hoisted to a single unconditional call at the top of the component. No more "Rendered more hooks than during the previous render" errors.
+- **Notifications composite index**: `(userId, timestamp)` index declared in `firestore.indexes.json` but never deployed; deployed to `hamrosathi1`. Redundant single-field "composite" declarations (`stories.createdAt`, `auditLogs.timestamp`, duplicate `users.lastActive`) removed.
+
+### Security
+- **Engagement integrity purge**: all fabricated likes/comments removed from `src/scripts/seed.ts`. `scripts/purge-fake-engagement.mjs` deleted **1,350 fake post-likes** and **838 fake story-likes** authored by demo accounts from production `hamrosathi1`; counters recomputed from the remaining real records. Real user interactions preserved (e.g., cp2 → 1 like / 4 comments, cp10 → 1 like, cp38 → 1 like / 1 comment). `firestore.rules` hardened: `community_posts.likesCount`/`commentsCount` must be non-negative numbers; like-doc IDs `${uid}_${postId}` are idempotent-by-ID.
+- **Honest limit (no rule change)**: without Cloud Functions (Blaze paused), rules cannot enforce delta-correctness of counters. They are maintained transactionally by repository code; a determined authenticated client could still write an arbitrary non-negative value. Documented as a known limitation until Functions are available.
+
+### Performance
+- Home discovery converted from per-mount `onSnapshot` listeners to cursor-paginated one-shot `getDocs` with in-memory session cache. Initial Home reads reduced from ~130 docs across 7 live listeners (with duplicate `community_posts`) to **65 docs across 5 one-shot queries**; subsequent batches are cursor pages of 10–15 docs. Real-time listeners preserved for messaging / notifications / bookings.
+- Event "joined" state now uses ONE equality-only query (`userId ==`, `status ==`) instead of up to 20 per-event doc reads. Post/story like-state lookups are memoized per session in `SocialRepository` and invalidated on like/unlike.
+- Feed regeneration keyed on item-ID signatures (not array identity); ordering decided once per session/batch and preserved via chunk-level merge. Duplicate identical page requests share one in-flight promise; only one pagination request per collection may be active at a time.
+
+### Tests
+- Full suite: **162/162 passing at the time** (164/164 as of 2026-09-04 after further KYC test additions in `client-services.test.ts`). New tests: home-feed-performance (chunker contract, desktop/mobile revealed-sequence parity for every reveal count, community-inside-feed, mergeById, append-only stabilization across 3-batch sessions ×15 seeds, run-limit under heavy companion DBs, scarce-content distribution, uniqueness, header alignment, truthful labeling). `client-services.test.ts` extended for KYC services. **Test files: 7 main + 5 admin = 12** (the previous v6.0.0 count of 5 test files in main app + admin has grown to **7 main app test files**).
+
 ## v6.0.0 - 2026-08-12
 
 ### Added

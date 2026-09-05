@@ -5,6 +5,7 @@ import { authService } from '../services/auth';
 import { firestore } from '../services/firestore';
 import { useToast } from './ui/Toast';
 import { DocumentModal } from './modals/DocumentModal';
+import { loadAuthenticatedProfile } from '../services/profileBootstrap';
 
 interface AuthModalProps {
   initialMode: 'login' | 'signup' | 'guide';
@@ -51,26 +52,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
     setLoading(true);
     try {
       const authUser = await authService.loginWithGoogle();
-      const profile = await firestore.getDocument<any>(`users/${authUser.uid}`);
-      if (!profile) {
-        await firestore.setDocument(`users/${authUser.uid}`, {
-          name: authUser.displayName || authUser.email?.split('@')[0] || 'User',
-          email: authUser.email || '',
-          avatar: authUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.displayName || 'User')}&background=random`,
-          role: 'customer',
-          favorites: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-      }
-      setCurrentUser({
-        id: authUser.uid,
-        name: authUser.displayName || authUser.email?.split('@')[0] || 'User',
-        email: authUser.email || '',
-        avatar: authUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.displayName || 'User')}&background=random`,
-        role: profile?.role || 'customer',
-        favorites: profile?.favorites || [],
-      });
+      setCurrentUser(await loadAuthenticatedProfile(authUser));
       showToast('Welcome to SATHI!', 'success');
       if (onSuccess) onSuccess(mode);
       onClose();
@@ -91,79 +73,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
     try {
       if (mode === 'login') {
         const authUser = await authService.login(email, password);
-        const profile = await firestore.getDocument<any>(`users/${authUser.uid}`);
-        setCurrentUser({
-          id: authUser.uid,
-          name: authUser.displayName || email.split('@')[0],
-          email: authUser.email || email,
-          avatar: authUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.displayName || email)}&background=random`,
-          role: profile?.role || 'customer',
-          favorites: profile?.favorites || [],
-        });
+        setCurrentUser(await loadAuthenticatedProfile(authUser));
         showToast('Welcome back!', 'success');
       } else if (mode === 'signup') {
         if (!agreed) {
           throw new Error('You must agree to the Terms of Service and Privacy Policy to register.');
         }
         const authUser = await authService.signup(email, password, name);
-        await firestore.setDocument(`users/${authUser.uid}`, {
-          name,
-          email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-          role: 'customer',
-          favorites: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-        setCurrentUser({
-          id: authUser.uid,
-          name,
-          email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-          role: 'customer',
-          favorites: [],
-        });
+        setCurrentUser(await loadAuthenticatedProfile(authUser));
         showToast('Account created successfully!', 'success');
       } else if (mode === 'guide') {
         if (!agreed) {
           throw new Error('You must agree to the Terms of Service and Privacy Policy to submit your guide application.');
         }
-        const authUser = await authService.signup(email, password, name);
-        const companionId = `companion-${authUser.uid}`;
-        await firestore.setDocument(`users/${authUser.uid}`, {
-          name,
-          email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-          role: 'customer',
-          favorites: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-        await firestore.setDocument(`guideApplications/${companionId}`, {
-          id: companionId,
-          name,
-          email,
-          location,
-          hourlyRate: Number(rate) || 0,
-          bio: '',
-          gender: '',
-          languages: [],
-          interests: [],
-          status: 'pending',
-          companionId,
-          appliedDate: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-        setCurrentUser({
-          id: authUser.uid,
-          name,
-          email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-          role: 'customer',
-          favorites: [],
-        });
-        showToast('Guide application submitted! An admin will review your profile shortly.', 'success');
+        throw new Error('Create or sign in to your account, then submit the companion application in Settings. This legacy form cannot submit KYC.');
       }
 
       if (onSuccess) onSuccess(mode);

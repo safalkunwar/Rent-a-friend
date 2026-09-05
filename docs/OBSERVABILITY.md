@@ -1,8 +1,8 @@
 # SATHI — OBSERVABILITY & MONITORING REQUIREMENTS
 
-**Date:** 2026-08-17  
-**Firebase Project:** hamrosathi1  
-**Purpose:** Production monitoring, alerting, and incident response  
+**Date:** 2026-08-17 (reaffirmed 2026-09-04)
+**Firebase Project:** hamrosathi1
+**Purpose:** Production monitoring, alerting, and incident response
 
 ---
 

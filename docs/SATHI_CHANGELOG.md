@@ -1,10 +1,12 @@
 # SATHI Changelog
 
-Last Updated: 2026-08-22
+Last Updated: 2026-08-22 (reaffirmed 2026-09-04 — see `docs/sathi/CHANGELOG.md` for the live session log)
 
 ## Audit Summary (2026-08-22)
 
 This changelog records findings from the complete project audit performed on 2026-08-22. No code changes were made during this audit.
+
+> **Subsequent work (2026-08-24 → 2026-09-04):** authoritative `docs/sathi/` spec set (19 files); home feed overhaul (cursor pagination, deterministic generator, mobile/desktop parity); community post deep links (`/post/:postId`); comment pipeline rebuild; engagement integrity purge (1,350 fake post-likes + 838 fake story-likes removed from `hamrosathi1`); companion application / KYC flow; `MapPreview` migration to Leaflet+OSM. Test count 164/164 (126 main + 38 admin). See `docs/sathi/CHANGELOG.md`.
 
 ### Current State
 
