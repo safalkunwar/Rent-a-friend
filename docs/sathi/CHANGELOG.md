@@ -407,3 +407,16 @@ Each session entry records the test count AT THE TIME of the work. Current total
 - **Tests performed:** Final main regression 231/231 in 26 files; root TypeScript zero diagnostics; Vite build/PWA generation passed. Actual loopback Firestore rules suite 28/28 including two new timestamp/ID/length and tied-cursor tests; emulators shut down normally. Scoped whitespace check passed. An intermediate new-test unsubscribe mock failure was corrected before the full successful rerun. Other emulator/admin/device gates not rerun.
 - **Known issues:** Breaking Timestamp schema needs coordinated rollout/reset scope, not an index-only release. Production missing indexes remain. Latest-50 history limit, Story ordering contract, SDK reconnect behavior and authenticated UI qualification remain open. No sample data deleted or migrated.
 - **Next recommended task:** Complete deterministic older-comment paging and Story time/order contracts locally, then seek explicit production reset/release scope. Follow COMMENT_QUERY_CONTRACT.md rather than the earlier index-only plan.
+
+## 2026-09-06 — Match light theme to the SATHI logo
+- **Task:** Align the existing light appearance with the supplied repository logo.
+- **Objective:** Use the navy handshake and golden crescent as the visual palette while retaining the current layout.
+- **Files changed:** src/index.css; src/components/settings/SettingsTab.tsx; this log.
+- **Architecture changes:** Light semantic theme tokens updated; preference switches use a theme token with their existing dark-mode value preserved.
+- **Firebase changes:** None.
+- **UI changes:** Navy primary controls/text, white cards, soft blue-white surfaces and borders, gold navigation highlight and star fills, readable amber rating/gold-label text. Navy overlay tags retain white-text contrast. Appearance copy now describes the actual brand palette. Existing dark tokens preserved; stylesheet line endings normalized.
+- **Security implications:** None; visual-only changes.
+- **Performance implications:** No new dependencies, data reads or listeners.
+- **Tests performed:** Local browser inspected in light mode at desktop and 390x844 mobile viewport; production build and PWA generation passed. No new unit tests for palette/copy changes. Existing large-bundle warning remains.
+- **Known issues:** Pre-existing Stories query failure remains visible; this task does not change backend behavior. Physical-device visual checks were not performed.
+- **Next recommended task:** Review the light appearance before publishing; continue the separately tracked application work as requested.

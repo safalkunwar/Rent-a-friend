@@ -27,7 +27,9 @@ describe('media form persistence sequencing',()=>{
     expect(mocks.save).toHaveBeenCalledTimes(1); expect(mocks.setUser).not.toHaveBeenCalled();
     resolve({id:'A',role:'admin',avatar:'https://storage.test/photo',photoModerationStatus:'ACTIVE',photoVisibilityStatus:'PUBLIC'});
     await waitFor(()=>expect(mocks.setUser).toHaveBeenCalledTimes(1));
-    expect(mocks.setUser.mock.calls[0][0].role).toBe('customer');
+    const update = mocks.setUser.mock.calls[0][0];
+    expect(update({id:'A',role:'customer',name:'New name'})).toMatchObject({role:'customer',name:'New name',avatar:'https://storage.test/photo'});
+    expect(update({id:'B',avatar:'B photo'})).toEqual({id:'B',avatar:'B photo'});
     expect(screen.getByRole('status').textContent).toBe('Profile photo saved.');
   });
   it('profile network failure preserves preview and permits retry',async()=>{

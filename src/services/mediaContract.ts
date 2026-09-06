@@ -17,7 +17,7 @@ export function mediaPath(kind: MediaKind, uid: string, id: string, extension: s
   return `${mediaCategory(kind)}/${uid}/${id}.${extension}`;
 }
 export const mediaTime = (value: ExperienceStory['expiresAt']): number =>
-  typeof value === 'string' ? Date.parse(value) : value?.toMillis() ?? 0;
+  typeof value === 'string' ? Date.parse(value) : typeof value?.toMillis === 'function' ? value.toMillis() : 0;
 export const visibleStory = (story: ExperienceStory, now = Date.now()): boolean => !!story &&
   story.status === 'active' && story.moderationStatus === 'ACTIVE' && story.visibilityStatus === 'PUBLIC' &&
   !!story.mediaPath && mediaTime(story.expiresAt) > now;

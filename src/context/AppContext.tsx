@@ -14,7 +14,7 @@ import { requireUid } from '../services/identity';
 
 interface AppState {
   currentUser: User | null;
-  setCurrentUser: (user: User | null) => void;
+  setCurrentUser: React.Dispatch<React.SetStateAction<User | null>>;
   favorites: string[];
   toggleFavorite: (companionId: string) => void;
   bookings: Booking[];

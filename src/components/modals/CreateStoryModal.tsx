@@ -27,6 +27,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const draft = useRef<MediaDraft | null>(null);
   const submitGuard = useRef(false);
   useEffect(() => () => { if (imagePreview) URL.revokeObjectURL(imagePreview); },[imagePreview]);
+  useEffect(() => { draft.current = null; setSelectedFile(null); setImagePreview(null); setCaption(''); setErrorMessage(null); }, [currentUser?.id]);
 
   if (!currentUser) {
     return (
@@ -77,10 +78,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
     setSubmitting(true);
     setErrorMessage(null);
     try {
-      const saved = await socialRepository.uploadStory(draft.current, { caption, userName: currentUser.name }, setUploadProgress);
+      const saved = await socialRepository.uploadStory(draft.current, { caption, userName: currentUser.name, userAvatar: currentUser.avatar }, setUploadProgress);
       requireUid(currentUser.id);
       onSuccess?.(saved as unknown as ExperienceStory);
-      showToast('Story saved. It is visible under the current moderation policy.', 'success');
+      showToast('Your Story has been published.', 'success');
       onClose();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Upload failed. Your selection is preserved for retry.');
@@ -157,6 +158,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               type="text"
               placeholder="Describe your co-experience moment..."
               value={caption}
+              disabled={submitting}
               onChange={(e) => setCaption(e.target.value)}
               maxLength={150}
               className="w-full bg-surface-elevated text-text-primary border border-border-token/60 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-primary-action"
@@ -167,7 +169,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           {uploadProgress !== null && (
             <div className="space-y-1">
               <div className="flex justify-between text-[10px] text-text-secondary font-bold">
-                <span>Uploading to Firebase Storage...</span>
+                <span>{uploadProgress === 100 ? 'Saving and confirming your Story...' : 'Uploading image...'}</span>
                 <span>{uploadProgress}%</span>
               </div>
               <div className="w-full h-1.5 bg-surface-elevated rounded-full overflow-hidden">

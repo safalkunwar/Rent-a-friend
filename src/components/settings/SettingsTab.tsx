@@ -286,7 +286,7 @@ export const SettingsTab: React.FC = () => {
                   <Sparkles className="w-4 h-4 text-amber-500" /> SATHI Custom Aesthetics
                 </h3>
                 <p className="text-[11px] text-text-secondary leading-relaxed">
-                  Our redesigned Light Mode utilizes soft warm whites (<code className="bg-surface-elevated px-1 py-0.5 rounded text-text-primary text-[9px]">#F0F2F5</code>), dynamic shadows, high text contrast ratios, and clean Airbnb-inspired curves. Accent colors automatically swap from premium gold to professional brand blue (<code className="bg-surface-elevated px-1 py-0.5 rounded text-text-primary text-[9px]">#2563EB</code>) in Light Mode to guarantee readability.
+                  Light Mode pairs the SATHI logo’s deep navy and golden highlights with bright surfaces and clear, comfortable text.
                 </p>
               </div>
             </div>
@@ -473,7 +473,7 @@ export const SettingsTab: React.FC = () => {
                         aria-label={`${item.label} unavailable`}
                         className="w-11 h-6 rounded-full p-0.5 flex items-center relative cursor-pointer transition-colors duration-300 bg-surface-elevated border border-white/10"
                         style={{
-                          backgroundColor: val ? '#2563EB' : undefined
+                          backgroundColor: val ? 'var(--toggle-active)' : undefined
                         }}
                       >
                         <div className="w-4.5 h-4.5 rounded-full bg-white shadow transition-all duration-300 absolute" style={{
@@ -529,7 +529,7 @@ export const SettingsTab: React.FC = () => {
                         onClick={() => handleTogglePref(item.id as any)}
                         className="w-11 h-6 rounded-full p-0.5 flex items-center relative cursor-pointer transition-colors duration-300 bg-surface-elevated border border-white/10"
                         style={{
-                          backgroundColor: val ? '#2563EB' : undefined
+                          backgroundColor: val ? 'var(--toggle-active)' : undefined
                         }}
                       >
                         <div className="w-4.5 h-4.5 rounded-full bg-white shadow transition-all duration-300 absolute" style={{

@@ -1,9 +1,10 @@
-import { doc, getDocFromServer, runTransaction, Timestamp, type Firestore } from 'firebase/firestore';
+import { doc, getDocFromServer, runTransaction, serverTimestamp, Timestamp, type Firestore } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, getMetadata, deleteObject, type FirebaseStorage } from 'firebase/storage';
 import type { Auth } from 'firebase/auth';
 import { imageExtension, mediaCategory, mediaPath, type MediaKind } from './mediaContract';
 import { validateFileSignature } from './uploadContract';
 import type { ExperienceStory } from '../types';
+import { mediaDeadline } from './mediaDeadline';
 
 export interface MediaDependencies { auth: Auth; db: Firestore; storage: FirebaseStorage }
 export interface MediaDraft {
@@ -28,16 +29,37 @@ export async function saveMedia(deps: MediaDependencies, draft: MediaDraft, fiel
   if (draft.busy) throw new Error('This upload is already in progress.');
   draft.busy = true;
   const target = doc(deps.db, collectionName(draft.kind), draft.contentId);
+  const wait = <T>(operation: Promise<T>, phase: string, cancel?: () => void) =>
+    draft.kind === 'event' ? operation : mediaDeadline(operation, phase, cancel);
+  const confirmStory = async () => {
+    requireOwner(deps.auth, draft.uid);
+    // Resolve the server creation time before assigning an exact 24-hour lifetime.
+    // A pending Story is owner-only and can be resumed using the same draft ID.
+    await wait(runTransaction(deps.db, async tx => {
+      const saved = await tx.get(target);
+      const data = saved.data();
+      if (!data || data.mediaPath !== draft.path || data.userId !== draft.uid) throw new Error('Story confirmation failed. Retry with this image.');
+      if (data.moderationStatus !== 'ACTIVE' || data.visibilityStatus !== 'PUBLIC') throw new Error('This Story is under moderation.');
+      if (data.status === 'publishing' && data.createdAt instanceof Timestamp) {
+        tx.update(target, { status: 'active', expiresAt: Timestamp.fromMillis(data.createdAt.toMillis() + 86400000) });
+      } else if (data.status !== 'active') throw new Error('Story could not be published.');
+    }), 'Story publication');
+    const confirmed = await wait(getDocFromServer(target), 'Story confirmation');
+    const data = confirmed.data();
+    if (!data || data.status !== 'active' || data.moderationStatus !== 'ACTIVE' || data.visibilityStatus !== 'PUBLIC') throw new Error('Story is not publicly available.');
+    return { ...data, id: confirmed.id };
+  };
   try {
     requireOwner(deps.auth, draft.uid);
     imageExtension(draft.file);
     validateFileSignature(draft.file.type, new Uint8Array(await draft.file.slice(0,16).arrayBuffer()));
     // Check current moderation before transferring bytes; rules repeat the check at commit.
-    const before = await getDocFromServer(target);
+    const before = await wait(getDocFromServer(target), 'Checking your media');
     if (draft.kind === 'profile' && !before.exists()) throw new Error('Create your account profile before uploading a photo.');
     if (before.exists() && ![undefined,'ACTIVE'].includes(before.data()[statusField(draft.kind)])) throw new Error('This media is under moderation. Contact support before replacing it.');
     if (draft.kind === 'event' && before.exists() && before.data().imageOwnerId && before.data().imageOwnerId !== draft.uid) throw new Error('Only the existing event image owner can replace this image.');
     if (before.exists() && before.data()[pathField(draft.kind)] === draft.path) {
+      if (draft.kind === 'story') return await confirmStory();
       return { ...before.data(), id: before.id }; // Lost acknowledgement: never reset moderation/counters.
     }
     if (!draft.url) {
@@ -45,7 +67,7 @@ export async function saveMedia(deps: MediaDependencies, draft: MediaDraft, fiel
       // Recover a lost upload acknowledgement without overwriting the immutable object.
       if (draft.uploadAttempted && !draft.uploaded) {
         try {
-          const existing = await getMetadata(object);
+          const existing = await wait(getMetadata(object), 'Recovering upload');
           if (existing.customMetadata?.ownerUid !== draft.uid || existing.customMetadata?.contentId !== draft.contentId || existing.size !== draft.file.size || existing.contentType !== draft.file.type) throw new Error('Existing media object does not match this upload.');
           draft.uploaded = true;
         } catch (error) { if ((error as {code?:string}).code !== 'storage/object-not-found') throw error; }
@@ -56,17 +78,17 @@ export async function saveMedia(deps: MediaDependencies, draft: MediaDraft, fiel
         contentType: draft.file.type, cacheControl: 'public, max-age=300',
         customMetadata: { ownerUid: draft.uid, category: mediaCategory(draft.kind), contentId: draft.contentId },
       });
-      await new Promise<void>((resolve,reject) => task.on('state_changed', snapshot => {
+      await wait(new Promise<void>((resolve,reject) => task.on('state_changed', snapshot => {
         if (deps.auth.currentUser?.uid !== draft.uid) task.cancel();
         onProgress?.(Math.round(100 * snapshot.bytesTransferred / snapshot.totalBytes));
-      }, reject, resolve));
+      }, reject, resolve)), 'Image upload', () => task.cancel());
       draft.uploaded = true;
       }
       requireOwner(deps.auth,draft.uid);
-      draft.url = await getDownloadURL(object);
+      draft.url = await wait(getDownloadURL(object), 'Obtaining image URL');
     }
     requireOwner(deps.auth,draft.uid);
-    return await runTransaction(deps.db, async tx => {
+    const result = await wait(runTransaction(deps.db, async tx => {
       const current = await tx.get(target);
       if (current.exists() && current.data()[pathField(draft.kind)] === draft.path) return { ...current.data(), id: current.id };
       if (current.exists() && ![undefined,'ACTIVE'].includes(current.data()[statusField(draft.kind)])) throw new Error('Media was restricted during upload; it was not published.');
@@ -75,10 +97,10 @@ export async function saveMedia(deps: MediaDependencies, draft: MediaDraft, fiel
       if (draft.kind === 'story') {
         if (current.exists()) throw new Error('Story identity already exists.');
         data = { id: draft.contentId, userId: draft.uid, contentType: 'story', mediaType: 'image',
-          userName: typeof fields.userName === 'string' ? fields.userName : 'User', userAvatar: '', companionName: '',
+          userName: typeof fields.userName === 'string' ? fields.userName : 'User', userAvatar: typeof fields.userAvatar === 'string' ? fields.userAvatar : '', companionName: '',
           caption: typeof fields.caption === 'string' ? fields.caption.trim() : '', timeAgo: 'Just now',
-          imageUrl: draft.url, mediaPath: draft.path, createdAt: now, updatedAt: now,
-          expiresAt: Timestamp.fromMillis(Date.now() + 86400000), status: 'active',
+          imageUrl: draft.url, mediaPath: draft.path, createdAt: serverTimestamp(), updatedAt: now,
+          expiresAt: null, status: 'publishing',
           moderationStatus: 'ACTIVE', visibilityStatus: 'PUBLIC', reportedCount: 0,
           likes: 0, likesCount: 0, comments: 0, commentsCount: 0 };
         tx.set(target,data);
@@ -95,7 +117,16 @@ export async function saveMedia(deps: MediaDependencies, draft: MediaDraft, fiel
         if (current.exists()) tx.update(target,data); else tx.set(target,data);
       }
       return { ...(current.exists() ? current.data() : {}), ...data, id: draft.contentId };
-    });
+    }), 'Saving image metadata');
+    if (draft.kind === 'story') return await confirmStory();
+    if (draft.kind === 'profile') {
+      const oldPath = before.data()?.photoPath;
+      if (typeof oldPath === 'string' && oldPath !== draft.path && oldPath.startsWith(`avatars/${draft.uid}/`) && /^avatars\/[^/]+\/[^/]+\.(jpg|jpeg|png|webp)$/.test(oldPath)) {
+        // Only after the canonical write; failure must not turn a saved photo into an upload error.
+        void wait(deleteObject(ref(deps.storage, oldPath)), 'Previous photo cleanup').catch(() => {});
+      }
+    }
+    return result;
   } catch (error) {
     // Never delete after an ambiguous acknowledgement unless a server read proves no reference.
     // Timeout/offline errors retain the stable draft for retry; backend lifecycle cleanup is still needed.
@@ -103,15 +134,16 @@ export async function saveMedia(deps: MediaDependencies, draft: MediaDraft, fiel
     if (draft.url && ['permission-denied','invalid-argument'].includes(code || '')) {
       try {
         requireOwner(deps.auth,draft.uid);
-        const saved = await getDocFromServer(target);
+        const saved = await wait(getDocFromServer(target), 'Checking orphan image');
         if (!saved.exists() || saved.data()[pathField(draft.kind)] !== draft.path) {
-          await deleteObject(ref(deps.storage,draft.path));
+          await wait(deleteObject(ref(deps.storage,draft.path)), 'Removing orphan image');
           draft.url = undefined;
           draft.uploaded = false;
           draft.uploadAttempted = false;
         }
       } catch { /* No safe proof/permission: retain object for authorized orphan cleanup. */ }
     }
+    if (draft.kind !== 'event') console.warn('[media upload]', { kind: draft.kind, id: draft.contentId, code: code || 'unknown' });
     throw error;
   } finally { draft.busy = false; }
 }

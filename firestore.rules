@@ -263,16 +263,18 @@ service cloud.firestore {
       allow read: if (resource.data.moderationStatus == 'ACTIVE' && resource.data.visibilityStatus == 'PUBLIC' && resource.data.status == 'active') || own(resource.data.userId) || mediaModerator();
       allow create: if own(request.resource.data.userId) &&
         request.resource.data.id == id && request.resource.data.contentType == 'story' && request.resource.data.mediaType == 'image' &&
-        request.resource.data.moderationStatus == 'ACTIVE' && request.resource.data.visibilityStatus == 'PUBLIC' && request.resource.data.status == 'active' &&
+        request.resource.data.moderationStatus == 'ACTIVE' && request.resource.data.visibilityStatus == 'PUBLIC' && request.resource.data.status == 'publishing' &&
         request.resource.data.reportedCount == 0 && request.resource.data.caption is string && request.resource.data.caption.size() <= 150 &&
-        request.resource.data.expiresAt is timestamp && request.resource.data.expiresAt > request.time &&
-        request.resource.data.expiresAt <= request.time + duration.value(25,'h') &&
+        request.resource.data.createdAt == request.time && request.resource.data.expiresAt == null &&
         mediaReference(request.resource.data.mediaPath,request.resource.data.imageUrl,'stories',request.auth.uid) &&
         request.resource.data.keys().hasOnly(['id','userId','contentType','mediaType','userName','userAvatar','companionName','caption','timeAgo',
           'imageUrl','mediaPath','createdAt','updatedAt','expiresAt','status','moderationStatus','visibilityStatus','reportedCount','likes','likesCount','comments','commentsCount']) &&
         request.resource.data.get('likes',0) == 0 && request.resource.data.get('likesCount',0) == 0 &&
         request.resource.data.get('comments',0) == 0 && request.resource.data.get('commentsCount',0) == 0;
       allow update: if (own(resource.data.userId) && resource.data.moderationStatus == 'ACTIVE' && changedOnly(['caption','updatedAt']) && request.resource.data.caption.size() <= 150) ||
+        (own(resource.data.userId) && resource.data.moderationStatus == 'ACTIVE' && resource.data.visibilityStatus == 'PUBLIC' &&
+          resource.data.status == 'publishing' && request.resource.data.status == 'active' && changedOnly(['status','expiresAt']) &&
+          request.resource.data.expiresAt == resource.data.createdAt + duration.value(24,'h')) ||
         (mediaModerator() && changedOnly(['moderationStatus','visibilityStatus','moderationReason','moderatedAt','moderatedBy','reportedCount']) &&
           mediaStatus(request.resource.data.moderationStatus) && request.resource.data.moderatedBy == request.auth.uid &&
           request.resource.data.visibilityStatus in ['PUBLIC','PRIVATE'] && request.resource.data.reportedCount >= 0) ||

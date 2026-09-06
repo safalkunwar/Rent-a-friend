@@ -322,7 +322,7 @@ export class SocialRepository extends BaseRepository {
     return visibleStory(story) ? story : null;
   }
 
-  async uploadStory(draft: MediaDraft, fields: { caption: string; userName: string }, onProgress?: (value: number) => void): Promise<ExperienceStory> {
+  async uploadStory(draft: MediaDraft, fields: { caption: string; userName: string; userAvatar?: string }, onProgress?: (value: number) => void): Promise<ExperienceStory> {
     requireUid(draft.uid);
     if (draft.kind !== 'story') throw new Error('Expected a Story media draft.');
     return await saveAppMedia(draft,fields,onProgress) as unknown as ExperienceStory;

@@ -49,6 +49,7 @@ service firebase.storage {
       allow read: if (member() && request.auth.uid == uid) || mediaModerator() ||
         (firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.moderationStatus == 'ACTIVE' &&
          firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.visibilityStatus == 'PUBLIC' &&
+         firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.status == 'active' &&
          firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.mediaPath == 'stories/' + uid + '/' + filename &&
          firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.expiresAt > request.time);
       allow create: if ownedUpload(uid,'stories') && image() && mediaFilename(filename) && request.resource.size <= 10 * 1024 * 1024 &&

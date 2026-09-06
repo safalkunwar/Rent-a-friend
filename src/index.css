@@ -60,6 +60,7 @@
   --verified: #C8A25E;
   --premium: #C8A25E;
   --rating: #F59E0B;
+  --toggle-active: #2563EB;
 
   --overlay-gradient: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.35) 50%, transparent 100%);
   --overlay-text-primary: #FFFFFF;
@@ -74,38 +75,63 @@
 }
 
 html.theme-light {
-  --background: #F7F8F8;
+  /* SATHI logo: navy handshake, golden crescent, white canvas. */
+  --background: #F5F7FB;
   --surface: #FFFFFF;
-  --surface-elevated: #F3F4F6;
-  --surface-hover: #E5E7EB;
+  --surface-elevated: #EDF2F9;
+  --surface-hover: #E3EBF5;
   --card: #FFFFFF;
-  --card-hover: #F9FAFB;
-  --text-primary: #111827;
-  --text-secondary: #4B5563;
-  --text-muted: #6B7280;
-  --placeholder: #9CA3AF;
-  --border: #E5E7EB;
-  --border-light: rgba(107, 114, 128, 0.2);
-  --primary-action: #2563EB;
-  --primary-action-hover: #1D4ED8;
+  --card-hover: #F5F7FB;
+  --text-primary: #102A50;
+  --text-secondary: #465B76;
+  --text-muted: #60718A;
+  --placeholder: #60718A;
+  --border: #D4DEEC;
+  --border-light: rgba(8, 38, 90, 0.14);
+  --primary-action: #08265A;
+  --primary-action-hover: #123B78;
   --success: #16A34A;
   --warning: #D97706;
   --danger: #DC2626;
-  --gold-accent: #2563EB;
-  --verified: #2563EB;
-  --premium: #2563EB;
-  --rating: #D97706;
+  --gold-accent: #FFB511;
+  --verified: #08265A;
+  --premium: #8A5700;
+  --rating: #A56500;
+  --toggle-active: #08265A;
 
-  --overlay-gradient: linear-gradient(to top, rgba(17, 24, 39, 0.88) 0%, rgba(17, 24, 39, 0.28) 50%, transparent 100%);
+  --overlay-gradient: linear-gradient(to top, rgba(8, 38, 90, 0.9) 0%, rgba(8, 38, 90, 0.3) 50%, transparent 100%);
   --overlay-text-primary: #FFFFFF;
   --overlay-text-secondary: rgba(255, 255, 255, 0.88);
-  --overlay-tag-bg: rgba(255, 255, 255, 0.95);
-  --overlay-tag-border: rgba(229, 231, 235, 0.9);
+  --overlay-tag-bg: rgba(8, 38, 90, 0.88);
+  --overlay-tag-border: rgba(255, 255, 255, 0.24);
 
-  --shadow-sm: 0 1px 2px 0 rgba(17, 24, 39, 0.05);
-  --shadow-md: 0 4px 12px -2px rgba(17, 24, 39, 0.06), 0 1px 3px 0 rgba(17, 24, 39, 0.04);
-  --shadow-lg: 0 12px 28px -4px rgba(17, 24, 39, 0.08), 0 2px 6px 0 rgba(17, 24, 39, 0.04);
-  --shadow-2xl: 0 25px 50px -12px rgba(17, 24, 39, 0.12);
+  --shadow-sm: 0 1px 2px 0 rgba(8, 38, 90, 0.05);
+  --shadow-md: 0 4px 12px -2px rgba(8, 38, 90, 0.07), 0 1px 3px 0 rgba(8, 38, 90, 0.04);
+  --shadow-lg: 0 12px 28px -4px rgba(8, 38, 90, 0.09), 0 2px 6px 0 rgba(8, 38, 90, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(8, 38, 90, 0.14);
+}
+
+/* Gold is a highlight; navy keeps small labels and controls readable. */
+html.theme-light ::selection {
+  background-color: #FFE4A3;
+  color: #08265A;
+}
+html.theme-light .bg-\[\#C8A25E\]\/10 {
+  background-color: rgba(255, 181, 17, 0.14) !important;
+}
+html.theme-light .bg-\[\#C8A25E\]\/5 {
+  background-color: rgba(255, 181, 17, 0.08) !important;
+}
+html.theme-light svg.lucide-star.fill-current {
+  fill: var(--gold-accent) !important;
+  color: var(--rating) !important;
+}
+html.theme-light .text-gold-accent {
+  color: var(--premium);
+}
+html.theme-light nav[aria-label="Sidebar navigation"] .border-l-4 {
+  border-left-color: var(--gold-accent);
+  background-color: #FFF3D5;
 }
 
 /* Let's set HTML base */

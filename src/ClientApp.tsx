@@ -22,6 +22,7 @@ import { CompanionCard } from './components/companions/CompanionCard';
 import { CategoryHeader } from './components/discovery/CategoryHeader';
 import { PageContainer, SectionHeader } from './components/layout';
 import { ProfileEditModal } from './components/modals/ProfileEditModal';
+import { ProfilePhotoUpload } from './components/modals/ProfilePhotoUpload';
 import { DocumentModal } from './components/modals/DocumentModal';
 import { MapPreview } from './components/maps/MapPreview';
 import { Companion, ExperienceStory, Activity, Event as SathiEvent } from './types';
@@ -234,6 +235,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [showProfileDropdown, setShowProfileDropdown] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState<boolean>(false);
+  const [showProfilePhoto, setShowProfilePhoto] = useState(false);
   const [showCalculator, setShowCalculator] = useState<boolean>(false);
   const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'explore' | 'experiences' | 'bookings' | 'messages' | 'profile' | 'notifications'>('home');
   
@@ -1886,7 +1888,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     <div className="relative p-[2px] rounded-full bg-gradient-to-tr from-[#C8A25E] via-pink-600 to-purple-600">
                       <div className="p-[1.5px] rounded-full bg-background">
                         <SafeImage 
-                          src={st.userAvatar} 
+                          src={st.userId === currentUser?.id ? currentUser.avatar : st.userAvatar} 
                           alt={st.userName} 
                           fallbackType="avatar"
                           textForInitials={st.userName}
@@ -2494,6 +2496,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 {/* Logged-In User Header */}
                 <div className="bg-surface border border-white/5 rounded-3xl p-6 flex items-center gap-4 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary-action/5 rounded-full blur-2xl" />
+                  <button type="button" aria-label="Change profile photo" onClick={() => setShowProfilePhoto(true)} className="relative shrink-0 rounded-full">
                   <SafeImage 
                     src={currentUser.avatar} 
                     alt={currentUser.name} 
@@ -2501,6 +2504,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     textForInitials={currentUser.name}
                     className="w-16 h-16 rounded-full object-cover border-2 border-primary-action" 
                   />
+                  <span className="absolute -bottom-1 -right-1 rounded-full bg-primary-action text-background px-1.5 py-0.5 text-[10px] font-bold">Edit</span>
+                  </button>
                   <div className="flex-1 text-left">
                     <h3 className="text-base font-bold text-text-primary flex items-center gap-1">
                       {currentUser.name}
@@ -3086,7 +3091,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             {/* Top Bar inside Story */}
             <div className="absolute top-0 inset-x-0 p-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-3 text-left">
-                <SafeImage src={viewingStory.userAvatar} className="w-9 h-9 rounded-full border border-primary-action object-cover" alt={viewingStory.userName} fallbackType="avatar" textForInitials={viewingStory.userName} />
+                <SafeImage src={viewingStory.userId === currentUser?.id ? currentUser.avatar : viewingStory.userAvatar} className="w-9 h-9 rounded-full border border-primary-action object-cover" alt={viewingStory.userName} fallbackType="avatar" textForInitials={viewingStory.userName} />
                 <div>
                   <span className="text-text-primary font-bold text-xs block leading-tight">{viewingStory.userName}</span>
                   <span className="text-text-secondary text-[9px]">with {viewingStory.companionName || 'SATHI'} • {viewingStory.timeAgo || 'Recently'}</span>
@@ -3229,6 +3234,14 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       </AnimatePresence>
 
       {/* Profile Edit Modal */}
+      {showProfilePhoto && currentUser && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label="Change profile photo">
+          <div className="w-full max-w-sm rounded-2xl border border-border-token bg-surface p-5 space-y-4">
+            <div className="flex items-center justify-between"><h2 className="font-bold text-text-primary">Change profile photo</h2><button type="button" aria-label="Close photo editor" onClick={() => setShowProfilePhoto(false)}>×</button></div>
+            <ProfilePhotoUpload />
+          </div>
+        </div>
+      )}
       {showProfileEditModal && (
         <ProfileEditModal 
           isOpen={showProfileEditModal}

@@ -33,13 +33,13 @@ export function ProfilePhotoUpload() {
         requireUid(currentUser.id);
         const photo = saved as Partial<User>;
         // Do not replace normalized Auth role/claims or other application state with a raw user document.
-        setCurrentUser({ ...currentUser, avatar: visibleAvatar(photo), photoPath: photo.photoPath,
+        setCurrentUser(previous => previous?.id !== currentUser.id ? previous : { ...previous, avatar: visibleAvatar(photo), photoPath: photo.photoPath,
           photoUpdatedAt: photo.photoUpdatedAt, photoModerationStatus: photo.photoModerationStatus,
           photoVisibilityStatus: photo.photoVisibilityStatus });
         draft.current = null; setPreview(''); setMessage('Profile photo saved.');
       } catch (error) { setMessage(error instanceof Error ? error.message : 'Upload failed. Retry with your selection.'); }
       finally { busy.current = false; setProgress(null); }
-    }}>{progress === null ? 'Upload profile photo' : `Uploading ${progress}%`}</button>
+    }}>{progress === null ? 'Upload profile photo' : progress === 100 ? 'Saving photo...' : `Uploading ${progress}%`}</button>
     <p className="text-xs text-text-secondary" role="status">{message}</p>
   </div>;
 }
