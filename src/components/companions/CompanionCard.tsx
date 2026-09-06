@@ -40,7 +40,7 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
           <SafeImage src={companion.imageUrl} className="w-full h-full object-cover" alt={companion.name} fallbackType="thumbnail" />
           {companion.isVerified && (
             <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded text-[7px] text-primary-action font-extrabold flex items-center gap-0.5 border border-primary-action/20">
-              VERIFIED
+              APPLICATION APPROVED
             </span>
           )}
           {onToggleFavorite && (
@@ -90,7 +90,7 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
           <SafeImage src={companion.imageUrl} className="w-full h-full object-cover" alt={companion.name} fallbackType="thumbnail" />
           {companion.isVerified && (
             <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[8px] text-primary-action font-extrabold flex items-center gap-0.5 border border-primary-action/20">
-              VERIFIED
+              APPLICATION APPROVED
             </span>
           )}
           {onToggleFavorite && (
@@ -139,7 +139,7 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
         <SafeImage src={companion.imageUrl} className="w-full h-full object-cover" alt={companion.name} fallbackType="thumbnail" />
         {companion.isVerified && (
           <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[8px] text-primary-action font-extrabold flex items-center gap-0.5 border border-primary-action/20">
-            VERIFIED
+            APPLICATION APPROVED
           </span>
         )}
         {onToggleFavorite && (

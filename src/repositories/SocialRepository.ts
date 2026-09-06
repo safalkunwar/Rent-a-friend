@@ -11,17 +11,9 @@ import { visibleStoriesQuery } from '../services/mediaQueries';
 import { visibleStory } from '../services/mediaContract';
 import { saveAppMedia } from '../services/mediaUploads';
 import type { MediaDraft } from '../services/mediaUploadCore';
+import { commentText, commentWrite, type Comment } from '../services/commentContract';
+export type { Comment } from '../services/commentContract';
 
-export interface Comment {
-  id: string;
-  postId: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  text: string;
-  createdAt: string;
-  parentId?: string; // For replies
-}
 
 export class SocialRepository extends BaseRepository {
   private likedStateCache = new Map<string, boolean>();
@@ -117,6 +109,21 @@ export class SocialRepository extends BaseRepository {
 
   // ==================== LIKES (Scalable Design) ====================
 
+  /** Fresh, bounded read for the shared Home reaction state; no permanent like cache. */
+  async getFeedReaction(kind: 'post' | 'story', userId: string, targetId: string): Promise<{ liked: boolean; count: number }> {
+    requireUid(userId);
+    if (!db) throw new Error('Social service unavailable.');
+    const [reaction, content] = await Promise.all([
+      getDocFromServer(doc(db, kind === 'post' ? 'likes' : 'story_likes', `${userId}_${targetId}`)),
+      getDocFromServer(doc(db, kind === 'post' ? 'community_posts' : 'stories', targetId)),
+    ]);
+    requireUid(userId);
+    if (!content.exists()) throw new Error('Content unavailable.');
+    const data = content.data();
+    const count = kind === 'post' ? data.likesCount : (data.likesCount ?? data.likes);
+    return { liked: reaction.exists(), count: typeof count === 'number' && Number.isFinite(count) ? Math.max(0, count) : 0 };
+  }
+
   async likePost(userId: string, postId: string): Promise<void> {
     requireUid(userId);
     if (!db) throw new Error('Social service unavailable.');
@@ -211,34 +218,11 @@ export class SocialRepository extends BaseRepository {
 
   // ==================== COMMENTS ====================
 
-  async getComments(postId: string, limitCount = 20): Promise<Comment[]> {
-    return this.executeWithRetry(
-      () => firestore.getDocuments<Comment>('comments', {
-        where: [{ field: 'postId', operator: '==', value: postId }],
-        orderByField: 'createdAt',
-        orderDirection: 'asc',
-        limitCount
-      }),
-      OperationType.LIST,
-      'comments'
-    );
-  }
-
   async createComment(comment: Omit<Comment, 'id' | 'createdAt'>): Promise<string> {
     requireUid(comment.userId);
     if (!db) throw new Error('Social service unavailable.');
     const id = doc(collection(db, 'comments')).id;
-    const timestamp = new Date().toISOString();
-    const newComment: Comment = {
-      ...comment,
-      id,
-      createdAt: timestamp,
-    };
-
-    if (!db) {
-      await firestore.setDocument(`comments/${id}`, newComment as any);
-      return id;
-    }
+    const newComment = commentWrite(id, comment);
 
     const postRef = doc(db, 'community_posts', comment.postId);
 
@@ -268,16 +252,13 @@ export class SocialRepository extends BaseRepository {
   }
 
   async editComment(id: string, text: string): Promise<void> {
-    try {
-      await this.executeWithRetry(
-        () => firestore.updateDocument(`comments/${id}`, { text }),
-        OperationType.UPDATE,
-        `comments/${id}`
-      );
-    } catch (err) {
-      await this.queueIfOffline('comments', id, { text }, 'update');
-      throw err;
-    }
+    requireUid();
+    const validated = commentText(text);
+    await this.executeWithRetry(
+      () => firestore.updateDocument(`comments/${id}`, { text: validated }),
+      OperationType.UPDATE,
+      `comments/${id}`
+    );
   }
 
   async deleteComment(id: string, postId: string): Promise<void> {

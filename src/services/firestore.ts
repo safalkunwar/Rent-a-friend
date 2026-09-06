@@ -1,4 +1,4 @@
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter, onSnapshot, writeBatch, runTransaction as firebaseRunTransaction, documentId, type Unsubscribe, type Query, type DocumentData, type Firestore } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, getDocs, getDocsFromServer, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter, onSnapshot, writeBatch, runTransaction as firebaseRunTransaction, documentId, type Unsubscribe, type Query, type DocumentData, type Firestore } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from './firestore-errors';
 
@@ -9,10 +9,13 @@ type QueryCondition = {
 };
 
 export interface QueryOptions {
+  /** Opt-in for callers that must distinguish unavailable data from an empty result. */
+  throwOnError?: boolean;
   where?: QueryCondition[];
   orderByField?: string;
   orderDirection?: 'asc' | 'desc';
   orderById?: boolean;
+  orderByIdDirection?: 'asc' | 'desc';
   limitCount?: number;
   startAfter?: unknown[];
 };
@@ -32,7 +35,7 @@ const buildQuery = <T = DocumentData>(collectionName: string, options: QueryOpti
   }
 
   if (options.orderById) {
-    q = query(q, orderBy(documentId(), 'asc'));
+    q = query(q, orderBy(documentId(), options.orderByIdDirection || 'asc'));
   }
 
   if ((options.startAfter?.length ?? 0) > 0 && (options.orderByField || options.orderById)) {
@@ -54,13 +57,14 @@ const requireDb = (): Firestore => {
 export const firestore = {
   collection: <T = DocumentData>(name: string) => collection(requireDb(), name),
 
-  getDocument: async <T = DocumentData>(path: string): Promise<T | null> => {
+  getDocument: async <T = DocumentData>(path: string, options: { throwOnError?: boolean } = {}): Promise<T | null> => {
     try {
       const snap = await getDoc(doc(requireDb(), path));
       if (!snap.exists()) return null;
       return { ...snap.data(), id: snap.id } as T;
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, path);
+      if (options.throwOnError) throw error;
       return null;
     }
   },
@@ -96,23 +100,27 @@ export const firestore = {
   },
 
   getDocuments: async <T = DocumentData>(collectionName: string, options: QueryOptions = {}): Promise<T[]> => {
-    if (!db) return [];
+    if (!db) {
+      if (options.throwOnError) requireDb();
+      return [];
+    }
     try {
       const q = buildQuery<T>(collectionName, options);
       const snap = await getDocs(q);
       return snap.docs.map(d => ({ id: d.id, ...d.data() } as T));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, collectionName);
+      if (options.throwOnError) throw error;
       return [];
     }
   },
 
   getDocumentsPaginated: async <T = DocumentData>(collectionName: string, options: QueryOptions = {}): Promise<{ items: T[]; lastVisible?: unknown[]; hasMore: boolean; failed?: boolean }> => {
-    if (!db) return { items: [], hasMore: false };
+    if (!db) return { items: [], hasMore: false, failed: true };
     try {
       const q = buildQuery<T>(collectionName, options);
-      const snap = await getDocs(q);
-      const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as T));
+      const snap = await getDocsFromServer(q);
+      const items = snap.docs.map(d => ({ ...d.data(), id: d.id } as T));
       const lastDoc = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : undefined;
       const lastVisible = lastDoc ? [lastDoc.id] : undefined;
       const hasMore = options.limitCount ? snap.docs.length >= options.limitCount : false;
@@ -123,8 +131,9 @@ export const firestore = {
     }
   },
 
-  subscribe: <T = DocumentData>(collectionName: string, options: QueryOptions = {}, callback: (items: T[]) => void): Unsubscribe => {
+  subscribe: <T = DocumentData>(collectionName: string, options: QueryOptions = {}, callback: (items: T[]) => void, onError?: (error: unknown) => void): Unsubscribe => {
     if (!db) {
+      if (onError) { onError(new Error('Firebase unavailable.')); return () => {}; }
       callback([]);
       return () => {};
     }
@@ -137,12 +146,14 @@ export const firestore = {
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, collectionName);
+        onError?.(error);
       }
     );
   },
 
-  subscribeDocument: <T = DocumentData>(path: string, callback: (item: T | null) => void): Unsubscribe => {
+  subscribeDocument: <T = DocumentData>(path: string, callback: (item: T | null) => void, onError?: (error: unknown) => void): Unsubscribe => {
     if (!db) {
+      if (onError) { onError(new Error('Firebase unavailable.')); return () => {}; }
       callback(null);
       return () => {};
     }
@@ -157,6 +168,7 @@ export const firestore = {
       },
       (error) => {
         handleFirestoreError(error, OperationType.GET, path);
+        onError?.(error);
       }
     );
   },

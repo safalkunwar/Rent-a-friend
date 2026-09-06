@@ -8,18 +8,20 @@ import { SafeImage } from '../components/ui/SafeImage';
 type LoadState =
   | { kind: 'loading' }
   | { kind: 'notfound' }
+  | { kind: 'error' }
   | { kind: 'ready'; post: CommunityPost };
 
 export const PostPage: React.FC = () => {
   const { postId = '' } = useParams();
   const navigate = useNavigate();
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
     setState({ kind: 'loading' });
     firestore
-      .getDocument<CommunityPost>(`community_posts/${postId}`)
+      .getDocument<CommunityPost>(`community_posts/${postId}`, { throwOnError: true })
       .then(post => {
         if (!active) return;
         // Only published posts are publicly viewable via deep link.
@@ -32,12 +34,12 @@ export const PostPage: React.FC = () => {
           setState({ kind: 'notfound' });
         }
       })
-      .catch(() => active && setState({ kind: 'notfound' }));
+      .catch(() => active && setState({ kind: 'error' }));
     return () => {
       active = false;
       document.title = 'SATHI - Nepal\'s Premier Social Experiences Marketplace';
     };
-  }, [postId]);
+  }, [postId, attempt]);
 
   return (
     <div className="min-h-screen bg-background text-text-primary">
@@ -53,6 +55,7 @@ export const PostPage: React.FC = () => {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6">
+        {state.kind === 'error' && <div role="alert" className="py-24 text-center text-text-secondary">Post unavailable. Check your connection. <button onClick={() => setAttempt(value => value + 1)} className="text-primary-action">Retry</button></div>}
         {state.kind === 'loading' && (
           <div className="py-24 flex flex-col items-center gap-3">
             <span className="w-10 h-10 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin" />

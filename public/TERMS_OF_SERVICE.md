@@ -8,7 +8,7 @@ Welcome to SATHI ("the Platform"). By using our services, you agree to comply wi
 By accessing or using the Platform, you agree to these Terms, our Privacy Policy, and any additional guidelines or rules. If you do not agree, you must not use the Platform.
 
 ## 2. Platform Description
-SATHI is a travel companion platform connecting independent travelers with verified local companions ("Guides" or "Companions") in Nepal. SATHI acts as a facilitator and platform provider, and does not directly employ the Companions.
+SATHI is a travel companion platform connecting independent travelers with local companions ("Guides" or "Companions") in Nepal. SATHI acts as a facilitator and platform provider, and does not directly employ the Companions.
 
 ## 3. User Eligibility and Registration
 - Users must be at least 18 years old.
@@ -16,12 +16,12 @@ SATHI is a travel companion platform connecting independent travelers with verif
 - You are responsible for keeping your credentials secure.
 
 ## 4. Companion Verification
-While we perform verification checks on Companions (e.g., identity verification), SATHI does not guarantee the behavior, performance, or character of any user or companion. Travelers are advised to follow standard safety protocols.
+An application-approval indicator represents a recorded application review, not a background check, professional certification, or guarantee of behavior, performance, character, or safety. Travelers should take their own safety precautions.
 
 ## 5. Payments and Bookings
 - Booking rates are denominated in NPR (Nepalese Rupee).
-- Payments must be made through authorized payment methods supported on the Platform.
-- Cancellation and refund policies apply to all active bookings as specified in the booking flow.
+- Online payments and escrow are unavailable. Requests are unpaid; acceptance does not establish payment.
+- Provider verification, settlement, and automated refunds are not implemented. A browser return page cannot determine whether money moved; do not pay again based solely on that page.
 
 ## 6. Safety and Conduct Rules
 - All users must treat companions and other travelers with respect and dignity.

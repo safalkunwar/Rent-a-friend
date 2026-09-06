@@ -202,7 +202,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSu
                       <button type="button" onClick={() => setShowDocType('terms')} className="text-primary-action font-medium hover:underline inline bg-transparent border-none">Terms of Service</button>
                       {' '}and{' '}
                       <button type="button" onClick={() => setShowDocType('privacy')} className="text-primary-action font-medium hover:underline inline bg-transparent border-none">Privacy Policy</button>
-                      , and confirm that I have undergone a mandatory background check. I understand that any violation of safety protocols will result in immediate termination.
+                      . Application approval does not establish a background check or guarantee safety.
                     </label>
                   </div>
                 </>

@@ -4,8 +4,6 @@ import { generateDiscoveryFeed, mulberry32, type FeedItem } from '../services/fe
 import { stabilizeFeed } from '../services/feedStabilizer';
 import { useAppContext } from '../context/AppContext';
 
-const idsKey = (items: { id: string }[]): string => items.map(i => i.id).join(',');
-
 export function useDiscoveryFeed(
   companions: Companion[],
   activities: Activity[],
@@ -18,31 +16,34 @@ export function useDiscoveryFeed(
   const userLocation = currentUser?.location;
   const userInterests = (currentUser as any)?.interests;
 
-  const sessionRngRef = useRef<() => number | null>(null);
-  if (sessionRngRef.current === null) {
-    sessionRngRef.current = mulberry32((Math.random() * 4294967296) >>> 0);
-  }
-
-  const companionsKey = idsKey(companions);
-  const activitiesKey = idsKey(activities);
-  const eventsKey = idsKey(events);
-  const storiesKey = idsKey(stories);
-  const postsKey = idsKey(posts);
+  const sessionRef = useRef({ uid: currentUser?.id, seed: (Math.random() * 4294967296) >>> 0 });
 
   const stabilizedRef = useRef<FeedItem[]>([]);
 
   return useMemo(() => {
+    if (sessionRef.current.uid !== currentUser?.id) {
+      sessionRef.current = { uid: currentUser?.id, seed: (Math.random() * 4294967296) >>> 0 };
+      stabilizedRef.current = [];
+    }
     const regenerated = generateDiscoveryFeed(companions, activities, events, stories, posts, {
       userLocation,
       userInterests,
       maxItems: Math.max(60, companions.length + activities.length + events.length + stories.length + posts.length),
       categoriesPerFeed: 16,
       itemsPerCategory: 24,
-      rng: sessionRngRef.current ?? undefined,
+      rng: mulberry32(sessionRef.current.seed),
     });
-    const stable = stabilizeFeed(stabilizedRef.current, regenerated);
+    // Ranking caps may omit a still-live item. Only absence from its actual
+    // source window removes it; updated payloads replace data in place.
+    const available: FeedItem[] = [
+      ...companions.map(data => ({ type: 'companion' as const, data, section: '', category: data.interests?.[0] || 'Local Companion' })),
+      ...activities.map(data => ({ type: 'activity' as const, data, section: '', category: data.category })),
+      ...events.map(data => ({ type: 'event' as const, data, section: '', category: data.category })),
+      ...stories.map(data => ({ type: 'story' as const, data, section: '' })),
+      ...posts.map(data => ({ type: 'post' as const, data, section: '' })),
+    ];
+    const stable = stabilizeFeed(stabilizedRef.current, regenerated, available);
     stabilizedRef.current = stable;
     return stable;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companionsKey, activitiesKey, eventsKey, storiesKey, postsKey, userLocation, JSON.stringify(userInterests ?? null)]);
+  }, [companions, activities, events, stories, posts, currentUser?.id, userLocation, JSON.stringify(userInterests ?? null)]);
 }

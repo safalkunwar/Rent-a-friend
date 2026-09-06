@@ -1,5 +1,7 @@
 # Home Feed Architecture
 
+> Current implementation note — 2026-09-06: [PHASE3_HOME_CHECKPOINT.md](PHASE3_HOME_CHECKPOINT.md) supersedes the historical implementation claims below. Home now uses typed identities, global append order with fresh source data, separate responsive sentinels with one reveal state, bounded server revalidation, and shared confirmed reactions. Deployment and physical-device qualification remain unverified.
+
 **Last updated:** 2026-08-25
 **Scope:** Home page feed data flow shared by Web Desktop, Web Mobile, and the installed PWA.
 

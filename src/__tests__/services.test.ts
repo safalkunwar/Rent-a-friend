@@ -12,6 +12,13 @@ describe('firestore service', () => {
     expect(result).toEqual([]);
   }, 10000);
 
+  it('strict dashboard reads reject unavailable Firebase instead of returning an empty result', async () => {
+    vi.doMock('../firebase', () => ({ db: null, auth: null }));
+    const { firestore } = await import('../services/firestore');
+    await expect(firestore.getDocuments('bookings', { throwOnError: true })).rejects.toThrow('Firebase is not configured');
+    await expect(firestore.getDocument('companions/C', { throwOnError: true })).rejects.toThrow('Firebase is not configured');
+  });
+
   it('subscribe calls callback with empty array when db is missing', async () => {
     vi.doMock('../firebase', () => ({ db: null }));
     const { firestore } = await import('../services/firestore');
@@ -41,7 +48,7 @@ describe('payment service', () => {
     await expect(paymentService.initiatePayment({ provider: 'unknown' as any, amount: 100, currency: 'NPR', companionId: 'c1', bookingId: 'b1' })).rejects.toThrow('Unsupported payment provider');
   });
 
-  it('throws when Khalti secret key is missing', async () => {
+  it('blocks Khalti initiation without contacting a provider', async () => {
     const { paymentService } = await import('../services/payments');
     await expect(paymentService.initiateKhalti({
       provider: 'khalti',
@@ -49,10 +56,10 @@ describe('payment service', () => {
       currency: 'NPR',
       companionId: 'c1',
       bookingId: 'b1',
-    })).rejects.toThrow('Khalti secret key is not configured');
+    })).rejects.toThrow('No payment has been initiated');
   });
 
-  it('throws when eSewa merchant ID is missing', async () => {
+  it('blocks eSewa initiation without contacting a provider', async () => {
     const { paymentService } = await import('../services/payments');
     await expect(paymentService.initiateEsewa({
       provider: 'esewa',
@@ -60,12 +67,12 @@ describe('payment service', () => {
       currency: 'NPR',
       companionId: 'c1',
       bookingId: 'b1',
-    })).rejects.toThrow('eSewa merchant ID is not configured');
+    })).rejects.toThrow('No payment has been initiated');
   });
 
-  it('verifyPayment always throws server-side error', async () => {
+  it('untrusted callback reference never establishes payment verification', async () => {
     const { paymentService } = await import('../services/payments');
-    await expect(paymentService.verifyPayment('khalti', 'token')).rejects.toThrow('Payment verification must be handled by server-side Cloud Function or payment gateway webhook.');
+    await expect(paymentService.verifyPayment('khalti', 'SUCCESS')).resolves.toMatchObject({ success: false, status: 'verification_required' });
   });
 });
 

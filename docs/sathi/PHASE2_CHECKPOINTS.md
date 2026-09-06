@@ -15,3 +15,7 @@ Scope: P0-A through P0-I, in that order. No Home/feed implementation, layout/pal
 No errors were classified as generated/platform code. No ts-ignore, compiler weakening, placeholder records or new any casts were introduced. Broad test discovery/mock-path repairs are a prerequisite to safely testing this checkpoint, not an early feature refactor. The dashboard selector has regression cases for cross-user records, cancelled value and signed-out state; the render-level source-reference check is revisited at P0-H.
 
 P0-A verification: root TypeScript 17 -> 0 diagnostics; existing main tests 126/126 and new selector regressions 3/3. All changes here are SPARK-COMPATIBLE NOW; no cloud infrastructure is added.
+
+## Final local handoff — 2026-09-06
+
+P0-B through P0-H implementation/checkpoint details are recorded in CHANGELOG.md; the intervening media foundation is preserved. Final evidence and issue-by-issue boundaries: [P0_STABILIZATION_REPORT.md](P0_STABILIZATION_REPORT.md). Fresh results: main 191/191, admin 40/40, combined Firebase emulators 45/45; both apps type-check/build. The three audited Home defects now have explicit red acceptance tests in tests/home-deferred.test.ts: **3 failures, no skips**. These are deferred by the no-Home instruction, not silently certified as fixed. The entire application is not production-ready; stop and await next-phase/rollout approval.

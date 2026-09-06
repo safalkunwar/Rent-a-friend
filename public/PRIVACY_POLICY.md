@@ -13,21 +13,21 @@ We collect personal information that you provide to us directly:
 ## 2. How We Use Your Information
 We use your data to:
 - Facilitate the traveler-companion connection and booking engine.
-- Verify identities to ensure community safety.
-- Process securely all active booking agreements.
+- Review companion applications; review does not guarantee safety.
+- Store booking requests and their status.
 - Deliver real-time notifications and messages.
 - Improve our platform experience and analytics.
 
 ## 3. Data Protection and Security
-We implement strict administrative, technical, and physical security measures to safeguard your personal information against unauthorized access, loss, alteration, or disclosure.
+The application uses Firebase authentication and access rules. No absolute security or privacy guarantee is made.
 - Role-based security rules govern access to Firestore collections.
-- Images and identity verification documents are securely processed in Firebase Storage.
+- Images and identity documents use separate Storage access policies. Application review is not automated document or malware screening. Previously shared image links may remain accessible.
 
 ## 4. Sharing Your Information
 We do not sell or trade your personal data. We only share data with:
 - Other users as necessary to complete bookings (e.g., sharing traveler name and contact info with the booked companion).
-- Payment gateways to complete authorized transactions.
+- Online payment initiation is currently disabled; historical provider activity requires separate reconciliation.
 - Law enforcement when legally required to protect the safety of our users.
 
 ## 5. Your Rights
-You can edit your profile, manage active bookings, and delete your account or personal content. To request complete deletion of your records, please contact our support team.
+You can edit supported profile fields and manage supported booking states. Complete account-data deletion is not an automated workflow. Use the support form for deletion requests; submitting a request does not establish completion or recall previously shared data.

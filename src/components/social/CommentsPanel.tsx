@@ -5,6 +5,8 @@ import { SafeImage } from '../ui/SafeImage';
 import { CommentComposer } from './CommentComposer';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
+import { Timestamp } from 'firebase/firestore';
+import { COMMENT_MAX_LENGTH, COMMENT_PAGE_SIZE } from '../../services/commentContract';
 
 interface CommentsPanelProps {
   postId: string;
@@ -13,9 +15,10 @@ interface CommentsPanelProps {
   maxHeightClass?: string;
 }
 
-export const commentTimeAgo = (iso?: string): string => {
-  if (!iso) return '';
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+export const commentTimeAgo = (timestamp?: Timestamp | null): string => {
+  if (!(timestamp instanceof Timestamp)) return '';
+  const date = timestamp.toDate();
+  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
   if (seconds < 60) return 'just now';
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m`;
@@ -23,7 +26,7 @@ export const commentTimeAgo = (iso?: string): string => {
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d`;
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
 export const CommentsPanel: React.FC<CommentsPanelProps> = ({
@@ -34,12 +37,12 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
 }) => {
   const { currentUser } = useAppContext();
   const { showToast } = useToast();
-  const { comments, loading, addComment, removeComment, editCommentText } = usePostComments(postId);
+  const { comments, loading, error, totalCount, retry, addComment, removeComment, editCommentText } = usePostComments(postId);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
 
   useEffect(() => {
-    if (!loading) onCountChange?.(comments.length);
-  }, [comments.length, loading, onCountChange]);
+    if (!loading && !error && totalCount !== null) onCountChange?.(totalCount);
+  }, [totalCount, loading, error, onCountChange]);
 
   const handleAdd = async (text: string) => {
     try {
@@ -60,6 +63,12 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
     }
   };
 
+  const handleEdit = async (commentId: string, text: string) => {
+    if (!text.trim()) return;
+    try { await editCommentText(commentId, text.trim()); setEditing(null); }
+    catch { showToast('Could not save the edit. Your text was kept.', 'error'); }
+  };
+
   return (
     <div id={`comments-panel-${postId}`} className="relative z-10 bg-background border-t border-border-token/40 p-3 text-left space-y-3">
       {onClose && (
@@ -72,9 +81,11 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
       )}
 
       <div className={`${maxHeightClass} overflow-y-auto space-y-2.5 custom-scrollbar pr-1`}>
+        {error && <p role="alert" className="text-xs text-text-secondary">{error} <button onClick={retry} className="text-primary-action">Retry</button></p>}
+        {totalCount !== null && totalCount > COMMENT_PAGE_SIZE && <p className="text-xs text-text-secondary">Showing the latest {COMMENT_PAGE_SIZE} of {totalCount} comments.</p>}
         {loading ? (
           <p className="text-[10px] text-text-secondary animate-pulse">Loading comments…</p>
-        ) : comments.length === 0 ? (
+        ) : comments.length === 0 && !error ? (
           <p className="text-[10px] text-text-muted italic py-1">
             No comments yet. Be the first to share your thoughts.
           </p>
@@ -113,15 +124,16 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
                     <div className="mt-1 flex items-center gap-1.5">
                       <input
                         autoFocus
+                        maxLength={COMMENT_MAX_LENGTH}
                         value={editing.text}
                         onChange={(e) => setEditing(prev => prev ? { ...prev, text: e.target.value } : prev)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && editing.text.trim()) void editCommentText(comm.id, editing.text.trim()).then(() => setEditing(null));
+                          if (e.key === 'Enter') void handleEdit(comm.id, editing.text);
                           if (e.key === 'Escape') setEditing(null);
                         }}
                         className="flex-1 bg-surface-elevated text-text-primary border border-primary-action/50 rounded-lg px-2 py-1 text-[10px] focus:outline-none"
                       />
-                      <button onClick={() => { if (editing.text.trim()) void editCommentText(comm.id, editing.text.trim()).then(() => setEditing(null)); }} className="text-primary-action" title="Save" aria-label="Save edit">
+                      <button onClick={() => { void handleEdit(comm.id, editing.text); }} className="text-primary-action" title="Save" aria-label="Save edit">
                         <Send className="w-3 h-3" />
                       </button>
                       <button onClick={() => setEditing(null)} className="text-text-muted hover:text-red-500" title="Cancel" aria-label="Cancel edit">
@@ -142,7 +154,7 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
       </div>
 
       {currentUser ? (
-        <CommentComposer autoFocus onSubmit={handleAdd} />
+        <CommentComposer key={currentUser.id} autoFocus onSubmit={handleAdd} />
       ) : (
         <p className="text-[10px] text-text-muted py-1">Sign in to join the conversation.</p>
       )}

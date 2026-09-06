@@ -1,6 +1,7 @@
 import { firestore } from './firestore';
 import { auth, db } from '../firebase';
-import { doc, query, where, collection, getDocs, type Firestore } from 'firebase/firestore';
+import { doc, query, where, collection, getDocs, documentId, limit, type Firestore } from 'firebase/firestore';
+import { requireUid } from './identity';
 
 export interface EventParticipant {
   id: string;
@@ -104,6 +105,7 @@ export const eventParticipantsService = {
   },
 
   async getUserJoinedEvents(userId: string): Promise<EventParticipant[]> {
+    requireUid(userId);
     return firestore.getDocuments<EventParticipant>(EVENT_PARTICIPANTS_COLLECTION, {
       where: [
         { field: 'userId', operator: '==', value: userId },
@@ -112,6 +114,26 @@ export const eventParticipantsService = {
       orderByField: 'joinedAt',
       orderDirection: 'desc',
       limitCount: 50,
+      throwOnError: true,
+    });
+  },
+
+  async getUserJoinedEventSummaries(userId: string) {
+    const registrations = (await this.getUserJoinedEvents(userId)).slice(0, 5);
+    if (!registrations.length) return [];
+    if (!db) throw new Error('Events are unavailable.');
+    const ids = [...new Set(registrations.map(item => item.eventId))];
+    const snapshot = await getDocs(query(collection(db, 'events'), where(documentId(), 'in', ids), limit(5)));
+    const events = new Map(snapshot.docs.map(item => [item.id, item.data()]));
+    return registrations.map(registration => {
+      const event = events.get(registration.eventId);
+      return {
+        id: registration.eventId,
+        title: typeof event?.title === 'string' ? event.title : 'Event details unavailable',
+        date: typeof event?.date === 'string' ? event.date : '',
+        time: typeof event?.time === 'string' ? event.time : '',
+        location: typeof event?.location === 'string' ? event.location : '',
+      };
     });
   },
 

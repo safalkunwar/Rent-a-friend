@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Companion } from '../types';
+import { searchStrings } from '../services/discoverySearch';
 
 interface CategoryGroup {
   category: string;
@@ -47,9 +48,9 @@ const ORDER_PREF = [
 
 export function useCompanionCategories(companions: Companion[]): CategoryGroup[] {
   return useMemo(() => {
-    const map: Record<string, Companion[]> = {};
+    const map: Record<string, Companion[]> = Object.create(null);
     companions.forEach(c => {
-      const primaryCat = c.interests[0] || 'Local Companion';
+      const primaryCat = searchStrings(c.interests)[0] || 'Local Companion';
       if (!map[primaryCat]) {
         map[primaryCat] = [];
       }

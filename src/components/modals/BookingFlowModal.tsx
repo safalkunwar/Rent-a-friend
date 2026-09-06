@@ -6,7 +6,7 @@ import { useAppContext } from '../../context/AppContext';
 import { MapPreview } from '../maps/MapPreview';
 import { MeetingLocationSelector } from '../maps/MeetingLocationSelector';
 import { MAP_CENTER } from '../../services/maps';
-import { paymentService, type PaymentProvider } from '../../services/payments';
+import { PAYMENT_UNAVAILABLE } from '../../services/payments';
 import { useToast } from '../ui/Toast';
 import { canBook } from '../../services/bookingEligibility';
 interface BookingFlowModalProps {
@@ -26,8 +26,8 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
   const [participants, setParticipants] = useState(1);
   const [location, setLocation] = useState('');
   const [requests, setRequests] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentProvider | ''>('');
   const [processing, setProcessing] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState('');
   const bookingIdRef = useRef(crypto.randomUUID());
   const getCompanionCoords = (coords: any): { lat: number; lng: number } | null => {
@@ -131,6 +131,7 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
       duration,
       participants,
       status: 'pending',
+      paymentStatus: 'not_started',
       totalPrice: grandTotal,
       meetingPoint: location,
       meetingCoordinates: meetingCoords,
@@ -142,42 +143,6 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
     };
 
     await addBooking(booking);
-
-    if (!paymentMethod) {
-      setStep(4);
-      return;
-    }
-
-    try {
-      const requestUrl = `${window.location.origin}/bookings`;
-      const result = await paymentService.initiatePayment({
-        amount: Math.round(grandTotal),
-        currency: 'NPR',
-        provider: paymentMethod,
-        companionId: companion.id,
-        bookingId,
-        returnUrl: requestUrl,
-        webhookUrl: requestUrl,
-        customerInfo: {
-          name: clientName || currentUser.name,
-          email: clientEmail || currentUser.email,
-          phone: clientPhone,
-        },
-      });
-
-      if (paymentMethod === 'khalti') {
-        window.open(result.paymentUrl, '_blank');
-        setStep(4);
-        return;
-      }
-
-      if (paymentMethod === 'esewa') {
-        setStep(4);
-        return;
-      }
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Payment initiation failed', 'error');
-    }
 
     setStep(4);
   };
@@ -298,7 +263,7 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
 
             {step === 3 && (
               <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <h3 className="text-lg font-bold text-text-primary mb-5">Review & Pay</h3>
+                <h3 className="text-lg font-bold text-text-primary mb-5">Review unpaid request</h3>
 
                 <div className="bg-surface-elevated rounded-2xl p-4.5 border border-border-token mb-5 space-y-3.5 text-xs">
                   <div className="flex justify-between items-center">
@@ -342,23 +307,24 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                 </div>
 
                 <div>
-                  <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-primary-action mb-3">Select Payment Method</h3>
+                  <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-primary-action mb-3">Online payments unavailable</h3>
+                  <p className="text-xs text-text-secondary mb-3">{PAYMENT_UNAVAILABLE} Sending a request does not confirm a booking or collect money.</p>
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       type="button"
-                      onClick={() => setPaymentMethod('khalti')}
-                      className={"p-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all " + (paymentMethod === 'khalti' ? 'border-primary-action bg-primary-action/10' : 'border-border-token hover:border-primary-action bg-transparent')}
+                      disabled
+                      className="p-4 border border-border-token rounded-xl flex flex-col items-center justify-center gap-1.5 opacity-50"
                     >
                       <div className="font-extrabold text-purple-400 text-base tracking-tight">Khalti</div>
-                      <span className="text-[10px] text-text-muted">Digital Wallet</span>
+                      <span className="text-[10px] text-text-muted">Unavailable</span>
                     </button>
                     <button
                       type="button"
-                      onClick={() => setPaymentMethod('esewa')}
-                      className={"p-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all " + (paymentMethod === 'esewa' ? 'border-primary-action bg-primary-action/10' : 'border-border-token hover:border-primary-action bg-transparent')}
+                      disabled
+                      className="p-4 border border-border-token rounded-xl flex flex-col items-center justify-center gap-1.5 opacity-50"
                     >
                       <div className="font-extrabold text-green-400 text-base tracking-tight">eSewa</div>
-                      <span className="text-[10px] text-text-muted">Digital Wallet</span>
+                      <span className="text-[10px] text-text-muted">Unavailable</span>
                     </button>
                   </div>
                 </div>
@@ -372,7 +338,7 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
                 </div>
                 <h3 className="text-xl font-bold text-text-primary mb-2">Request Sent!</h3>
                 <p className="text-xs text-text-secondary mb-8 leading-relaxed max-w-sm mx-auto">
-                  {companion.name} will review your request and get back to you shortly. You can track this in your Bookings tab.
+                  Your unpaid request for {companion.name} has been saved and is awaiting acceptance. No payment has been initiated. You can track the request in your Bookings tab.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
@@ -402,6 +368,7 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
             {step > 1 && (
               <button 
                 type="button"
+                disabled={processing}
                 onClick={() => setStep(step - 1)} 
                 className="px-5 py-3.5 bg-surface-elevated text-text-primary rounded-xl font-bold hover:bg-border-token transition-colors border border-border-token text-xs shrink-0"
               >
@@ -458,24 +425,27 @@ export const BookingFlowModal: React.FC<BookingFlowModalProps> = ({ companion, o
             {step === 3 && (
               <button 
                 type="button"
-                disabled={!paymentMethod || processing}
+                disabled={processing}
                 onClick={async () => {
-                  if (!paymentMethod || processing) return;
+                  if (submittingRef.current) return;
                   if (!validateDateTime()) {
                     showToast('Please select a future date and time.', 'error');
                     return;
                   }
+                  submittingRef.current = true;
                   setProcessing(true);
                   try {
                     await handleConfirm();
                   } catch (err) {
-                    showToast(err instanceof Error ? err.message : 'Payment failed', 'error');
+                    showToast(err instanceof Error ? err.message : 'Could not save booking request', 'error');
+                  } finally {
+                    submittingRef.current = false;
                     setProcessing(false);
                   }
                 }}
                 className="flex-1 py-3.5 bg-primary-action text-background rounded-xl font-bold hover:bg-primary-action-hover transition-colors shadow-lg shadow-primary-action/20 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
               >
-                {processing ? 'Processing...' : `Pay NPR ${grandTotal.toFixed(2)}`}
+                {processing ? 'Sending request...' : 'Send unpaid booking request'}
               </button>
             )}
           </div>

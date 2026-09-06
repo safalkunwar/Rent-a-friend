@@ -1,13 +1,11 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Companion, Activity, CommunityPost, Event, ExperienceStory } from '../../types';
 import { type FeedItem } from '../../services/feedGenerator';
 import { SafeImage } from '../ui/SafeImage';
-import { SocialPostCard } from '../social/SocialPostCard';
 import { DiscoveryContentContainer } from './DiscoveryContentContainer';
-import { Heart, MapPin, Star, ArrowRight, ChevronRight } from 'lucide-react';
+import { MapPin, Star } from 'lucide-react';
 import { chunkFeedByHeader } from '../../services/feedStabilizer';
 import { FeedStoryCard, FeedPostCard } from '../social/FeedSocialCards';
-import { useAppContext } from '../../context/AppContext';
 
 interface DiscoveryFeedProps {
   stories: ExperienceStory[];
@@ -21,7 +19,9 @@ interface DiscoveryFeedProps {
   onViewStory: (story: ExperienceStory) => void;
   feedItems: FeedItem[];
   visibleCategoryCount: number;
-  sentinelRef: React.MutableRefObject<HTMLDivElement | null>;
+  sentinelRef: React.Ref<HTMLDivElement>;
+  error?: string | null;
+  onRetry?: () => void;
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
@@ -40,6 +40,8 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   feedItems,
   visibleCategoryCount,
   sentinelRef,
+  error,
+  onRetry,
   hasMore = false,
   loadingMore = false,
   onLoadMore,
@@ -47,76 +49,6 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   const [lightboxImages, setLightboxImages] = useState<string[] | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  const { currentUser: ctxCurrentUser, likePost, unlikePost, likeStory, unlikeStory, checkUserLikedPost, checkUserLikedStory, createComment, deleteComment, openAuthModal } = useAppContext();
-  const currentUserId = ctxCurrentUser?.id;
-
-  const handleLike = async (id: string, type: 'story' | 'post') => {
-    if (!currentUserId) {
-      openAuthModal();
-      return;
-    }
-    try {
-      if (type === 'story') {
-        const liked = await checkUserLikedStory(id);
-        if (liked) {
-          await unlikeStory(id);
-        } else {
-          await likeStory(id);
-        }
-      } else {
-        const liked = await checkUserLikedPost(id);
-        if (liked) {
-          await unlikePost(id);
-        } else {
-          await likePost(id);
-        }
-      }
-    } catch (err) {
-      onShowToast('Failed to sync like with Firebase. Try again.', 'error');
-    }
-  };
-
-  const handleUnlike = async (id: string, type: 'story' | 'post') => {
-    if (!currentUserId) return;
-    try {
-      if (type === 'story') {
-        await unlikeStory(id);
-      } else {
-        await unlikePost(id);
-      }
-    } catch (err) {
-      onShowToast('Failed to sync unlike with Firebase. Try again.', 'error');
-    }
-  };
-
-  const handleComment = async (postId: string) => {
-    if (!currentUserId) {
-      openAuthModal();
-      return;
-    }
-    const text = window.prompt('Enter your comment:');
-    if (!text || !text.trim()) return;
-    try {
-      await createComment({
-        postId,
-        userId: currentUserId,
-        userName: ctxCurrentUser.name || 'User',
-        userAvatar: ctxCurrentUser.avatar || '',
-        text: text.trim(),
-      });
-      onShowToast('Comment posted!', 'success');
-    } catch (err) {
-      onShowToast('Failed to post comment. Try again.', 'error');
-    }
-  };
-
-  const handleDeleteComment = async (commentId: string, postId: string) => {
-    try {
-      await deleteComment(commentId, postId);
-    } catch (err) {
-      onShowToast('Failed to delete comment. Try again.', 'error');
-    }
-  };
 
   const categoryChunks = useMemo(() => chunkFeedByHeader(feedItems), [feedItems]);
 
@@ -233,7 +165,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                   <span className="text-2xl">{group.emoji}</span>
                   <div>
                     <h3 className="text-lg font-extrabold text-text-primary">{group.category}</h3>
-                    <p className="text-[10px] text-text-secondary uppercase tracking-wider">Top picks near you</p>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-wider">Discover companions</p>
                   </div>
                 </div>
               );
@@ -344,7 +276,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
               return (
                 <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
                   <div
-                    onClick={() => onShowToast(`Event: ${(item.data as Event).title} • spots left: ${(item.data as Event).spots}`, 'info')}
+                    onClick={() => onShowToast(`Event: ${(item.data as Event).title} • capacity: ${(item.data as Event).spots ?? 'unavailable'}`, 'info')}
                     className="bg-surface border border-white/5 rounded-2xl p-4 flex gap-4 cursor-pointer active:scale-98 transition-all"
                   >
                     <div className="w-20 h-20 rounded-xl overflow-hidden bg-surface-elevated shrink-0">
@@ -360,7 +292,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-[10px] text-primary-action font-bold font-mono">{(item.data as Event).date}</span>
-                        <span className="text-[10px] bg-red-500/10 text-red-400 px-2 py-0.5 rounded font-bold uppercase tracking-wider">{(item.data as Event).spots} Left</span>
+                        <span className="text-[10px] bg-red-500/10 text-red-400 px-2 py-0.5 rounded font-bold uppercase tracking-wider">Capacity: {(item.data as Event).spots ?? 'unavailable'}</span>
                       </div>
                     </div>
                   </div>
@@ -374,6 +306,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
       </DiscoveryContentContainer>
 
       {/* Progressive loading sentinel */}
+      {error && <div role="alert" className="py-3 text-sm text-text-secondary">{error} <button onClick={onRetry} className="text-primary-action">Retry</button></div>}
       {(visibleCategoryCount < categoryChunks.length || hasMore || loadingMore) && (
         <div ref={sentinelRef} className="flex justify-center py-4">
           {(loadingMore || visibleCategoryCount < categoryChunks.length) && (
@@ -390,7 +323,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent"></div>
             <div className="relative z-10 space-y-2.5">
               <h3 className="text-sm font-extrabold text-text-primary leading-tight">Become a SATHI Companion</h3>
-              <p className="text-[10px] text-gray-300 leading-relaxed max-w-[240px]">Share your favorite local spots, guide travelers, and earn up to <span className="text-text-primary font-bold">NPR 15,000/week</span> on your own schedule.</p>
+              <p className="text-[10px] text-gray-300 leading-relaxed max-w-[240px]">Share your favorite local spots and guide travelers on your own schedule. Earnings depend on completed bookings.</p>
               <button
                 onClick={onApplyAsCompanion}
                 className="w-max px-4 py-2 bg-primary-action hover:bg-primary-action-hover active:scale-95 text-background rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"

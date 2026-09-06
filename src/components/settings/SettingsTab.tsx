@@ -450,18 +450,18 @@ export const SettingsTab: React.FC = () => {
                   <Eye className="w-5 h-5 text-primary-action" /> Privacy & Data Controls
                 </h2>
                 <p className="text-xs text-text-secondary mt-1">
-                  Control how other members see your travel logs and active locations.
+                  These saved preferences are not currently enforced as privacy or location-sharing controls.
                 </p>
               </div>
 
               <div className="divide-y divide-white/5">
                 {[
-                  { id: 'profileVisibility', label: 'Public Profile Visibility', desc: 'Allows your verified avatar, guide stories, and hiking reviews to be visible on search engines and external explore pages.' },
-                  { id: 'messagePrivacy', label: 'Restricted Messaging', desc: 'Only allow verified local guides or ongoing booking hosts to directly message or share map pins with your inbox.' },
-                  { id: 'bookingPrivacy', label: 'Private Bookings Log', desc: 'Hides your past experience coordinates, total payments, and local SATHI reviews from public partner feedback cards.' },
-                  { id: 'locationPermission', label: 'Active Location Sharing', desc: 'Let Pokhara and Kathmandu emergency centers view your precise GPS coordinates for outdoor hiking backup support.' }
+                  { id: 'profileVisibility', label: 'Public Profile Visibility', desc: 'Not implemented: this preference does not hide or publish your content.' },
+                  { id: 'messagePrivacy', label: 'Restricted Messaging', desc: 'Not implemented: this preference does not change who may message you.' },
+                  { id: 'bookingPrivacy', label: 'Private Bookings Log', desc: 'Booking access is governed by participant permissions, not this preference.' },
+                  { id: 'locationPermission', label: 'Active Location Sharing', desc: 'Not implemented: no emergency-center integration or continuous location sharing.' }
                 ].map((item) => {
-                  const val = (prefs as any)[item.id] !== false; // default true
+                  const val = false; // Not an implemented access-control mechanism.
                   return (
                     <div key={item.id} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
                       <div className="pr-4 max-w-xl">
@@ -469,7 +469,8 @@ export const SettingsTab: React.FC = () => {
                         <p className="text-[10px] text-text-secondary mt-0.5 leading-normal">{item.desc}</p>
                       </div>
                       <button
-                        onClick={() => handleTogglePref(item.id as any)}
+                        disabled
+                        aria-label={`${item.label} unavailable`}
                         className="w-11 h-6 rounded-full p-0.5 flex items-center relative cursor-pointer transition-colors duration-300 bg-surface-elevated border border-white/10"
                         style={{
                           backgroundColor: val ? '#2563EB' : undefined
@@ -487,9 +488,9 @@ export const SettingsTab: React.FC = () => {
               <div className="bg-blue-500/5 border border-blue-500/10 rounded-2xl p-4 flex gap-4 text-left">
                 <ShieldCheck className="w-10 h-10 text-blue-500 shrink-0" />
                 <div>
-                  <h4 className="font-bold text-text-primary text-xs">Zero-Trust Personal Data Safeguard</h4>
+                  <h4 className="font-bold text-text-primary text-xs">Privacy limitations</h4>
                   <p className="text-[10px] text-text-secondary leading-relaxed mt-0.5">
-                    SATHI strictly isolates Personally Identifiable Information (PII) like phone numbers and email addresses. Only authenticated users can request location coordinates, strictly regulated by our ABAC rules block.
+                    Access depends on service permissions. Do not treat these preference switches as privacy guarantees; previously shared content cannot be recalled.
                   </p>
                 </div>
               </div>

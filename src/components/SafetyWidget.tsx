@@ -1,23 +1,25 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { MapPin, AlertTriangle, Navigation, CheckCircle2, X } from 'lucide-react';
 import * as motion from 'motion/react-client';
 import { sosService } from '../services/sos';
-import { auth } from '../firebase';
+import { requireUid } from '../services/identity';
 
 export const SafetyWidget: React.FC<{ isVisible?: boolean, onClose?: () => void, bookingId?: string }> = ({ isVisible = true, onClose, bookingId }) => {
   const [sosActive, setSosActive] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const busy = useRef(false);
 
   const handleSOS = useCallback(async () => {
-    if (sosActive) {
-      setSosActive(false);
-      return;
-    }
-
+    if (sosActive || busy.current) return;
+    busy.current = true;
+    setError('');
     setLoading(true);
     try {
+      requireUid();
+      if (!navigator.geolocation) throw new Error('Location is unavailable.');
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
       });
 
       await sosService.createAlert({
@@ -27,15 +29,15 @@ export const SafetyWidget: React.FC<{ isVisible?: boolean, onClose?: () => void,
           lng: position.coords.longitude,
           address: 'Current location',
         },
-        message: 'Emergency SOS triggered from SATHI app',
+        message: 'User submitted a safety alert with a single location reading',
         severity: 'critical',
       });
 
       setSosActive(true);
     } catch (error) {
-      console.error('SOS activation failed:', error);
-      alert('Failed to activate SOS. Please try again.');
+      setError('Safety alert was not confirmed saved. Do not wait for this app in an emergency; contact local emergency services directly.');
     } finally {
+      busy.current = false;
       setLoading(false);
     }
   }, [sosActive, bookingId]);
@@ -62,30 +64,28 @@ export const SafetyWidget: React.FC<{ isVisible?: boolean, onClose?: () => void,
            </div>
            <div>
              <h4 className="text-sm font-semibold text-white">
-                {sosActive ? 'SOS Protocol Active' : 'Safety Features Active'}
+                {sosActive ? 'Safety alert saved' : 'Safety alert'}
              </h4>
              <p className="text-xs text-text-secondary">
-                {sosActive ? 'Broadcasting live location' : 'Live tracking enabled'}
+                {sosActive ? 'Single location recorded' : 'No live tracking or monitored response'}
              </p>
            </div>
         </div>
 
         <div className="bg-surface-elevated rounded-lg p-3 border border-border-token">
            <div className="text-xs flex justify-between text-text-secondary mb-1">
-             <span>Emergency Contacts</span>
+             <span>Contact notifications</span>
              <span className={`${sosActive ? 'text-red-500' : 'text-primary-action'} font-medium whitespace-nowrap`}>
-               {sosActive ? 'Alerted' : 'Shared'}
+               Not sent
              </span>
            </div>
-           <div className="flex -space-x-2">
-             <div className={`w-6 h-6 rounded-full ${sosActive ? 'bg-red-900 text-red-100 border-red-500' : 'bg-background border-border-token text-text-primary'} border-2 flex justify-center items-center text-[10px] uppercase font-bold transition-colors`}>Mom</div>
-             <div className={`w-6 h-6 rounded-full ${sosActive ? 'bg-red-900 text-red-100 border-red-500' : 'bg-background border-border-token text-text-primary'} border-2 flex justify-center items-center text-[10px] uppercase font-bold transition-colors`}>Sis</div>
-           </div>
+           <p className="text-xs text-text-secondary">No automatic contact notification or emergency dispatch. Contact local emergency services directly if you need urgent help.</p>
         </div>
+        {error && <p role="alert" className="text-xs text-danger">{error}</p>}
 
         <button 
           onClick={handleSOS}
-          disabled={loading}
+          disabled={loading || sosActive}
           className={`w-full flex items-center justify-center gap-2 py-2 font-medium text-sm rounded-lg transition-colors disabled:opacity-50 ${
             sosActive 
               ? 'bg-red-600 hover:bg-red-700 text-white border border-red-500'
@@ -93,11 +93,11 @@ export const SafetyWidget: React.FC<{ isVisible?: boolean, onClose?: () => void,
           }`}
         >
           {loading ? (
-            'Activating...'
+            'Saving alert...'
           ) : sosActive ? (
-            <><CheckCircle2 className="w-4 h-4" /> Cancel SOS</>
+            <><CheckCircle2 className="w-4 h-4" /> Alert saved — not monitored</>
           ) : (
-            <><AlertTriangle className="w-4 h-4" /> Emergency SOS</>
+            <><AlertTriangle className="w-4 h-4" /> Save safety alert</>
           )}
         </button>
       </div>

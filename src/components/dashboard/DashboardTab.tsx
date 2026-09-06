@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { useCompanions } from '../../hooks/useFirestoreData';
-import { useEvents } from '../../hooks/useFirestoreData';
 import { companionDashboardService, type CompanionBookingRequest } from '../../services/companionDashboard';
 import { eventParticipantsService } from '../../services/eventParticipants';
 import { Star, ShieldCheck, Heart, MapPin, Settings, Calendar, X, Bell } from 'lucide-react';
@@ -11,20 +10,27 @@ import { SafeImage } from '../ui/SafeImage';
 import { selectCustomerDashboard } from '../../services/dashboardData';
 
 export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string) => void }> = ({ onMessageCompanion }) => {
-  const { currentUser, favorites, toggleFavorite, bookings, setCurrentUser, notifications } = useAppContext();
+  const { currentUser } = useAppContext();
+  return <DashboardContent key={`${currentUser?.id}:${currentUser?.role}`} onMessageCompanion={onMessageCompanion} />;
+};
+
+const DashboardContent: React.FC<{ onMessageCompanion?: (companionId: string) => void }> = ({ onMessageCompanion }) => {
+  const { currentUser, favorites, toggleFavorite, bookings, updateUserProfile, notifications } = useAppContext();
   const { showToast } = useToast();
   const { companions: fetchedCompanions } = useCompanions();
-  const { events: fetchedEvents } = useEvents();
   const { myBookings, favoriteCompanions, totalBookedValue } = selectCustomerDashboard(
     currentUser?.id, bookings, fetchedCompanions, favorites,
   );
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(currentUser?.name || '');
-  const [editEmail, setEditEmail] = useState(currentUser?.email || '');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const savingRef = useRef(false);
+  const [statsError, setStatsError] = useState('');
+  const [requestsError, setRequestsError] = useState('');
   const [companionStats, setCompanionStats] = useState<{
-    totalEarnings: number;
+    totalCompletedBookingValue: number;
     pendingRequests: number;
-    profileViews: number;
+    profileViews: number | null;
     averageRating: number;
     totalReviews: number;
   } | null>(null);
@@ -32,16 +38,18 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
 
   const [joinedEvents, setJoinedEvents] = useState<Array<{ id: string; title: string; date: string; time: string; location: string }>>([]);
   const [loadingJoined, setLoadingJoined] = useState(false);
+  const [joinedError, setJoinedError] = useState('');
 
   useEffect(() => {
     if (currentUser?.role !== 'companion') return;
     let cancelled = false;
     setLoadingStats(true);
+    setStatsError('');
     companionDashboardService.getStats(currentUser.id)
       .then(stats => {
         if (!cancelled) {
           setCompanionStats({
-            totalEarnings: stats.totalEarnings,
+            totalCompletedBookingValue: stats.totalCompletedBookingValue,
             pendingRequests: stats.pendingRequests,
             profileViews: stats.profileViews,
             averageRating: stats.averageRating,
@@ -49,8 +57,8 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
           });
         }
       })
-      .catch(err => {
-        console.error('[DashboardTab] Failed to load companion stats:', err);
+      .catch(() => {
+        if (!cancelled) setStatsError('Companion statistics unavailable.');
       })
       .finally(() => {
         if (!cancelled) setLoadingStats(false);
@@ -62,56 +70,43 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
     if (!currentUser || currentUser.role !== 'customer') return;
     let cancelled = false;
     setLoadingJoined(true);
-    eventParticipantsService.getUserJoinedEvents(currentUser.id)
-      .then(registrations => {
-        if (!cancelled) {
-          const eventsMap = new Map((fetchedEvents || []).map(e => [e.id, e]));
-          setJoinedEvents(registrations.map(r => {
-            const ev = eventsMap.get(r.eventId);
-            return {
-              id: r.eventId,
-              title: ev?.title || r.eventId,
-              date: ev?.date || r.joinedAt,
-              time: ev?.time || '',
-              location: ev?.location || ''
-            };
-          }));
-        }
+    setJoinedError('');
+    eventParticipantsService.getUserJoinedEventSummaries(currentUser.id)
+      .then(events => {
+        if (!cancelled) setJoinedEvents(events);
       })
-      .catch(err => console.error('[DashboardTab] Failed to load joined events:', err))
+      .catch(() => { if (!cancelled) setJoinedError('Joined events unavailable.'); })
       .finally(() => { if (!cancelled) setLoadingJoined(false); });
     return () => { cancelled = true; };
-  }, [currentUser?.id, currentUser?.role, fetchedEvents]);
+  }, [currentUser?.id, currentUser?.role]);
 
   // Incoming booking requests for companions (real snapshot contact info)
-  const myCompanionIds = useMemo(
-    () => fetchedCompanions.filter(c => currentUser && c.userId === currentUser.id).map(c => c.id),
-    [fetchedCompanions, currentUser?.id]
-  );
   const [incomingBookings, setIncomingBookings] = useState<CompanionBookingRequest[]>([]);
 
   useEffect(() => {
-    if (currentUser?.role !== 'companion' || myCompanionIds.length === 0) {
+    if (currentUser?.role !== 'companion') {
       setIncomingBookings([]);
       return;
     }
     let cancelled = false;
-    Promise.all(myCompanionIds.map(id => companionDashboardService.getBookingRequests(id)))
-      .then(groups => {
+    setRequestsError('');
+    companionDashboardService.getBookingRequests(currentUser.id)
+      .then(requests => {
         if (!cancelled) {
           setIncomingBookings(
-            groups.flat().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 10)
+            requests.slice(0, 10)
           );
         }
       })
-      .catch(err => console.error('[DashboardTab] Failed to load incoming bookings:', err));
+      .catch(() => { if (!cancelled) setRequestsError('Incoming booking requests unavailable.'); });
     return () => { cancelled = true; };
-  }, [currentUser?.id, currentUser?.role, myCompanionIds.join(',')]);
+  }, [currentUser?.id, currentUser?.role]);
 
   if (!currentUser) return <div className="text-text-primary p-8">Please log in to view dashboard</div>;
 
   return (
     <div className="space-y-8">
+      {requestsError && <p role="alert" className="text-danger">{requestsError}</p>}
       {/* Incoming booking requests (companion view) */}
       {currentUser.role === 'companion' && incomingBookings.length > 0 && (
         <div className="bg-surface border border-border-token rounded-3xl p-8">
@@ -165,9 +160,18 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
             </div>
             <div>
               <label className="text-[10px] uppercase tracking-[0.2em] text-text-secondary font-bold block mb-2">Email</label>
-              <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="w-full px-4 py-2 bg-surface-elevated border border-border-token rounded-xl text-text-primary outline-none focus:border-primary-action text-sm" />
+              <input type="email" value={currentUser.email} readOnly aria-label="Account email (read-only)" className="w-full px-4 py-2 bg-surface-elevated border border-border-token rounded-xl text-text-primary outline-none focus:border-primary-action text-sm" />
             </div>
-            <button onClick={() => { setCurrentUser({ ...currentUser!, name: editName, email: editEmail, avatar: currentUser!.avatar }); setIsEditing(false); showToast('Profile updated', 'success'); }} className="px-4 py-2 bg-primary-action text-white rounded-xl text-sm font-bold hover:bg-primary-action-hover transition-colors">Save Changes</button>
+            <button disabled={savingProfile || !editName.trim()} onClick={async () => {
+              if (savingRef.current) return;
+              savingRef.current = true; setSavingProfile(true);
+              try {
+                await updateUserProfile({ name: editName.trim() });
+                setIsEditing(false); showToast('Profile updated', 'success');
+              } catch (error) {
+                showToast(error instanceof Error ? error.message : 'Profile update failed', 'error');
+              } finally { savingRef.current = false; setSavingProfile(false); }
+            }} className="px-4 py-2 bg-primary-action text-white rounded-xl text-sm font-bold hover:bg-primary-action-hover transition-colors">{savingProfile ? 'Saving...' : 'Save Changes'}</button>
           </div>
         ) : (
           <button
@@ -272,7 +276,7 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
           {/* Joined Events */}
           <div>
             <h2 className="text-2xl font-bold text-text-primary mb-6">Joined Events</h2>
-            {loadingJoined ? (
+            {joinedError ? <p role="alert" className="text-danger">{joinedError}</p> : loadingJoined ? (
               <div className="space-y-4">
                 {[1, 2].map(i => (
                   <div key={i} className="bg-surface border border-border-token rounded-2xl p-5 animate-pulse">
@@ -287,7 +291,7 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
                   <div key={ev.id} className="bg-surface border border-border-token rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <h3 className="font-bold text-text-primary mb-1">{ev.title}</h3>
-                      <p className="text-sm text-text-secondary flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {ev.location || 'Nepal'}</p>
+                      <p className="text-sm text-text-secondary flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {ev.location || 'Location unavailable'}</p>
                       <p className="text-xs text-text-muted mt-1">{ev.date ? new Date(ev.date).toLocaleDateString() : ''}</p>
                     </div>
                     <span className="text-xs px-3 py-1 bg-success/10 border border-success/50 text-success rounded-full font-bold">Joined</span>
@@ -297,7 +301,7 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
             ) : (
               <div className="bg-surface border border-border-token rounded-2xl p-8 text-center text-text-secondary">
                 <Calendar className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                <p>No joined events yet. Explore events to join!</p>
+                <p>No joined events found. New event registration is currently unavailable.</p>
               </div>
             )}
           </div>
@@ -316,7 +320,7 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
                       </button>
                     </div>
                     <div className="p-4 bg-surface-elevated">
-                      <h3 className="font-bold text-text-primary flex items-center gap-1.5">{companion.name} <ShieldCheck className="w-3.5 h-3.5 text-primary-action" /></h3>
+                      <h3 className="font-bold text-text-primary flex items-center gap-1.5">{companion.name} {companion.isVerified && <ShieldCheck aria-label="Application approved" className="w-3.5 h-3.5 text-primary-action" />}</h3>
                       <p className="text-xs text-text-secondary flex items-center gap-1 mt-1"><MapPin className="w-3 h-3" /> {companion.location}</p>
                     </div>
                   </div>
@@ -335,25 +339,26 @@ export const DashboardTab: React.FC<{ onMessageCompanion?: (companionId: string)
       {currentUser.role === 'companion' && (
         <div className="bg-surface border border-border-token p-8 rounded-3xl text-center">
           <h2 className="text-2xl font-bold text-text-primary mb-2">Guide Dashboard</h2>
-          <p className="text-text-secondary mb-6">Manage your availability, view incoming requests, and track earnings.</p>
+          <p className="text-text-secondary mb-6">Recent loaded bookings only (up to 100). Booking value is not settled earnings.</p>
+          {statsError && <p role="alert" className="text-danger">{statsError}</p>}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
             <div className="bg-surface-elevated rounded-2xl p-6 border border-border-token">
-              <h3 className="text-text-secondary text-sm uppercase tracking-wider mb-2">Total Earnings</h3>
+              <h3 className="text-text-secondary text-sm uppercase tracking-wider mb-2">Completed Booking Value (Unverified)</h3>
               <p className="text-3xl font-bold text-text-primary">
-                {loadingStats ? '...' : `NPR ${companionStats?.totalEarnings.toFixed(2) ?? '0.00'}`}
+                {loadingStats ? '...' : companionStats ? `NPR ${companionStats.totalCompletedBookingValue.toFixed(2)}` : 'Unavailable'}
               </p>
             </div>
             <div className="bg-surface-elevated rounded-2xl p-6 border border-border-token">
               <h3 className="text-text-secondary text-sm uppercase tracking-wider mb-2">Pending Requests</h3>
               <p className="text-3xl font-bold text-primary-action">
-                {loadingStats ? '...' : companionStats?.pendingRequests ?? 0}
+                {loadingStats ? '...' : companionStats?.pendingRequests ?? 'Unavailable'}
               </p>
             </div>
             <div className="bg-surface-elevated rounded-2xl p-6 border border-border-token">
-              <h3 className="text-text-secondary text-sm uppercase tracking-wider mb-2">Profile Views (30d)</h3>
+              <h3 className="text-text-secondary text-sm uppercase tracking-wider mb-2">Profile Views</h3>
               <p className="text-3xl font-bold text-text-primary">
-                {loadingStats ? '...' : companionStats?.profileViews ?? 0}
+                Unavailable — not measured
               </p>
             </div>
           </div>

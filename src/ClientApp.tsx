@@ -16,6 +16,8 @@ import { SafetyWidget } from './components/SafetyWidget';
 import { CommunityFeed } from './components/social/CommunityFeed';
 import { FeedStoryCard, FeedPostCard } from './components/social/FeedSocialCards';
 import { DiscoveryFeed } from './components/discovery/DiscoveryFeed';
+import { DiscoveryPageControl } from './components/discovery/DiscoveryPageControl';
+import { filterCompanions, homeSourceError, searchText } from './services/discoverySearch';
 import { CompanionCard } from './components/companions/CompanionCard';
 import { CategoryHeader } from './components/discovery/CategoryHeader';
 import { PageContainer, SectionHeader } from './components/layout';
@@ -40,6 +42,7 @@ import { useCompanions, useStories, useActivities, useEvents, usePartners, useCo
 import { useCompanionCategories } from './hooks/useCompanionCategories';
 import { useDiscoveryFeed } from './hooks/useDiscoveryFeed';
 import { useProgressiveReveal } from './hooks/useProgressiveReveal';
+import { useFeedReaction } from './hooks/useFeedReaction';
 import { type FeedItem } from './services/feedGenerator';
 import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
@@ -85,27 +88,30 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     }
   }, [location.pathname]);
   
-  const { companions: fetchedCompanions, loading: companionsLoading, hasMore: companionsHasMore, loadingMore: companionsLoadingMore, loadMore: loadMoreCompanions } = useCompanions();
-  const { stories: fetchedStories, loading: storiesLoading, hasMore: storiesHasMore, loadingMore: storiesLoadingMore, loadMore: loadMoreStories, prependStory, removeStory } = useStories();
-  const { activities, loading: activitiesLoading, hasMore: activitiesHasMore, loadingMore: activitiesLoadingMore, loadMore: loadMoreActivities } = useActivities();
-  const { events, loading: eventsLoading, hasMore: eventsHasMore, loadingMore: eventsLoadingMore, loadMore: loadMoreEvents } = useEvents();
+  const { companions: fetchedCompanions, loading: companionsLoading, hasMore: companionsHasMore, loadingMore: companionsLoadingMore, loadMore: loadMoreCompanions, error: companionsError, retry: retryCompanions } = useCompanions();
+  const { stories: fetchedStories, loading: storiesLoading, hasMore: storiesHasMore, loadingMore: storiesLoadingMore, loadMore: loadMoreStories, prependStory, removeStory, error: storiesError, retry: retryStories } = useStories();
+  const { activities, loading: activitiesLoading, hasMore: activitiesHasMore, loadingMore: activitiesLoadingMore, loadMore: loadMoreActivities, error: activitiesError, retry: retryActivities } = useActivities();
+  const { events, loading: eventsLoading, hasMore: eventsHasMore, loadingMore: eventsLoadingMore, loadMore: loadMoreEvents, error: eventsError, retry: retryEvents } = useEvents();
   const { partners, loading: partnersLoading } = usePartners();
-  const { posts, loading: postsLoading, hasMore: postsHasMore, loadingMore: postsLoadingMore, loadMore: loadMorePosts } = useCommunityPosts();
+  const { posts, loading: postsLoading, hasMore: postsHasMore, loadingMore: postsLoadingMore, loadMore: loadMorePosts, error: postsError, retry: retryCommunityPosts } = useCommunityPosts();
 
   const homeFeedItems = useDiscoveryFeed(fetchedCompanions, activities, events, fetchedStories, posts);
+  const homeFeedError = homeSourceError({ companions: companionsError, Stories: storiesError, activities: activitiesError, events: eventsError, 'Community posts': postsError });
+  const retryHome = async () => {
+    await Promise.all([
+      companionsError && retryCompanions(), storiesError && retryStories(),
+      activitiesError && retryActivities(), eventsError && retryEvents(), postsError && retryCommunityPosts(),
+    ]);
+  };
 
   const homeFeedHasMore = companionsHasMore || storiesHasMore || activitiesHasMore || eventsHasMore || postsHasMore;
   const homeFeedLoadingMore = companionsLoadingMore || storiesLoadingMore || activitiesLoadingMore || eventsLoadingMore || postsLoadingMore;
   const homeFeedLoadMoreRef = useRef(false);
-  const loadMoreHome = useCallback(() => {
+  const loadMoreHome = useCallback(async () => {
     if (homeFeedLoadMoreRef.current) return;
     homeFeedLoadMoreRef.current = true;
     try {
-      loadMoreCompanions();
-      loadMoreStories();
-      loadMoreActivities();
-      loadMoreEvents();
-      loadMorePosts();
+      await Promise.all([loadMoreCompanions(), loadMoreStories(), loadMoreActivities(), loadMoreEvents(), loadMorePosts()]);
     } finally {
       homeFeedLoadMoreRef.current = false;
     }
@@ -116,6 +122,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     hasMore: homeFeedHasMore,
     loadingMore: homeFeedLoadingMore,
     onLoadMore: loadMoreHome,
+    sessionKey: currentUser?.id ?? 'guest',
+    enabled: location.pathname === '/',
   });
 
   const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'companions' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings'>(initialTab || 'home');
@@ -141,22 +149,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   },[fetchedStories,viewingStory,openVisibleStory]);
   const [joinedEvents, setJoinedEvents] = useState<Record<string, boolean>>({});
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
-  const [storyLiked, setStoryLiked] = useState<Record<string, boolean>>({});
-  const [storyLikesCount, setStoryLikesCount] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    if (viewingStory) {
-      setStoryLikesCount(prev => ({
-        ...prev,
-        [viewingStory.id]: viewingStory.likesCount || viewingStory.likes || 0
-      }));
-      if (currentUser) {
-        socialRepository.checkUserLikedStory(currentUser.id, viewingStory.id).then(liked => {
-          setStoryLiked(prev => ({ ...prev, [viewingStory.id]: liked }));
-        });
-      }
-    }
-  }, [viewingStory, currentUser]);
+  const storyReaction = useFeedReaction('story', viewingStory?.id ?? '', viewingStory?.likesCount ?? viewingStory?.likes ?? 0);
 
   useEffect(() => {
     if (!currentUser) {
@@ -288,6 +281,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     };
   }, [mobileTab]);
   const [discoveryTab, setDiscoveryTab] = useState<'all' | 'companions' | 'activities' | 'events'>('all');
+  const openCompanionSearch = () => {
+    setActiveTab('companions');
+    setMobileTab('search');
+    setDiscoveryTab('companions');
+    navigate('/companions');
+  };
   const [activeChatCompanionId, setActiveChatCompanionId] = useState<string | null>(null);
   const [activeDocType, setActiveDocType] = useState<'terms' | 'privacy' | 'help' | null>(null);
   
@@ -295,26 +294,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [calcHourlyRate, setCalcHourlyRate] = useState<number>(1200); // NPR per hour
   const [calcWeeklyHours, setCalcWeeklyHours] = useState<number>(15); // Hours per week
   
-  // Interactive social reaction counts
-  const [momentLiked, setMomentLiked] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    if (!currentUser || !fetchedStories) return;
-    fetchedStories.forEach(story => {
-      socialRepository.checkUserLikedStory(currentUser.id, story.id).then(liked => {
-        setMomentLiked(prev => ({ ...prev, [story.id]: liked }));
-      });
-    });
-  }, [fetchedStories, currentUser]);
-
-  useEffect(() => {
-    if (showSOS) {
-      const timer = setTimeout(() => {
-        setShowSOS(false);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [showSOS]);
 
   useEffect(() => {
     const slideTimer = setInterval(() => {
@@ -353,38 +332,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     setSelectedCompanion(companion);
   };
 
-  const handleToggleLikeMoment = async (id: string | number) => {
-    if (!currentUser) {
-      showToast('Please sign in to like community adventures!', 'info');
-      return;
-    }
-
-    const storyId = String(id);
-    const isLiked = momentLiked[storyId] || false;
-
-    // Optimistic UI update
-    setMomentLiked(prev => ({ ...prev, [storyId]: !isLiked }));
-    setStoryLikesCount(prev => ({
-      ...prev,
-      [storyId]: Math.max(0, (prev[storyId] || 0) + (isLiked ? -1 : 1))
-    }));
-
-    try {
-      if (isLiked) {
-        await socialRepository.unlikeStory(currentUser.id, storyId);
-      } else {
-        await socialRepository.likeStory(currentUser.id, storyId);
-      }
-    } catch (err) {
-      // Revert optimistic state
-      setMomentLiked(prev => ({ ...prev, [storyId]: isLiked }));
-      setStoryLikesCount(prev => ({
-        ...prev,
-        [storyId]: Math.max(0, (prev[storyId] || 0) + (isLiked ? 1 : -1))
-      }));
-      showToast('Failed to sync like with Firebase. Try again.', 'error');
-    }
-  };
 
   const handleCitySelect = (city: string) => {
     setSelectedCity(city);
@@ -398,42 +345,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     (minRatingFilter > 0 ? 1 : 0) +
     (sortBy !== 'recommended' ? 1 : 0);
 
-  const filteredCompanions = companions.filter(c => {
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch = !q ||
-      c.location.toLowerCase().includes(q) ||
-      c.name.toLowerCase().includes(q) ||
-      c.bio.toLowerCase().includes(q) ||
-      c.interests.some(i => i.toLowerCase().includes(q)) ||
-      c.languages.some(l => l.toLowerCase().includes(q));
-    
-    const matchesCategory = 
-      selectedCategory === 'All' || 
-      c.interests.includes(selectedCategory) || 
-      c.bio.toLowerCase().includes(selectedCategory.toLowerCase());
-    
-    const matchesCity = 
-      selectedCity === 'All' || 
-      c.location.toLowerCase() === selectedCity.toLowerCase();
-
-    const matchesLanguage =
-      selectedLanguage === 'All' ||
-      c.languages.some(l => l.toLowerCase() === selectedLanguage.toLowerCase());
-
-    const matchesMaxRate = (c.hourlyRate || 0) <= maxHourlyRate;
-
-    const matchesMinRating = (c.rating || 0) >= minRatingFilter;
-    
-    const matchesSaved = 
-      !showSavedOnly || 
-      (favorites && favorites.includes(c.id));
-    
-    return matchesSearch && matchesCategory && matchesCity && matchesLanguage && matchesMaxRate && matchesMinRating && matchesSaved;
-  }).sort((a, b) => {
-    if (sortBy === 'priceAsc') return a.hourlyRate - b.hourlyRate;
-    if (sortBy === 'priceDesc') return b.hourlyRate - a.hourlyRate;
-    if (sortBy === 'rating') return b.rating - a.rating;
-    return 0; // recommended
+  const filteredCompanions = filterCompanions(companions, {
+    query: searchQuery, category: selectedCategory, city: selectedCity,
+    language: selectedLanguage, maxRate: maxHourlyRate, minRating: minRatingFilter,
+    savedOnly: showSavedOnly, favorites: favorites || [], sort: sortBy,
   });
 
   const companionCategories = useCompanionCategories(filteredCompanions);
@@ -441,13 +356,13 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const filteredActivities = (activities || []).filter(act => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q ||
-      act.title?.toLowerCase().includes(q) ||
-      act.description?.toLowerCase().includes(q) ||
-      act.location?.toLowerCase().includes(q);
+      searchText(act.title).includes(q) ||
+      searchText(act.description).includes(q) ||
+      searchText(act.location).includes(q);
     
     const matchesCity = 
       selectedCity === 'All' || 
-      act.location?.toLowerCase().includes(selectedCity.toLowerCase());
+      searchText(act.location).includes(selectedCity.toLowerCase());
       
     return matchesSearch && matchesCity;
   });
@@ -455,13 +370,13 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const filteredEvents = (events || []).filter(evt => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q ||
-      evt.title?.toLowerCase().includes(q) ||
-      evt.description?.toLowerCase().includes(q) ||
-      evt.location?.toLowerCase().includes(q);
+      searchText(evt.title).includes(q) ||
+      searchText(evt.description).includes(q) ||
+      searchText(evt.location).includes(q);
     
     const matchesCity = 
       selectedCity === 'All' || 
-      evt.location?.toLowerCase().includes(selectedCity.toLowerCase());
+      searchText(evt.location).includes(selectedCity.toLowerCase());
       
     return matchesSearch && matchesCity;
   });
@@ -496,7 +411,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           {/* Navigation Links */}
           <nav className="space-y-1" aria-label="Sidebar navigation">
             <button 
-              onClick={() => { navigate('/'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} 
+              onClick={() => { setActiveTab('home'); setMobileTab('home'); navigate('/'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }}
               className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/' && !showSavedOnly ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
             >
               <Home className="w-4 h-4" /> Home
@@ -689,10 +604,11 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               <Search className="w-4 h-4 text-text-secondary absolute left-4 top-1/2 transform -translate-y-1/2" />
               <input 
                 type="text" 
-                placeholder="Search companions, local skills, activities, or chiya spots..." 
+                placeholder="Search companions, skills, or locations..."
                 className="w-full bg-surface-elevated/50 border border-border-token/40 rounded-full h-10 pl-11 pr-16 text-xs text-text-primary placeholder-text-secondary focus:outline-none focus:border-primary-action focus:bg-surface transition-all shadow-inner focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') openCompanionSearch(); }}
               />
               {searchQuery && (
                 <button 
@@ -878,7 +794,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <Sun className="w-4 h-4 text-primary-action" /> Appearance
                         </button>
-                        <button onClick={() => { showToast("Privacy protection active. SATHI uses end-to-end escrow security.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
+                        <button onClick={() => { showToast("Privacy controls are limited; SATHI does not provide escrow or end-to-end encrypted messaging.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <ShieldCheck className="w-4 h-4 text-primary-action" /> Privacy & Security
                         </button>
                       </div>
@@ -894,7 +810,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         <button onClick={() => { setActiveDocType('help'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-secondary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <HelpCircle className="w-4 h-4" /> Help & Support
                         </button>
-                        <button onClick={() => { showToast("Emergency Contact: +977-9801234567. Location: Thamel, Kathmandu.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-secondary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
+                        <button onClick={() => { showToast("SATHI has no verified emergency helpline. Contact local emergency services directly for urgent help.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-secondary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <Smile className="w-4 h-4" /> Contact Us
                         </button>
                       </div>
@@ -952,13 +868,15 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 onToggleFavorite={toggleFavorite}
                 onViewCompanion={handleViewCompanion}
                 onShowToast={showToast}
-                onNavigateExplore={(category) => { setMobileTab('explore'); if (category) setSelectedCategory(category); }}
+                onNavigateExplore={(category) => { setActiveTab('explore'); setMobileTab('explore'); if (category) setSelectedCategory(category); navigate('/explore'); }}
                 onCreateStory={() => setShowCreateStoryModal(true)}
-                onApplyAsCompanion={() => setAuthMode('guide')}
+                onApplyAsCompanion={() => currentUser ? navigate('/settings') : setAuthMode('guide')}
                 onViewStory={openVisibleStory}
                 feedItems={homeFeedItems}
                 visibleCategoryCount={homeReveal.visibleCount}
                 sentinelRef={homeReveal.sentinelRef}
+                error={homeFeedError}
+                onRetry={() => { void retryHome(); }}
                 hasMore={homeFeedHasMore}
                 loadingMore={homeFeedLoadingMore}
                 onLoadMore={loadMoreHome}
@@ -1056,7 +974,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border-token/40 pb-4">
                       <div>
                         <h2 className="text-xl md:text-3xl font-extrabold text-text-primary flex items-center gap-2">
-                          Top Companions for You <span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">KYC Verified</span>
+                          Top Companions for You <span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">Local Companions</span>
                         </h2>
                         <p className="text-xs text-text-secondary mt-1">Book safely. Hourly rates listed in NPR. Zero commission or matching fee.</p>
                       </div>
@@ -1397,7 +1315,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         <h3 className="text-xl md:text-2xl font-extrabold text-text-primary tracking-tight">SATHI Shield Protection</h3>
                       </div>
                       <p className="text-xs text-text-secondary leading-relaxed font-light">
-                        Every companion buddy is fully ID-verified, background screened, and managed under strict Nepal Tourism safety guidelines. Your funds are protected in escrow and disbursed only after your adventure completes.
+                        Companion approval reflects a recorded application review, not a background check or safety guarantee. Online payments and escrow are unavailable. Safety alerts do not dispatch emergency assistance.
                       </p>
                       <span className="text-lg font-black text-primary-action block tracking-tight pt-1">
                         Trusted by 25,000+ Travelers
@@ -1405,7 +1323,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     </div>
 
                     <button 
-                      onClick={() => { setShowSOS(true); showToast('SOS Emergency protocol initiated', 'info'); }}
+                      onClick={() => { setShowSOS(true); showToast('Safety alert form opened. No emergency assistance has been dispatched.', 'info'); }}
                       className="px-6 py-3 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-500 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
                     >
                       🚨 Emergency Support Protocol
@@ -1437,7 +1355,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     <div className="space-y-3">
                       <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary">Security & Help</h4>
                       <ul className="space-y-1.5 text-xs text-text-secondary">
-                        <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveDocType('help'); }} className="hover:text-text-primary transition-colors">24/7 Support Desk</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveDocType('help'); }} className="hover:text-text-primary transition-colors">Help & Support</a></li>
                         <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveDocType('privacy'); }} className="hover:text-text-primary transition-colors">Privacy Policy & Verification</a></li>
                         <li><a href="#" onClick={(e) => { e.preventDefault(); setShowSOS(true); }} className="hover:text-text-primary transition-colors">Emergency Protocol</a></li>
                         <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveDocType('terms'); }} className="hover:text-text-primary transition-colors">Terms of Service</a></li>
@@ -1472,8 +1390,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                  <SectionHeader
                    title="Discover Companions"
-                   subtitle="Browse verified local companions by category, location, and interest."
-                   badge={<span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">KYC Verified</span>}
+                   subtitle="Browse local companions by category, location, and interest."
+                   badge={<span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">Local Companions</span>}
                    action={
                      <button 
                        onClick={() => setIsFilterDrawerOpen(true)}
@@ -1496,7 +1414,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                  ) : filteredCompanions.length === 0 ? (
                    <div className="text-center py-20">
                      <Users className="w-12 h-12 text-text-muted mx-auto mb-3" />
-                     <p className="text-sm font-bold text-text-secondary">No companions found</p>
+                     <p className="text-sm font-bold text-text-secondary">No matches in loaded companions</p>
                      <p className="text-[10px] text-text-muted mt-1">Try adjusting your search or filters</p>
                    </div>
                    ) : (
@@ -1534,6 +1452,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       })()}
                     </div>
                   )}
+                 <DiscoveryPageControl source="companions" loaded={companions.length} matches={filteredCompanions.length}
+                   loading={companionsLoading} loadingMore={companionsLoadingMore} hasMore={companionsHasMore}
+                   error={companionsError} onLoadMore={loadMoreCompanions} onRetry={retryCompanions} />
                </motion.div>
              )}
 
@@ -1629,7 +1550,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 
                 <div className="bg-surface border border-border-token p-8 rounded-3xl space-y-6 text-text-secondary leading-relaxed">
                   <p className="text-lg text-text-primary">
-                    SATHI is Nepal's elite social marketplace connecting travelers with KYC-verified, trusted local guides for non-dating cultural exchange, outdoor hiking, and Lake Pokhara adventure.
+                    SATHI is Nepal's elite social marketplace connecting travelers with local companions for non-dating cultural exchange, outdoor hiking, and Lake Pokhara adventure.
                   </p>
                   <p className="font-light text-xs">
                     We ensure transparent hourly billing in NPR, zero hidden commission fees, complete safety backup checks, and localized experiences that make you feel at home in our glorious mountains.
@@ -1706,9 +1627,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-1">
                     {[
-                      { title: "✔ KYC Verification", desc: "All companion identities strictly checked & verified." },
-                      { title: "✔ Secure Escrow", desc: "Funds held safely in secure escrow in NPR currency." },
-                      { title: "✔ SOS Support", desc: "24/7 SOS location check-ins and helpline backup." },
+                      { title: "Application Review", desc: "Approval records an application review, not a background check." },
+                      { title: "Payment Status", desc: "Online payments and escrow are unavailable. Requests are unpaid." },
+                      { title: "Safety Alerts", desc: "Single-location records only; no monitored emergency response." },
                       { title: "✔ Free Discovery", desc: "Explore peer profiles and build connections entirely free." }
                     ].map((item, idx) => (
                       <div key={idx} className="space-y-1 text-xs group">
@@ -1811,9 +1732,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </div>
               <div className="space-y-4">
                 {[
-                  { title: "✔ KYC Verification", desc: "All companion identities checked & verified." },
-                  { title: "✔ Secure Escrow", desc: "Funds held safely in NPR currency." },
-                  { title: "✔ SOS Support", desc: "SOS check-ins and active helpline support." },
+                  { title: "Application Review", desc: "Approval records an application review, not a background check." },
+                  { title: "Payment Status", desc: "Online payments and escrow are unavailable. Requests are unpaid." },
+                  { title: "Safety Alerts", desc: "Single-location records only; no monitored emergency response." },
                   { title: "✔ Free Discovery", desc: "Explore peer profiles and connect free." }
                 ].map((item, idx) => (
                   <div key={idx} className="space-y-1 text-xs group">
@@ -1885,7 +1806,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             <h2 className="text-2xl font-light text-text-primary mb-4 border-b border-border-token pb-3">About <span className="font-bold">SATHI<span className="text-primary-action">.</span></span></h2>
             <div className="bg-surface border border-border-token p-6 rounded-3xl space-y-4 text-text-secondary leading-relaxed">
               <p className="text-base text-text-primary">
-                SATHI is Nepal's elite social marketplace connecting travelers with KYC-verified, trusted local guides for non-dating cultural exchange, outdoor hiking, and Lake Pokhara adventure.
+                SATHI is Nepal's elite social marketplace connecting travelers with local companions for non-dating cultural exchange, outdoor hiking, and Lake Pokhara adventure.
               </p>
               <p className="font-light text-xs">
                 We ensure transparent hourly billing in NPR, zero hidden commission fees, complete safety backup checks, and localized experiences that make you feel at home in our glorious mountains.
@@ -1909,9 +1830,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     <Search className="w-4 h-4 text-primary-action absolute left-3" />
                     <input
                       type="text"
-                      placeholder="Where are you going?"
+                      placeholder="Search companions or locations..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') openCompanionSearch(); }}
                       className="w-full h-10 pl-9 pr-10 bg-surface-elevated/60 backdrop-blur-md rounded-full border border-white/10 text-xs text-text-primary focus:outline-none focus:border-primary-action transition-all"
                     />
                   </div>
@@ -2028,7 +1950,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     const act = item.data as Activity;
                     const price = act.avgPrice || act.price;
                     return (
-                      <div key={`${item.type}-${item.data.id}-${idx}`} className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col">
+                      <div key={`${item.type}-${item.data.id}-${idx}`} onClick={() => { setSelectedCategory(act.category || 'All'); setActiveTab('explore'); setMobileTab('explore'); navigate('/explore'); }} className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer">
                         <div className="relative h-32 bg-surface-elevated">
                           <SafeImage src={act.imageUrl || act.image} className="w-full h-full object-cover" alt={act.title} />
                         </div>
@@ -2045,7 +1967,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     const eventDate = evt.date ? new Date(evt.date) : null;
                     const hasValidDate = !!eventDate && !Number.isNaN(eventDate.getTime());
                     return (
-                      <div key={`${item.type}-${item.data.id}-${idx}`} className="bg-surface border border-white/5 p-3 rounded-2xl flex items-center gap-3">
+                      <div key={`${item.type}-${item.data.id}-${idx}`} onClick={() => showToast(`Event: ${evt.title} • capacity: ${evt.spots ?? 'unavailable'}`, 'info')} className="bg-surface border border-white/5 p-3 rounded-2xl flex items-center gap-3 cursor-pointer">
                         <div className="shrink-0 w-10 h-10 rounded-xl bg-surface-elevated flex flex-col items-center justify-center border border-white/10">
                           <span className="text-primary-action text-[7px] font-black leading-none uppercase">
                             {hasValidDate ? eventDate.toLocaleString('en-US', { month: 'short' }) : 'TBA'}
@@ -2076,95 +1998,19 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             )}
 
             {/* Mobile progressive loading sentinel */}
-            {(homeReveal.visibleCount < homeReveal.totalChunks || homeFeedHasMore || homeFeedLoadingMore) && (
-              <div ref={homeReveal.sentinelRef} className="flex justify-center py-4">
+            {mobileTab === 'home' && homeFeedError && (
+              <div role="alert" className="px-4 py-3 text-sm text-text-secondary">
+                {homeFeedError} <button onClick={() => { void retryHome(); }} className="text-primary-action">Retry</button>
+              </div>
+            )}
+            {mobileTab === 'home' && (homeReveal.visibleCount < homeReveal.totalChunks || homeFeedHasMore || homeFeedLoadingMore) && (
+              <div ref={homeReveal.mobileSentinelRef} className="flex justify-center py-4">
                 {(homeFeedLoadingMore || homeReveal.visibleCount < homeReveal.totalChunks) && (
                   <div className="w-8 h-8 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin" />
                 )}
               </div>
             )}
 
-            {/* Activities Section */}
-            <div className="px-4 py-1 space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xs font-black uppercase tracking-wider text-text-secondary">Activities</h3>
-                <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => setMobileTab('explore')}>See all</span>
-              </div>
-              
-              <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
-                {activities.slice(0, 10).map((exp, i) => (
-                  <div 
-                    key={`${exp.id || 'exp'}-${i}`} 
-                    className="shrink-0 w-44 bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col snap-start cursor-pointer hover:border-primary-action/30 transition-all"
-                    onClick={() => { setSelectedCategory(exp.category || 'All'); setMobileTab('explore'); }}
-                  >
-                    <div className="relative h-24 bg-surface-elevated">
-                      <SafeImage src={exp.imageUrl || exp.image} className="w-full h-full object-cover" alt={exp.title} fallbackType="thumbnail" loading="lazy" />
-                      <span className="absolute top-2 left-2 bg-primary-action text-background text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                        {exp.category || 'EXPERIENCE'}
-                      </span>
-                    </div>
-                    <div className="p-2.5 space-y-1 text-left">
-                      <h4 className="text-[11px] font-bold text-text-primary truncate">{exp.title}</h4>
-                      <p className="text-[9px] text-text-secondary truncate">
-                        {exp.duration || 'Duration unavailable'}
-                        {exp.companionCount > 0 ? ` • ${exp.companionCount} buddies` : ''}
-                      </p>
-                      <div className="flex justify-between items-center pt-1 border-t border-white/5">
-                        <span className="text-[10px] font-black text-primary-action">{exp.avgPrice ? `NPR ${exp.avgPrice}` : 'Price unavailable'}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Upcoming Events */}
-            <div className="px-4 py-1 space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xs font-black uppercase tracking-wider text-text-secondary">Upcoming Events</h3>
-                 <span className="text-xs font-bold text-primary-action cursor-pointer" onClick={() => setMobileTab('explore')}>See all</span>
-              </div>
-              
-              <div className="space-y-3">
-                {events.slice(0, 5).map((ev, idx) => {
-                  const dateObj = ev.date ? new Date(ev.date) : null;
-                  const hasValidDate = !!dateObj && !Number.isNaN(dateObj.getTime());
-                  const monthStr = hasValidDate ? dateObj.toLocaleString('en-US', { month: 'short' }).toUpperCase() : 'TBA';
-                  const dayStr = hasValidDate ? String(dateObj.getDate()) : '—';
-                  const attendeesCount = Array.isArray(ev.participants)
-                    ? ev.participants.length
-                    : (typeof ev.participants === 'number' ? ev.participants : 0);
-
-                  return (
-                    <div key={`${ev.id || 'ev'}-${idx}`} className="bg-surface border border-white/5 p-3.5 rounded-2xl flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 text-left">
-                        <div className="shrink-0 w-11 h-11 rounded-xl bg-surface-elevated flex flex-col items-center justify-center border border-white/10">
-                          <span className="text-primary-action text-[8px] font-black leading-none uppercase">{monthStr}</span>
-                          <span className="text-text-primary font-black text-sm leading-none mt-1">{dayStr}</span>
-                        </div>
-                        <div className="space-y-0.5">
-                          <h5 className="text-[11px] font-bold text-text-primary truncate max-w-[160px]">{ev.title}</h5>
-                          <p className="text-[9px] text-text-secondary truncate max-w-[160px]">{ev.location || 'Location unavailable'}{ev.time ? ` • ${ev.time}` : ''}</p>
-                          {attendeesCount > 0 && <span className="text-[8px] text-primary-action font-bold">{attendeesCount} buddies attending</span>}
-                        </div>
-                      </div>
-                       <button 
-                         onClick={() => {
-                           const btn = getEventButtonState(ev);
-                           if (btn.action === 'join') handleJoinEvent(ev.id);
-                           else if (btn.action === 'leave') handleLeaveEvent(ev.id);
-                         }}
-                         disabled={getEventButtonState(ev).disabled}
-                         className="px-3 py-1.5 bg-primary-action hover:bg-primary-action-hover text-background text-[9px] font-black rounded-lg uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                       >
-                         {getEventButtonState(ev).text}
-                       </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
 
             {/* Become a Companion */}
             <div className="px-4 py-1 pb-6">
@@ -2173,9 +2019,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent"></div>
                 <div className="relative z-10 space-y-2.5">
                   <h3 className="text-sm font-extrabold text-text-primary leading-tight">Become a SATHI Companion</h3>
-                  <p className="text-[10px] text-gray-300 leading-relaxed max-w-[240px]">Share your favorite local spots, guide travelers, and earn up to <span className="text-text-primary font-bold">NPR 15,000/week</span> on your own schedule.</p>
+                  <p className="text-[10px] text-gray-300 leading-relaxed max-w-[240px]">Share your favorite local spots and guide travelers on your own schedule. Earnings depend on completed bookings.</p>
                   <button 
-                    onClick={() => { setAuthMode('guide'); setIsGuide(true); }}
+                    onClick={() => currentUser ? navigate('/settings') : setAuthMode('guide')}
                     className="w-max px-4 py-2 bg-primary-action hover:bg-primary-action-hover active:scale-95 text-background rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
                   >
                     Apply Now
@@ -2686,14 +2532,14 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   </div>
                   <div className="flex justify-between items-end">
                     <div>
-                      <span className="text-2xl font-black text-text-primary">NPR 4,500.00</span>
-                      <p className="text-[9px] text-text-secondary mt-0.5">Nepal Local Market Rate currency</p>
+                      <span className="text-2xl font-black text-text-primary">Unavailable</span>
+                      <p className="text-[9px] text-text-secondary mt-0.5">No wallet or escrow ledger is implemented.</p>
                     </div>
                     <button 
                       onClick={() => setShowWalletModal(true)}
                       className="px-4 py-2 bg-primary-action text-black font-extrabold text-[10px] rounded-lg uppercase tracking-wider hover:bg-primary-action-hover transition-colors"
                     >
-                      Deposit Fund
+                      Wallet Status
                     </button>
                   </div>
                 </div>
@@ -2995,7 +2841,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
                   {filteredCompanions.length === 0 ? (
                     <div className="py-8 text-center text-text-secondary text-xs bg-surface rounded-2xl border border-white/5">
-                      No matching buddies found.
+                      {companionsLoading ? 'Loading companions…' : 'No matches in loaded companions.'}
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-3">
@@ -3012,6 +2858,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       ))}
                     </div>
                   )}
+                  <DiscoveryPageControl source="companions" loaded={companions.length} matches={filteredCompanions.length}
+                    loading={companionsLoading} loadingMore={companionsLoadingMore} hasMore={companionsHasMore}
+                    error={companionsError} onLoadMore={loadMoreCompanions} onRetry={retryCompanions} />
                 </div>
               )}
 
@@ -3026,7 +2875,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
                   {filteredActivities.length === 0 ? (
                     <div className="py-8 text-center text-text-secondary text-xs bg-surface rounded-2xl border border-white/5">
-                      No matching activities found.
+                      {activitiesLoading ? 'Loading activities…' : 'No matches in loaded activities.'}
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-3">
@@ -3060,6 +2909,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       ))}
                     </div>
                   )}
+                  <DiscoveryPageControl source="activities" loaded={activities.length} matches={filteredActivities.length}
+                    loading={activitiesLoading} loadingMore={activitiesLoadingMore} hasMore={activitiesHasMore}
+                    error={activitiesError} onLoadMore={loadMoreActivities} onRetry={retryActivities} />
                 </div>
               )}
 
@@ -3074,7 +2926,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
                   {filteredEvents.length === 0 ? (
                     <div className="py-8 text-center text-text-secondary text-xs bg-surface rounded-2xl border border-white/5">
-                      No matching events found.
+                      {eventsLoading ? 'Loading events…' : 'No matches in loaded events.'}
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-3">
@@ -3107,6 +2959,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       ))}
                     </div>
                   )}
+                  <DiscoveryPageControl source="events" loaded={events.length} matches={filteredEvents.length}
+                    loading={eventsLoading} loadingMore={eventsLoadingMore} hasMore={eventsHasMore}
+                    error={eventsError} onLoadMore={loadMoreEvents} onRetry={retryEvents} />
                 </div>
               )}
 
@@ -3191,6 +3046,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 onClick={() => { 
                   if (item.tab === 'messages') {
                     setActiveTab('messages');
+                  } else if (item.tab === 'home') {
+                    setActiveTab('home');
                   } else if (item.tab === 'bookings') {
                     setActiveTab('bookings');
                   } else {
@@ -3269,37 +3126,19 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               <div className="flex items-center justify-between gap-2">
                 <p className="text-text-primary text-sm font-semibold drop-shadow flex-1">{viewingStory.caption}</p>
                 <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (!currentUser) {
-                      showToast('Please sign in to like stories', 'info');
-                      openAuthModal();
-                      return;
-                    }
-                    const isLiked = storyLiked[viewingStory.id];
-                    setStoryLiked(prev => ({ ...prev, [viewingStory.id]: !isLiked }));
-                    setStoryLikesCount(prev => ({
-                      ...prev,
-                      [viewingStory.id]: Math.max(0, (prev[viewingStory.id] || 0) + (isLiked ? -1 : 1))
-                    }));
-                    try {
-                      if (isLiked) {
-                        await socialRepository.unlikeStory(currentUser.id, viewingStory.id);
-                      } else {
-                        await socialRepository.likeStory(currentUser.id, viewingStory.id);
-                      }
-                    } catch (err) {
-                      setStoryLiked(prev => ({ ...prev, [viewingStory.id]: isLiked }));
-                    }
-                  }}
+                  onClick={(e) => { e.stopPropagation(); void storyReaction.setLiked(!storyReaction.liked); }}
+                  disabled={storyReaction.busy || !!storyReaction.error}
+                  aria-label={storyReaction.liked ? 'Unlike Story' : 'Like Story'}
+                  aria-pressed={storyReaction.liked}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md text-text-primary border border-white/20 hover:scale-105 transition-transform"
                 >
-                  <Heart className={`w-4 h-4 ${storyLiked[viewingStory.id] ? 'fill-red-500 text-red-500' : 'text-text-primary'}`} />
-                  {(storyLikesCount[viewingStory.id] || 0) > 0 && (
-                    <span className="text-xs font-bold">{storyLikesCount[viewingStory.id]}</span>
+                  <Heart className={`w-4 h-4 ${storyReaction.liked ? 'fill-red-500 text-red-500' : 'text-text-primary'}`} />
+                  {storyReaction.count > 0 && (
+                    <span className="text-xs font-bold">{storyReaction.count}</span>
                   )}
                 </button>
               </div>
+              {storyReaction.error && <p role="alert" className="text-xs text-text-secondary">{storyReaction.error} <button onClick={() => { void storyReaction.refresh(); }} className="text-primary-action">Refresh likes</button></p>}
               
               <div className="flex gap-1">
                 {stories.map((s, idx) => {
@@ -3360,7 +3199,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 <Wallet className="w-8 h-8 mx-auto text-primary-action/60" />
                 <h4 className="text-sm font-bold text-text-primary">Wallet balance unavailable</h4>
                 <p className="text-xs text-text-secondary leading-relaxed">
-                  Secure wallet balances and ledger entries will appear here after server-side payment verification is enabled.
+                  Wallet and escrow services are not implemented. Booking values are not balances or proof of payment.
                 </p>
               </div>
             </motion.div>
@@ -3588,7 +3427,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   Reset All
                 </button>
                 <button
-                  onClick={() => setIsFilterDrawerOpen(false)}
+                  onClick={() => { setIsFilterDrawerOpen(false); openCompanionSearch(); }}
                   className="flex-1 py-3 bg-primary-action hover:bg-primary-action-hover text-background rounded-xl text-xs font-extrabold transition-all shadow-md"
                 >
                   Apply Filters
@@ -3708,7 +3547,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     </span>
                     <ChevronRight className="w-4 h-4 text-text-muted" />
                   </button>
-                  <button onClick={() => { showToast("Privacy protection active. SATHI uses end-to-end escrow security.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
+                  <button onClick={() => { showToast("Privacy controls are limited; SATHI does not provide escrow or end-to-end encrypted messaging.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
                     <span className="flex items-center gap-3 font-semibold">
                       <ShieldCheck className="w-4.5 h-4.5 text-primary-action" /> Privacy & Security
                     </span>
@@ -3737,7 +3576,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     </span>
                     <ChevronRight className="w-4 h-4 text-text-muted" />
                   </button>
-                  <button onClick={() => { showToast("Emergency Contact: +977-9801234567. Location: Thamel, Kathmandu.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
+                  <button onClick={() => { showToast("SATHI has no verified emergency helpline. Contact local emergency services directly for urgent help.", "info"); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
                     <span className="flex items-center gap-3 font-semibold">
                       <Smile className="w-4.5 h-4.5 text-text-secondary" /> Contact Us
                     </span>

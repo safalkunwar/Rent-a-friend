@@ -239,10 +239,12 @@ service cloud.firestore {
     match /comments/{id} {
       allow read: if publicPost(resource.data.postId) || own(resource.data.userId) || content();
       allow create: if own(request.resource.data.userId) && publicPost(request.resource.data.postId) &&
-        textValid(request.resource.data.text) &&
+        request.resource.data.id == id && request.resource.data.createdAt is timestamp &&
+        request.resource.data.createdAt == request.time &&
+        textValid(request.resource.data.text) && request.resource.data.text.size() <= 500 &&
         request.resource.data.keys().hasOnly(['id','postId','userId','userName','userAvatar','text','createdAt','parentId']) &&
         pairedComment(request.resource.data.postId,id,1);
-      allow update: if own(resource.data.userId) && changedOnly(['text']) && textValid(request.resource.data.text);
+      allow update: if own(resource.data.userId) && changedOnly(['text']) && textValid(request.resource.data.text) && request.resource.data.text.size() <= 500;
       allow delete: if (own(resource.data.userId) || content()) &&
         pairedComment(resource.data.postId,id,-1);
     }

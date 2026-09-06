@@ -1,206 +1,123 @@
-import { useState, useEffect, useRef, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { firestore, type QueryOptions } from '../services/firestore';
-import { Companion, ExperienceStory, Activity, Event, Partner, CommunityPost } from '../types';
-import { offlineStorage } from '../services/storage';
+import { Companion, Activity, Event, Partner, CommunityPost } from '../types';
 import { db } from '../firebase';
 import { useVisibleStories } from './useVisibleStories';
 import { visibleEventImage } from '../services/mediaContract';
 import { getDocsFromServer } from 'firebase/firestore';
 import { eventSummaryQuery } from '../services/mediaQueries';
+import { mergeById } from '../services/feedStabilizer';
 
+interface PageResult<T> { items: T[]; hasMore: boolean; failed?: boolean }
 export interface PaginationState {
   loading: boolean;
   loadingMore: boolean;
   hasMore: boolean;
-  loadMore: () => void;
+  error: string | null;
+  loadMore: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
-
-interface SessionEntry<T> {
-  items: T[];
-  lastId?: string;
-  exhausted: boolean;
-}
-
-interface PageResult<T> {
-  items: T[];
-  hasMore: boolean;
-  failed?: boolean;
-}
-
-const sessionCache = new Map<string, SessionEntry<unknown>>();
 const inflightPages = new Map<string, Promise<PageResult<unknown>>>();
-
-const COMPANIONS_PAGE_SIZE = 15;
-const DEFAULT_PAGE_SIZE = 10;
-
-const COMPANIONS_QUERY: QueryOptions = {};
-const ACTIVITIES_QUERY: QueryOptions = {};
-const EVENTS_QUERY: QueryOptions = {};
-const PARTNERS_QUERY: QueryOptions = {};
-const POSTS_QUERY: QueryOptions = {
-  where: [{ field: 'status', operator: '==', value: 'published' }],
-};
-
-const deduplicateById = <T extends { id: string }>(arr: T[]): T[] => {
-  const seen = new Set<string>();
-  return arr.filter(item => {
-    if (!item || !item.id) return false;
-    if (seen.has(item.id)) return false;
-    seen.add(item.id);
-    return true;
-  });
-};
+const EMPTY_QUERY: QueryOptions = {};
+const POSTS_QUERY: QueryOptions = { where: [{ field: 'status', operator: '==', value: 'published' }] };
 
 const fetchPage = <T extends { id: string }>(
-  collectionName: string,
-  cursorId: string | undefined,
-  pageSize: number,
-  baseOptions: QueryOptions
+  collectionName: string, cursorId: string | undefined, pageSize: number, baseOptions: QueryOptions
 ): Promise<PageResult<T>> => {
-  const key = `${collectionName}|${cursorId ?? 'head'}`;
+  const key = JSON.stringify([collectionName, cursorId ?? null, pageSize, baseOptions]);
   const existing = inflightPages.get(key);
   if (existing) return existing as Promise<PageResult<T>>;
   const options: QueryOptions = {
-    ...baseOptions,
-    orderById: true,
-    limitCount: pageSize,
+    ...baseOptions, orderById: true, limitCount: pageSize,
     ...(cursorId ? { startAfter: [cursorId] } : {}),
   };
   const source: Promise<PageResult<T>> = collectionName === 'events' && db
-    ? getDocsFromServer(eventSummaryQuery(db,pageSize,cursorId)).then(snapshot => ({
-        items: snapshot.docs.map(document => ({ ...document.data(), id: document.id } as T)), hasMore: snapshot.size === pageSize,
-      })).catch(() => ({ items: [], hasMore: false, failed: true }))
+    ? getDocsFromServer(eventSummaryQuery(db, pageSize, cursorId)).then(snapshot => ({
+        items: snapshot.docs.map(document => ({ ...document.data(), id: document.id } as T)),
+        hasMore: snapshot.size === pageSize,
+      }))
     : firestore.getDocumentsPaginated<T>(collectionName, options);
-  const promise = source
-    .finally(() => {
-      inflightPages.delete(key);
-    });
+  const promise = source.catch(() => ({ items: [], hasMore: false, failed: true }))
+    .finally(() => { inflightPages.delete(key); });
   inflightPages.set(key, promise as Promise<PageResult<unknown>>);
   return promise;
 };
 
 const usePaginatedCollection = <T extends { id: string }>(
-  collectionName: string,
-  pageSize: number,
-  baseOptions: QueryOptions
-): { items: T[]; loading: boolean; loadingMore: boolean; hasMore: boolean; loadMore: () => void; setItems: Dispatch<SetStateAction<T[]>> } => {
-  // Event image visibility must be revalidated; never paint persisted media status on remount.
-  const cachedEntry = (collectionName === 'events' ? undefined : sessionCache.get(collectionName)) as SessionEntry<T> | undefined;
-  const [items, setItems] = useState<T[]>(() => cachedEntry?.items ?? []);
-  const [hasMore, setHasMore] = useState<boolean>(() => !cachedEntry?.exhausted);
-  const [loading, setLoading] = useState<boolean>(() => !cachedEntry);
+  collectionName: string, pageSize: number, baseOptions: QueryOptions
+) => {
+  // A session/offline cache is not evidence that a post is still published or
+  // media is still visible. Remounts revalidate a bounded head page.
+  const [items, setItems] = useState<T[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const loadingMoreRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const lifecycle = useRef(0);
+  const page = useRef({ cursor: undefined as string | undefined, ready: false, exhausted: false, busy: false });
 
-  useEffect(() => {
-    if (collectionName === 'events' || sessionCache.has(collectionName)) return;
-    let cancelled = false;
-    offlineStorage.getCachedCollection<T>(collectionName).then(cached => {
-      if (cancelled || cached.length === 0) return;
-      setItems(prev => (prev.length > 0 ? prev : deduplicateById(cached)));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [collectionName]);
-
-  useEffect(() => {
-    if (collectionName !== 'events' && sessionCache.has(collectionName)) return;
-    let cancelled = false;
-    fetchPage<T>(collectionName, undefined, pageSize, baseOptions)
-      .then(result => {
-        if (cancelled) return;
-        if (result.failed) {
-          setLoading(false);
-          return;
-        }
-        const uniqueItems = deduplicateById(result.items);
-        sessionCache.set(collectionName, {
-          items: uniqueItems,
-          lastId: uniqueItems.length > 0 ? uniqueItems[uniqueItems.length - 1].id : undefined,
-          exhausted: !result.hasMore || uniqueItems.length === 0,
-        });
-        setItems(prev => collectionName === 'events' ? uniqueItems : mergeCached(uniqueItems, prev));
-        setHasMore(result.hasMore && uniqueItems.length > 0);
+  const read = useCallback(async (more: boolean) => {
+    const state = page.current;
+    if (state.busy || (more && (!state.ready || state.exhausted))) return;
+    state.busy = true;
+    const version = lifecycle.current;
+    setError(null);
+    if (more) setLoadingMore(true);
+    else { setLoading(true); setItems([]); }
+    try {
+      const result = await fetchPage<T>(collectionName, more ? state.cursor : undefined, pageSize, baseOptions);
+      if (version !== lifecycle.current) return;
+      if (result.failed) throw new Error('Content unavailable. Try again online.');
+      const batch = mergeById([], result.items);
+      const cursor = result.items.at(-1)?.id;
+      const hasNext = result.hasMore && !!cursor && (!more || cursor !== state.cursor);
+      state.cursor = cursor ?? state.cursor;
+      state.exhausted = !hasNext;
+      state.ready = true;
+      setItems(previous => more ? mergeById(previous, batch) : batch);
+      setHasMore(hasNext);
+    } catch {
+      if (version === lifecycle.current) setError('Content unavailable. Try again online.');
+    } finally {
+      if (version === lifecycle.current) {
+        state.busy = false;
         setLoading(false);
-        if (collectionName !== 'events') offlineStorage.cacheCollection(collectionName, uniqueItems);
-      })
-      .catch(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [collectionName, pageSize, baseOptions]);
-
-  const loadMore = useCallback(() => {
-    const entry = sessionCache.get(collectionName) as SessionEntry<T> | undefined;
-    if (!entry || entry.exhausted) return;
-    if (loadingMoreRef.current) return;
-    loadingMoreRef.current = true;
-    setLoadingMore(true);
-    fetchPage<T>(collectionName, entry.lastId, pageSize, baseOptions)
-      .then(result => {
-        if (result.failed) return;
-        const uniqueBatch = deduplicateById(result.items).filter(item => !entry.items.some(existing => existing.id === item.id));
-        const merged = uniqueBatch.length > 0 ? [...entry.items, ...uniqueBatch] : entry.items;
-        const nextLastId = result.items.length > 0 ? result.items[result.items.length - 1].id : entry.lastId;
-        sessionCache.set(collectionName, {
-          items: merged,
-          lastId: nextLastId,
-          exhausted: !result.hasMore,
-        });
-        setItems(merged);
-        setHasMore(result.hasMore);
-        if (collectionName !== 'events') offlineStorage.cacheCollection(collectionName, merged);
-      })
-      .catch(() => {})
-      .finally(() => {
-        loadingMoreRef.current = false;
         setLoadingMore(false);
-      });
+      }
+    }
   }, [collectionName, pageSize, baseOptions]);
 
-  return { items, loading, loadingMore, hasMore, loadMore, setItems };
-};
+  useEffect(() => {
+    page.current = { cursor: undefined, ready: false, exhausted: false, busy: false };
+    void read(false);
+    return () => { lifecycle.current++; };
+  }, [read]);
 
-const mergeCached = <T extends { id: string }>(fetched: T[], previouslyPainted: T[]): T[] => {
-  if (previouslyPainted.length === 0) return fetched;
-  const fetchedIds = new Set(fetched.map(item => item.id));
-  const staleExtras = previouslyPainted.filter(item => !fetchedIds.has(item.id));
-  return [...fetched, ...staleExtras];
+  const loadMore = useCallback(() => read(true), [read]);
+  const refresh = useCallback(() => read(false), [read]);
+  const retry = useCallback(() => read(page.current.ready), [read]);
+  return { items, loading, loadingMore, hasMore, loadMore, refresh, retry, error };
 };
 
 export const useCompanions = () => {
-  const { items, loading, loadingMore, hasMore, loadMore } = usePaginatedCollection<Companion>('companions', COMPANIONS_PAGE_SIZE, COMPANIONS_QUERY);
-  return { companions: items, loading, loadingMore, hasMore, loadMore };
+  const { items, ...state } = usePaginatedCollection<Companion>('companions', 15, EMPTY_QUERY);
+  return { companions: items, ...state };
 };
-
 export const useStories = useVisibleStories;
-
 export const useActivities = () => {
-  const { items, loading, loadingMore, hasMore, loadMore } = usePaginatedCollection<Activity>('activities', DEFAULT_PAGE_SIZE, ACTIVITIES_QUERY);
-  return { activities: items, loading, loadingMore, hasMore, loadMore };
+  const { items, ...state } = usePaginatedCollection<Activity>('activities', 10, EMPTY_QUERY);
+  return { activities: items, ...state };
 };
-
 export const useEvents = () => {
-  const { items, loading, loadingMore, hasMore, loadMore } = usePaginatedCollection<Event>('events', DEFAULT_PAGE_SIZE, EVENTS_QUERY);
+  const { items, ...state } = usePaginatedCollection<Event>('events', 10, EMPTY_QUERY);
   const events = useMemo(() => items.map(event => ({ ...event, imageUrl: visibleEventImage(event), image: visibleEventImage(event) })), [items]);
-  return { events, loading, loadingMore, hasMore, loadMore };
+  return { events, ...state };
 };
-
 export const usePartners = () => {
-  const { items, loading, loadingMore, hasMore, loadMore } = usePaginatedCollection<Partner>('partners', DEFAULT_PAGE_SIZE, PARTNERS_QUERY);
-  return { partners: items, loading, loadingMore, hasMore, loadMore };
+  const { items, ...state } = usePaginatedCollection<Partner>('partners', 10, EMPTY_QUERY);
+  return { partners: items, ...state };
 };
-
 export const useCommunityPosts = () => {
-  const { items, loading, loadingMore, hasMore, loadMore } = usePaginatedCollection<CommunityPost>('community_posts', DEFAULT_PAGE_SIZE, POSTS_QUERY);
-  return { posts: items, loading, loadingMore, hasMore, loadMore };
-};
-
-export const __testHooks = {
-  sessionCache,
-  inflightPages,
-  dbPresent: !!db,
+  const { items, ...state } = usePaginatedCollection<CommunityPost>('community_posts', 10, POSTS_QUERY);
+  return { posts: items, ...state };
 };

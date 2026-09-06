@@ -40,135 +40,69 @@ export function chunkFeedByHeader(feed: FeedItem[]): FeedChunk[] {
   return chunks;
 }
 
-export function splitIntoChunks(feed: FeedItem[]): FeedChunk[] {
-  const chunks: FeedChunk[] = [];
-  let current: FeedChunk | null = null;
-  for (const item of feed) {
-    if (item.type === 'category-header') {
-      if (current) chunks.push(current);
-      current = { headerCategory: item.category, header: item, items: [] };
-    } else if (current) {
-      current.items.push(item);
-    } else {
-      current = { headerCategory: '', items: [item] };
-    }
-  }
-  if (current) chunks.push(current);
-  return chunks;
-}
+export const splitIntoChunks = chunkFeedByHeader;
 
 const itemKey = (item: FeedItem): string =>
   item.type === 'category-header' ? `header:${item.category}` : `${item.type}:${item.data.id}`;
 
-function splitIntoChunksAndTail(feed: FeedItem[]): { chunks: FeedChunk[]; tail: FeedItem[] } {
-  let cut = feed.length;
-  while (cut > 0 && (feed[cut - 1] as FeedItem & { _tail?: boolean })._tail === true) {
-    cut--;
-  }
-  const chunks = cut > 0 ? splitIntoChunks(feed.slice(0, cut)) : [];
-  const tail = feed.slice(cut);
-  return { chunks, tail };
-}
-
-export function stabilizeFeed(prevFeed: FeedItem[], nextFeed: FeedItem[]): FeedItem[] {
+/**
+ * Keep surviving content in global display order, not regenerated category order.
+ * availableItems is the authoritative current source window: omission from a
+ * ranked/capped nextFeed is not a deletion. New selections append only.
+ */
+export function stabilizeFeed(
+  prevFeed: FeedItem[],
+  nextFeed: FeedItem[],
+  availableItems: FeedItem[] = nextFeed
+): FeedItem[] {
   if (prevFeed.length === 0) return nextFeed;
-  if (nextFeed.length === 0) return [];
-
-  const { chunks: prevChunks, tail: prevTail } = splitIntoChunksAndTail(prevFeed);
-  const { chunks: nextChunks, tail: nextTail } = splitIntoChunksAndTail(nextFeed);
-  const prevTailKeys = new Set<string>(prevTail.map(item => itemKey(item)));
-
-  const nextKeys = new Set<string>();
-  nextChunks.forEach(chunk => chunk.items.forEach(item => nextKeys.add(itemKey(item))));
-  nextTail.forEach(item => nextKeys.add(itemKey(item)));
-
-  const nextByCategory = new Map<string, FeedChunk>();
-  for (const chunk of nextChunks) {
-    const existing = nextByCategory.get(chunk.headerCategory);
-    if (existing) {
-      existing.items.push(...chunk.items);
-    } else {
-      nextByCategory.set(chunk.headerCategory, chunk);
-    }
-  }
-
+  const latest = new Map(availableItems.filter(item => item.type !== 'category-header').map(item => [itemKey(item), item]));
   const emitted = new Set<string>();
-  const orphanGuard = new Set<string>();
-  const stabilized: FeedChunk[] = [];
-  const orphanAppends: Array<{ targetCategory: string; items: FeedItem[] }> = [];
+  const result: FeedItem[] = [];
+  let companionRun = 0;
 
-  for (const prevChunk of prevChunks) {
-    const match = nextByCategory.get(prevChunk.headerCategory);
-    if (!match) continue;
-    nextByCategory.delete(prevChunk.headerCategory);
+  const appendChunk = (chunk: FeedChunk, items: FeedItem[]) => {
+    if (!items.length) return;
+    if (chunk.header) result.push(chunk.header);
+    result.push(...items);
+  };
 
-    const matchKeys = new Set(match.items.map(itemKey));
+  // Keep the original section placement, but never keep its obsolete payload.
+  for (const chunk of chunkFeedByHeader(prevFeed)) {
     const kept: FeedItem[] = [];
-    const orphans: FeedItem[] = [];
-    for (const item of prevChunk.items) {
-      if (matchKeys.has(itemKey(item))) {
-        kept.push(item);
-      } else {
-        orphans.push(item);
-      }
+    for (const old of chunk.items) {
+      const key = itemKey(old);
+      const current = latest.get(key);
+      if (!current || emitted.has(key)) continue;
+      // If an interleaver was deleted/expired, defer overflow without moving
+      // surviving cards ahead of one another or retaining invisible content.
+      if (current.type === 'companion' && companionRun >= 3) continue;
+      kept.push({ ...current, section: old.type === 'category-header' ? current.section : old.section });
+      emitted.add(key);
+      companionRun = current.type === 'companion' ? companionRun + 1 : 0;
     }
-    kept.forEach(item => emitted.add(itemKey(item)));
-
-    const placedKeys = new Set(kept.map(itemKey));
-    const added = match.items.filter(item => {
-      const key = itemKey(item);
-      return !placedKeys.has(key) && !emitted.has(key) && !orphanGuard.has(key) && !prevTailKeys.has(key);
-    });
-    added.forEach(item => emitted.add(itemKey(item)));
-
-    stabilized.push({
-      headerCategory: prevChunk.headerCategory,
-      header: match.header || prevChunk.header,
-      items: [...kept, ...added],
-    });
-
-    const liveOrphans = orphans.filter(item => nextKeys.has(itemKey(item)));
-    liveOrphans.forEach(item => orphanGuard.add(itemKey(item)));
-    if (liveOrphans.length > 0) {
-      orphanAppends.push({ targetCategory: prevChunk.headerCategory, items: liveOrphans });
-    }
+    appendChunk(chunk, kept);
   }
 
-  for (const entry of orphanAppends) {
-    const target = stabilized.find(chunk => chunk.headerCategory === entry.targetCategory);
-    if (target) {
-      const fresh = entry.items.filter(item => !emitted.has(itemKey(item)));
-      fresh.forEach(item => emitted.add(itemKey(item)));
-      target.items.push(...fresh);
+  const pending = chunkFeedByHeader(nextFeed).flatMap(chunk =>
+    chunk.items.filter(item => !emitted.has(itemKey(item))).map(item => ({ chunk, item }))
+  );
+  let activeChunk: FeedChunk | undefined;
+  while (pending.length) {
+    // Only unseen content may move to bridge a run at the append boundary.
+    let index = 0;
+    if (companionRun >= 3 && pending[0].item.type === 'companion') {
+      index = pending.findIndex(entry => entry.item.type !== 'companion');
+      if (index < 0) break; // Defer extra companions; never invent filler.
     }
-  }
-
-  for (const unmatched of nextByCategory.values()) {
-    const fresh = unmatched.items.filter(item => {
-      const key = itemKey(item);
-      return !emitted.has(key) && !prevTailKeys.has(key);
-    });
-    fresh.forEach(item => emitted.add(itemKey(item)));
-    stabilized.push({ headerCategory: unmatched.headerCategory, header: unmatched.header, items: fresh });
-  }
-
-  const keptTail = prevTail.filter(item => {
+    const { chunk, item } = pending.splice(index, 1)[0];
     const key = itemKey(item);
-    return nextKeys.has(key) && !emitted.has(key);
-  });
-  keptTail.forEach(item => emitted.add(itemKey(item)));
-
-  const addedTail = nextTail.filter(item => !emitted.has(itemKey(item)));
-
-  const flat: FeedItem[] = [];
-  for (const chunk of stabilized) {
-    if (chunk.header) flat.push(chunk.header);
-    for (const item of chunk.items) {
-      if (item.type !== 'category-header') flat.push(item);
-    }
+    if (emitted.has(key)) continue;
+    if (activeChunk !== chunk && chunk.header) result.push(chunk.header);
+    activeChunk = chunk;
+    result.push(item);
+    emitted.add(key);
+    companionRun = item.type === 'companion' ? companionRun + 1 : 0;
   }
-  for (const item of [...keptTail, ...addedTail]) {
-    if (item.type !== 'category-header') flat.push(item);
-  }
-  return flat;
+  return result;
 }

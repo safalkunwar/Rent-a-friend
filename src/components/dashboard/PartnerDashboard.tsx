@@ -4,10 +4,10 @@ import { Store, BarChart2, Calendar, Users, TrendingUp, Star } from 'lucide-reac
 type PartnerType = 'hotel' | 'restaurant' | 'cafe' | 'adventure';
 
 interface PartnerStats {
-  views: number;
-  bookings: number;
-  revenue: number;
-  rating: number;
+  views: number | null;
+  bookings: number | null;
+  revenue: number | null;
+  rating: number | null;
 }
 
 interface PartnerOffer {
@@ -21,16 +21,13 @@ export const PartnerDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'offers' | 'analytics'>('overview');
 
   const stats: PartnerStats = {
-    views: 1240,
-    bookings: 86,
-    revenue: 42500,
-    rating: 4.8,
+    views: null,
+    bookings: null,
+    revenue: null,
+    rating: null,
   };
 
-  const offers: PartnerOffer[] = [
-    { id: 'o1', title: 'Weekend Stay Discount', discount: '20%', validUntil: '2026-08-01' },
-    { id: 'o2', title: 'Group Package', discount: '15%', validUntil: '2026-07-20' },
-  ];
+  const offers: PartnerOffer[] = [];
 
   return (
     <div className="space-y-6">
@@ -41,7 +38,7 @@ export const PartnerDashboard: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">Partner Dashboard</h1>
-            <p className="text-sm text-text-secondary">Manage your business profile, offers, and bookings.</p>
+            <p className="text-sm text-text-secondary">Partner reporting and offer management are not implemented. No business metrics are available.</p>
           </div>
         </div>
 
@@ -51,28 +48,28 @@ export const PartnerDashboard: React.FC = () => {
               <BarChart2 className="w-4 h-4 text-primary-action" />
               <span className="text-xs text-text-secondary uppercase tracking-wider">Views</span>
             </div>
-            <p className="text-2xl font-bold text-white">{stats.views}</p>
+            <p className="text-2xl font-bold text-white">{stats.views ?? 'Unavailable'}</p>
           </div>
           <div className="bg-surface-elevated border border-border-token p-4 rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="w-4 h-4 text-primary-action" />
               <span className="text-xs text-text-secondary uppercase tracking-wider">Bookings</span>
             </div>
-            <p className="text-2xl font-bold text-white">{stats.bookings}</p>
+            <p className="text-2xl font-bold text-white">{stats.bookings ?? 'Unavailable'}</p>
           </div>
           <div className="bg-surface-elevated border border-border-token p-4 rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="w-4 h-4 text-primary-action" />
               <span className="text-xs text-text-secondary uppercase tracking-wider">Revenue</span>
             </div>
-            <p className="text-2xl font-bold text-white">NPR {stats.revenue.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-white">{stats.revenue === null ? 'Unavailable' : `NPR ${stats.revenue.toLocaleString()}`}</p>
           </div>
           <div className="bg-surface-elevated border border-border-token p-4 rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
               <Star className="w-4 h-4 text-primary-action" />
               <span className="text-xs text-text-secondary uppercase tracking-wider">Rating</span>
             </div>
-            <p className="text-2xl font-bold text-white">{stats.rating}</p>
+            <p className="text-2xl font-bold text-white">{stats.rating ?? 'Unavailable'}</p>
           </div>
         </div>
       </div>
@@ -83,6 +80,7 @@ export const PartnerDashboard: React.FC = () => {
           <h2 className="text-xl font-bold text-white">Active Offers</h2>
         </div>
         <div className="space-y-4">
+          <p className="text-sm text-text-secondary">Offer data unavailable.</p>
           {offers.map(offer => (
             <div key={offer.id} className="bg-surface-elevated border border-border-token p-4 rounded-2xl flex items-center justify-between">
               <div>

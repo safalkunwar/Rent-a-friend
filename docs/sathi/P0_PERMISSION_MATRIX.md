@@ -36,3 +36,7 @@ Roles: root = super_admin (or legacy server-issued admin=true only when no admin
 | Storage kyc/UID/file | KYC reviewer, not uploader/other users | own UID + MIME/size/metadata | no overwrite | root | private path reference, no token URL persisted |
 
 Storage billing is a separate prerequisite: current Firebase Cloud Storage requires Blaze. Emulator success is not a Spark deployment capability. Ordinary client Firestore rules/transactions and local emulator tests do not require Functions deployment.
+
+## Post-media clarification (2026-09-06)
+
+The table above records the pre-implementation permission plan, not a replacement for current rules. The intervening media foundation narrowed Stories/public photo/event-image visibility and protected moderation/report fields. Read [MEDIA_UPLOAD_FOUNDATION.md](MEDIA_UPLOAD_FOUNDATION.md) for those exact contracts. Client writes to reviews are entirely denied; the table's proposed moderation deletion is not implemented. Profile-photo review does not give a moderation-only operator permission to read the entire private users document. The final role tests exercise all 11 adminRole claims with a conflicting legacy admin=true value to ensure lesser explicit roles do not inherit root authority.

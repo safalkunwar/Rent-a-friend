@@ -1,5 +1,7 @@
 # 12 — Feed Loading Strategy
 
+> 2026-09-06 implementation update: the historical details below are superseded by `PHASE3_HOME_CHECKPOINT.md`. Home uses typed identities, global append stability, separate responsive sentinel refs with shared reveal state, and bounded server revalidation instead of permanent session/offline discovery replay. Stories use the media-specific expiry cursor, not document-ID pagination. Opened comments use a latest-50 listener plus parent summary listener and require the descending comment index. Do not infer deployed readiness from the older status table.
+
 **Last updated:** 2026-08-24
 
 ---

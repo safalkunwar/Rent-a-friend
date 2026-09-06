@@ -339,7 +339,8 @@ export function generateDiscoveryFeed(
 
   function addItem(item: FeedItem): boolean {
     if (item.type === 'category-header') return false;
-    if (seenIds.has(item.data.id)) return false;
+    const key = `${item.type}:${item.data.id}`;
+    if (seenIds.has(key)) return false;
     if (feed.length >= maxItems) return false;
 
     const currentCount = typeCounts[item.type] || 0;
@@ -347,7 +348,29 @@ export function generateDiscoveryFeed(
     const maxForType = Math.max(1, Math.floor(maxItems * ratio));
     if (currentCount >= maxForType) return false;
 
-    seenIds.add(item.data.id);
+    // Category boundaries and exhausted per-type caps must not reset the global run.
+    if (item.type === 'companion') {
+      let run = 0;
+      for (let index = feed.length - 1; index >= 0; index--) {
+        const previous = feed[index];
+        if (previous.type === 'category-header') continue;
+        if (previous.type !== 'companion') break;
+        run++;
+      }
+      if (run >= 3) {
+        const alternatives: ContentItem[] = [
+          ...posts.map(data => ({ type: 'post' as const, data, section: 'Community Feed' })),
+          ...events.map(data => ({ type: 'event' as const, data, section: data.category || 'Events', category: data.category })),
+          ...activities.map(data => ({ type: 'activity' as const, data, section: data.category || 'Activities', category: data.category })),
+          ...stories.map(data => ({ type: 'story' as const, data, section: 'Stories' })),
+        ];
+        const alternative = alternatives.find(candidate => !seenIds.has(`${candidate.type}:${candidate.data.id}`) &&
+          (typeCounts[candidate.type] || 0) < Math.max(1, Math.floor(maxItems * TYPE_MAX_RATIO[candidate.type])));
+        if (!alternative || !addItem(alternative) || feed.length >= maxItems) return false;
+      }
+    }
+
+    seenIds.add(key);
     typeCounts[item.type] = currentCount + 1;
     if (item.type === 'companion') {
       usedCompanionIds.add(item.data.id);
@@ -380,16 +403,16 @@ export function generateDiscoveryFeed(
     feed.push({ type: 'category-header', category, emoji: CATEGORY_EMOJIS[category] });
 
     const relatedActivities = allActivities
-      .filter(a => !seenIds.has(a.id) && (a.category === category || getCategoryFallbacks(category).includes(a.category || '')))
+      .filter(a => !seenIds.has(`activity:${a.id}`) && (a.category === category || getCategoryFallbacks(category).includes(a.category || '')))
       .slice(0, 2);
     const relatedEvents = allEvents
-      .filter(e => !seenIds.has(e.id) && (e.category === category || getCategoryFallbacks(category).includes(e.category || '')))
+      .filter(e => !seenIds.has(`event:${e.id}`) && (e.category === category || getCategoryFallbacks(category).includes(e.category || '')))
       .slice(0, 2);
     const relatedStories = allStories
-      .filter(s => !seenIds.has(s.id) && (s.category === category || (!!s.tags && s.tags.includes(category.toLowerCase().replace(' ', '_')))))
+      .filter(s => !seenIds.has(`story:${s.id}`) && (s.category === category || (!!s.tags && s.tags.includes(category.toLowerCase().replace(' ', '_')))))
       .slice(0, 1);
     const relatedPosts = allPosts
-      .filter(p => !seenIds.has(p.id) && (!p.category || p.category.toLowerCase() === category.toLowerCase() || getCategoryFallbacks(category).includes(p.category || '')))
+      .filter(p => !seenIds.has(`post:${p.id}`) && (!p.category || p.category.toLowerCase() === category.toLowerCase() || getCategoryFallbacks(category).includes(p.category || '')))
       .slice(0, 2);
 
     const shuffledCompanions = [...groupCompanions].slice(0, itemsPerCategory);
@@ -440,16 +463,16 @@ export function generateDiscoveryFeed(
       return { type: 'companion' as const, data: c, section: SECTION_TITLES[fallbackCategory]?.companion || fallbackCategory, category: fallbackCategory };
     });
   const leftoverActivityEntries: ContentItem[] = activities
-    .filter(a => !seenIds.has(a.id))
+    .filter(a => !seenIds.has(`activity:${a.id}`))
     .map(a => ({ type: 'activity' as const, data: a, section: SECTION_TITLES[a.category || '']?.activity || a.category || 'Discover More', category: a.category || 'Discover More' }));
   const leftoverEventEntries: ContentItem[] = events
-    .filter(e => !seenIds.has(e.id))
+    .filter(e => !seenIds.has(`event:${e.id}`))
     .map(e => ({ type: 'event' as const, data: e, section: SECTION_TITLES[e.category || '']?.event || e.category || 'Discover More', category: e.category || 'Discover More' }));
   const leftoverStoryEntries: ContentItem[] = stories
-    .filter(s => !seenIds.has(s.id))
+    .filter(s => !seenIds.has(`story:${s.id}`))
     .map(s => ({ type: 'story' as const, data: s, section: `${s.category || 'SATHI'} stories` }));
   const leftoverPostEntries: ContentItem[] = posts
-    .filter(p => !seenIds.has(p.id))
+    .filter(p => !seenIds.has(`post:${p.id}`))
     .map(p => ({ type: 'post' as const, data: p, section: 'Community Feed' }));
 
   const otherTailCount =

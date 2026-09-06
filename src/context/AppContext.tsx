@@ -10,6 +10,7 @@ import { bookingRepository } from '../repositories/BookingRepository';
 import { socialRepository, Comment } from '../repositories/SocialRepository';
 import { messagingService } from '../services/messaging';
 import { loadAuthenticatedProfile } from '../services/profileBootstrap';
+import { requireUid } from '../services/identity';
 
 interface AppState {
   currentUser: User | null;
@@ -291,9 +292,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     interests?: string[];
     location?: string;
   }>) => {
-    if (!currentUser) return;
-    await userRepository.updateUserProfile(currentUser.id, updates);
-    setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+    if (!currentUser) throw new Error('Sign in to update your profile.');
+    const uid = requireUid(currentUser.id);
+    await userRepository.updateUserProfile(uid, updates);
+    requireUid(uid);
+    setCurrentUser(prev => prev?.id === uid ? { ...prev, ...updates } : prev);
   }, [currentUser]);
 
   const becomeCompanion = useCallback(async (companion: Omit<Companion, 'id'>, customId?: string) => {

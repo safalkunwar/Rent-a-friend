@@ -1,5 +1,6 @@
 import { firestore } from './firestore';
 import { auth } from '../firebase';
+import { requireUid } from './identity';
 
 export interface SOSAlertData {
   bookingId?: string;
@@ -14,14 +15,16 @@ export interface SOSAlertData {
 
 export const sosService = {
   async createAlert(data: SOSAlertData): Promise<string> {
-    const user = auth.currentUser;
-    if (!user) throw new Error('Must be logged in to trigger SOS');
+    const uid = requireUid();
 
-    const alertId = `sos_${Date.now()}_${user.uid}`;
+    const alertId = `sos_${crypto.randomUUID()}`;
     await firestore.setDocument(`sosAlerts/${alertId}`, {
-      userId: user.uid,
-      userEmail: user.email,
-      ...data,
+      userId: uid,
+      userEmail: auth.currentUser?.email || '',
+      ...(data.bookingId ? { bookingId: data.bookingId } : {}),
+      ...(data.location ? { location: data.location } : {}),
+      ...(data.message ? { message: data.message } : {}),
+      severity: data.severity,
       status: 'active',
       timestamp: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

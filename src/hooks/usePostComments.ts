@@ -2,16 +2,20 @@ import { useCallback, useEffect, useState } from 'react';
 import { firestore } from '../services/firestore';
 import { socialRepository, type Comment } from '../repositories/SocialRepository';
 import { useAppContext } from '../context/AppContext';
+import { assertCommentTimes, latestCommentsQuery } from '../services/commentContract';
 
 /**
  * Shared comment engine for every surface (Community Feed cards and the
- * unified Home feed). One realtime listener per OPENED post; optimistic
- * insertion reconciled by the listener; failures revert cleanly.
+ * unified Home feed). A bounded latest-50 listener and one summary-document
+ * listener per OPENED post; the visible window is never used as a total count.
  */
 export function usePostComments(postId: string | null) {
   const { currentUser, createComment, deleteComment } = useAppContext();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!postId) {
@@ -20,22 +24,30 @@ export function usePostComments(postId: string | null) {
       return;
     }
     let active = true;
+    setComments([]);
+    setError(null);
+    setTotalCount(null);
     setLoading(true);
-    const unsubscribe = firestore.subscribe<Comment>('comments', {
-      where: [{ field: 'postId', operator: '==', value: postId }],
-      orderByField: 'createdAt',
-      orderDirection: 'asc',
-    }, (items) => {
+    const failed = () => { if (active) { setLoading(false); setError('Comments unavailable. Try again online.'); } };
+    const unsubscribe = firestore.subscribe<Comment>('comments', latestCommentsQuery(postId), (items) => {
       if (!active) return;
+      try { assertCommentTimes(items); }
+      catch { setComments([]); setLoading(false); setError('Comments use an unsupported data format.'); return; }
       if (import.meta.env.DEV) console.debug(`[comments:${postId}] snapshot:`, items.length);
-      setComments(items);
+      setComments(items.slice().reverse());
       setLoading(false);
-    });
+    }, failed);
+    const unsubscribeCount = firestore.subscribeDocument<{ commentsCount?: number }>(`community_posts/${postId}`, post => {
+      if (!active) return;
+      if (!post) { failed(); return; }
+      setTotalCount(typeof post.commentsCount === 'number' ? Math.max(0, post.commentsCount) : null);
+    }, failed);
     return () => {
       active = false;
       unsubscribe();
+      unsubscribeCount();
     };
-  }, [postId]);
+  }, [postId, attempt]);
 
   const addComment = useCallback(async (rawText: string) => {
     if (!currentUser) throw new Error('auth-required');
@@ -53,7 +65,7 @@ export function usePostComments(postId: string | null) {
       userName: currentUser.name || 'Anonymous Traveler',
       userAvatar: currentUser.avatar || defaultAvatar,
       text,
-      createdAt: new Date().toISOString(),
+      createdAt: null,
       pending: true,
     } as Comment]);
 
@@ -87,5 +99,5 @@ export function usePostComments(postId: string | null) {
     setComments(prev => prev.map(c => (c.id === commentId ? { ...c, text, updatedAt: new Date().toISOString() } : c)));
   }, []);
 
-  return { comments, loading, addComment, removeComment, editCommentText };
+  return { comments, loading, error, totalCount, retry: () => setAttempt(value => value + 1), addComment, removeComment, editCommentText };
 }

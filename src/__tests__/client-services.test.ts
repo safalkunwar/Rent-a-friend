@@ -180,9 +180,10 @@ describe('maps service', () => {
 describe('companion dashboard service', () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.doMock('../firebase', () => ({ db: null, auth: { currentUser: { uid: 'c1', isAnonymous: false } } }));
   });
 
-  it('getStats calculates earnings from completed bookings', async () => {
+  it('getStats calculates unverified booking value, not settled earnings or measured views', async () => {
     const bookings = [
       { id: 'b1', status: 'completed', totalPrice: 1000, companionId: 'c1' },
       { id: 'b2', status: 'completed', totalPrice: 2000, companionId: 'c1' },
@@ -196,12 +197,12 @@ describe('companion dashboard service', () => {
     }));
     const { companionDashboardService } = await import('../services/companionDashboard');
     const stats = await companionDashboardService.getStats('c1');
-    expect(stats.totalEarnings).toBe(3000);
+    expect(stats.totalCompletedBookingValue).toBe(3000);
     expect(stats.pendingRequests).toBe(1);
     expect(stats.completedBookings).toBe(2);
     expect(stats.averageRating).toBe(4.5);
     expect(stats.totalReviews).toBe(12);
-    expect(stats.profileViews).toBe(100);
+    expect(stats.profileViews).toBeNull();
   });
 
   it('getBookingRequests returns mapped booking data', async () => {
@@ -220,6 +221,11 @@ describe('companion dashboard service', () => {
     expect(requests[0].userPhone).toBe('9800000000');
     expect(requests[0].meetingPoint).toBe('Thamel');
     expect(requests[0].specialRequests).toBe('Near mall');
+  });
+
+  it('rejects another companion UID before reading private requests', async () => {
+    const { companionDashboardService } = await import('../services/companionDashboard');
+    await expect(companionDashboardService.getBookingRequests('other')).rejects.toThrow('authenticated UID');
   });
 });
 

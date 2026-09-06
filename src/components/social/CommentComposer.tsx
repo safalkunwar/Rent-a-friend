@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Send } from 'lucide-react';
+import { COMMENT_MAX_LENGTH } from '../../services/commentContract';
 
 interface CommentComposerProps {
   placeholder?: string;
@@ -8,11 +9,9 @@ interface CommentComposerProps {
   onSubmit: (text: string) => Promise<void>;
 }
 
-const MAX_LENGTH = 500;
-
 export const CommentComposer: React.FC<CommentComposerProps> = ({
   placeholder = 'Write a comment...',
-  maxLength = MAX_LENGTH,
+  maxLength = COMMENT_MAX_LENGTH,
   autoFocus = false,
   onSubmit,
 }) => {

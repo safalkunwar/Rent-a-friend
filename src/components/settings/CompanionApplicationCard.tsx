@@ -40,7 +40,7 @@ export const CompanionApplicationCard: React.FC<CompanionApplicationCardProps> =
       <div className="rounded-2xl border border-success/40 bg-success/5 p-4 flex items-center gap-3">
         <ShieldCheck className="w-5 h-5 text-success shrink-0" />
         <p className="text-xs text-text-secondary">
-          <span className="font-bold text-success">Verified Companion.</span> Your professional profile is live.
+          <span className="font-bold text-success">Application approved.</span> Your professional profile is live.
         </p>
       </div>
     );

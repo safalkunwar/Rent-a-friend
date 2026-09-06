@@ -9,13 +9,17 @@ export function useVisibleStories() {
   const [loading,setLoading] = useState(true);
   const [loadingMore,setLoadingMore] = useState(false);
   const [hasMore,setHasMore] = useState(true);
+  const [error,setError] = useState<string | null>(null);
   const [now,setNow] = useState(Date.now);
   const cursor = useRef<QueryDocumentSnapshot | undefined>(undefined);
   const epoch = useRef(0);
   const busy = useRef(false);
+  const canLoadMore = useRef(false);
   const read = useCallback(async (more = false) => {
+    if (more && !canLoadMore.current) return;
     if (!db || busy.current) { if (!db) setLoading(false); return; }
     busy.current = true;
+    setError(null);
     const version = epoch.current;
     if (more) setLoadingMore(true); else { setLoading(true); setItems([]); cursor.current = undefined; }
     try {
@@ -25,9 +29,10 @@ export function useVisibleStories() {
       cursor.current = result.docs.at(-1);
       setItems(previous => more ? [...previous,...page.filter(item => !previous.some(existing => existing.id === item.id))].slice(-40) : page);
       setHasMore(result.size === MEDIA_PAGE_SIZE);
+      canLoadMore.current = result.size === MEDIA_PAGE_SIZE;
       setNow(Date.now());
     } catch {
-      if (version === epoch.current) { setItems([]); setHasMore(false); }
+      if (version === epoch.current) { canLoadMore.current = false; setItems([]); setHasMore(false); setError('Stories unavailable. Try again online.'); }
     } finally {
       if (version === epoch.current) { busy.current = false; setLoading(false); setLoadingMore(false); }
     }
@@ -49,5 +54,5 @@ export function useVisibleStories() {
   const prependStory = useCallback((story: ExperienceStory) => setItems(previous =>
     visibleStory(story) ? [story,...previous.filter(item => item.id !== story.id)].slice(0,40) : previous),[]);
   const removeStory = useCallback((id: string) => setItems(previous => previous.filter(story => story.id !== id)),[]);
-  return { stories,loading,loadingMore,hasMore,loadMore:useCallback(() => { void read(true); },[read]),prependStory,removeStory };
+  return { stories,loading,loadingMore,hasMore,error,retry:useCallback(() => read(false),[read]),loadMore:useCallback(() => read(true),[read]),prependStory,removeStory };
 }
