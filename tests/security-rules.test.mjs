@@ -117,6 +117,39 @@ test('real comments persist for another reader; edits stay owner-only and deleti
   assert.equal((await getDoc(doc(db('B'), 'community_posts/p'))).data().commentsCount, 0);
 });
 
+test('comments reject client-clock timestamps, spoofed IDs and oversized content atomically', async () => {
+  const store = db('A');
+  for (const override of [
+    { createdAt: '2026-09-06T00:00:00Z' },
+    { createdAt: Timestamp.fromMillis(0) },
+    { createdAt: Timestamp.fromMillis(Date.now() + 86400000) },
+    { id: 'spoofed' },
+    { text: 'x'.repeat(501) },
+  ]) {
+    const batch = writeBatch(store);
+    batch.set(doc(store, 'comments/rejected'), { id: 'rejected', postId: 'p', userId: 'A', userName: 'A', userAvatar: '', text: 'Typed', createdAt: serverTimestamp(), ...override });
+    batch.update(doc(store, 'community_posts/p'), { commentsCount: 1, lastCommentMutationId: 'rejected' });
+    await assertFails(batch.commit());
+    assert.equal((await getDoc(doc(store, 'community_posts/p'))).data().commentsCount, 0);
+  }
+});
+
+test('comment timestamp ties paginate by document ID without gaps or duplicates', async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    const batch = writeBatch(context.firestore());
+    for (const id of ['a', 'b', 'c']) batch.set(doc(context.firestore(), `comments/${id}`), {
+      id, postId: 'p', userId: 'A', text: id, createdAt: Timestamp.fromMillis(1000),
+    });
+    await batch.commit();
+  });
+  const store = db('B');
+  const base = query(collection(store, 'comments'), where('postId', '==', 'p'), orderBy('createdAt', 'desc'), orderBy(documentId(), 'desc'));
+  const first = await assertSucceeds(getDocs(query(base, limit(2))));
+  const second = await assertSucceeds(getDocs(query(base, startAfter(first.docs.at(-1)), limit(2))));
+  assert.deepEqual(first.docs.map(d => d.id), ['c', 'b']);
+  assert.deepEqual(second.docs.map(d => d.id), ['a']);
+});
+
 const roleCases = [
   ['super_admin', true, true, true],
   ['platform_admin', true, false, false],

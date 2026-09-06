@@ -2,6 +2,8 @@
 
 ## Owner priority update
 
+**Subsequent local implementation:** [COMMENT_QUERY_CONTRACT.md](COMMENT_QUERY_CONTRACT.md) now supersedes the comment timestamp/reader findings below. An index-only deployment is no longer a complete rollout plan: the staged Timestamp schema requires coordinated client/rules/data handling. The historical live missing-index evidence remains valid.
+
 The owner clarified that existing data is mostly scripted and preserving temporary sample records is not a design requirement. Prioritize clean architecture and correct queries. The index diagnosis below remains valid, but its proposed rollout is **not approved** and must not substitute for query-contract review.
 
 Before rollout, define canonical timestamps, ordering, visibility and pagination per domain, align writers/readers/rules, and test them with controlled fixtures. Do not add fallback queries, dual schemas or migration machinery solely to accommodate sample records. Any production reset still needs explicitly identified collections/resources and authorization; “mostly scripted” does not identify which remaining records are real.

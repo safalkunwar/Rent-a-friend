@@ -2,6 +2,7 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Timestamp } from 'firebase/firestore';
 import { CommentComposer } from '../components/social/CommentComposer';
 import { ExpandableText } from '../components/social/ExpandableText';
 import { usePostComments } from '../hooks/usePostComments';
@@ -37,7 +38,7 @@ it('bounds opened comments, keeps the aggregate separate, uses authenticated UID
   const { result, unmount } = renderHook(() => usePostComments('exact-post'));
   expect(mocks.subscribe.mock.calls[0][1]).toMatchObject({ limitCount: 50, orderDirection: 'desc', where: [{ field: 'postId', operator: '==', value: 'exact-post' }] });
   act(() => {
-    mocks.subscribe.mock.calls[0][2]([{ id: 'new', text: 'new', createdAt: null }, { id: 'old', text: 'old', createdAt: null }]);
+    mocks.subscribe.mock.calls[0][2]([{ id: 'new', text: 'new', createdAt: Timestamp.fromMillis(2000) }, { id: 'old', text: 'old', createdAt: Timestamp.fromMillis(1000) }]);
     mocks.summary.mock.calls[0][1]({ commentsCount: 120 });
   });
   expect(result.current.comments.map(comment => comment.id)).toEqual(['old', 'new']);
@@ -48,6 +49,16 @@ it('bounds opened comments, keeps the aggregate separate, uses authenticated UID
   expect(result.current.error).toBeTruthy();
   unmount();
   expect(stopComments).toHaveBeenCalledOnce(); expect(stopCount).toHaveBeenCalledOnce();
+});
+
+it('reports incompatible persisted comment timestamps instead of silently parsing legacy strings', () => {
+  mocks.subscribe.mockReturnValue(vi.fn());
+  mocks.summary.mockReturnValue(vi.fn());
+  const { result } = renderHook(() => usePostComments('p'));
+  act(() => mocks.subscribe.mock.calls[0][2]([{ id: 'legacy', createdAt: '2026-09-06' }]));
+  expect(result.current.comments).toEqual([]);
+  expect(result.current.error).toContain('unsupported data format');
+  expect(result.current.loading).toBe(false);
 });
 
 it('collapses only the rendered text and supports Show more / Show less', () => {

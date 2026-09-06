@@ -2,6 +2,10 @@
 
 Date: 2026-09-06. User approved Phase 3 after the P0 gate, then requested resume. Local working tree only; no deployment, production writes, billing changes, migrations or Functions activation.
 
+## Latest implementation update — canonical comments, 2026-09-06
+
+Following the owner's clean-architecture priority, the local comment contract now uses server Timestamps, one latest-50 descending query with an explicit document-ID tiebreaker, and a shared 500-character limit. The unused alternate reader was removed. Local rules reject forged creation times. This is a breaking schema change: **do not execute the earlier index-only rollout proposal as a complete release plan**. No production reset, migration, index/rules deployment or app deployment occurred. See [COMMENT_QUERY_CONTRACT.md](COMMENT_QUERY_CONTRACT.md) for verification, remaining history pagination and coordinated rollout dependencies.
+
 ## Latest diagnostic update — 2026-09-06
 
 The Story failure is now confirmed, superseding the earlier unknown-cause wording below: the actual bounded guest Story query and latest-comments query both return live `failed-precondition` / missing-index errors. The live CLI inventory reports 60 composites; the only Story/comment entry is the older ascending comments index. Both required definitions are already local but absent in the live inventory. No application code or production configuration changed in this diagnosis. See [HOME_LIVE_QUERY_DIAGNOSIS.md](HOME_LIVE_QUERY_DIAGNOSIS.md) for exact queries, evidence and the proposed **approval-gated, additive two-index correction**. Passing earlier local tests does not resolve these live failures.
