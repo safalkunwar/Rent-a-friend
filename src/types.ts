@@ -27,12 +27,13 @@ export interface Review {
 export interface ExperienceStory {
   id: string;
   userId?: string;
+  // Older callers render the client-visible creation string; persistence is read as a Timestamp in the media service.
   createdAt?: string;
   expiresAt?: string | import('firebase/firestore').Timestamp;
   moderationStatus?: 'ACTIVE' | 'UNDER_REVIEW' | 'RESTRICTED' | 'REMOVED';
   visibilityStatus?: 'PUBLIC' | 'PRIVATE';
   contentType?: 'story';
-  status?: 'active' | 'expired';
+  status?: 'publishing' | 'active' | 'expired';
   companionName: string;
   userName: string;
   userAvatar: string;

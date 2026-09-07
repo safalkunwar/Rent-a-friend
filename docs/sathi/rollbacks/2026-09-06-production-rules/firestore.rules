@@ -1,0 +1,578 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the user is anonymous
+    function isAnonymous() {
+      return isAuthenticated() && request.auth.token.anonymous == true;
+    }
+
+    // Helper function to check if the user is an admin (via custom claim, role or admins collection)
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin' ||
+        request.auth.token.adminRole in ['super_admin','platform_admin','safety_admin','moderation_admin','support_agent','booking_admin','finance_admin','kyc_reviewer','content_admin','analytics_admin','read_only_admin'] ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isCompanion() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['companion'] ||
+        exists(/databases/$(database)/documents/companions/$(request.auth.uid))
+      );
+    }
+
+    function isCustomer() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['customer', 'guest']
+      );
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole == 'super_admin' ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'super_admin'
+      );
+    }
+
+    function isSafetyAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'safety_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'safety_admin']
+      );
+    }
+
+    function isModerationAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'moderation_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'moderation_admin']
+      );
+    }
+
+    function isBookingAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'booking_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'booking_admin']
+      );
+    }
+
+    function isKYCReviewer() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'kyc_reviewer'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'kyc_reviewer']
+      );
+    }
+
+    function isContentAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'content_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'content_admin']
+      );
+    }
+
+    // Helper function to check if the requested data is valid
+    function isValidData(data) {
+      return (!data.keys().hasAll(['createdAt']) || data.createdAt is string) &&
+             (!data.keys().hasAll(['updatedAt']) || data.updatedAt is string);
+    }
+
+    function isValidUserUpdate(uid) {
+      return isAuthenticated() && request.auth.uid == uid && 
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+               'name', 'avatar', 'preferences', 'updatedAt', 'favorites', 'fcmToken',
+               'phone', 'bio', 'languages', 'skills', 'availability', 'interests', 'location'
+             ]);
+    }
+
+    // Users may NEVER modify their own privilege/verification state. These keys
+    // are only writable through the admin path (isAdmin branch) or backend.
+    function userUpdateContainsPrivilegeChange() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['role', 'companionStatus', 'verificationStatus', 'kycVerificationStatus', 'adminRole']);
+    }
+
+    // Users Collection: /users/{userId}
+    match /users/{userId} {
+      // Users can read their own profile, or admins
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+
+      // Users can update their own profile, but only specific fields (no changing role or createdAt)
+      allow update: if isValidUserUpdate(userId) && !userUpdateContainsPrivilegeChange();
+
+      // Admins can read and write any user profile
+      allow read, write: if isAdmin();
+
+      // New user creation — privilege/verification fields are FORBIDDEN at
+      // create time (prevents upsert-based self-promotion). Role, if present,
+      // may only be a non-privileged value.
+      allow create: if isAuthenticated() && request.auth.uid == userId
+        && (!('role' in request.resource.data) || request.resource.data.role in ['customer', 'guest'])
+        && !('companionStatus' in request.resource.data)
+        && !('verificationStatus' in request.resource.data)
+        && !('adminRole' in request.resource.data)
+        && isValidData(request.resource.data);
+
+      // Subcollection for user favorites
+      match /favorites/{favoriteId} {
+        allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+        allow create, delete: if isAuthenticated() && request.auth.uid == userId;
+        allow create, delete: if isAdmin();
+        allow write: if isAuthenticated();
+      }
+    }
+
+    // Companions Collection: /companions/{companionId}
+    match /companions/{companionId} {
+      // Public discovery profiles contain no KYC or private contact fields.
+      // Guest browsing is a canonical SATHI flow, so these listings are public.
+      allow read: if true;
+
+      // Companion user can create their own profile
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+
+      // Companion user can update their own profile
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      'name', 'bio', 'location', 'hourlyRate', 'gender', 'languages', 'interests', 'images', 'availableDays', 'updatedAt'
+                    ]);
+
+      // Admins can create, update, and delete any companion profile
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Activities Collection: /activities/{activityId}
+    match /activities/{activityId} {
+      // Anyone can read activities
+      allow read: if true;
+
+      // Companions can create, update, and delete their own activities
+      allow create: if isCompanion() && request.auth.uid == request.resource.data.companionId && isValidData(request.resource.data);
+      allow update, delete: if isCompanion() && request.auth.uid == resource.data.companionId;
+
+      // Admins can create, update, and delete any activity
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Bookings Collection: /bookings/{bookingId}
+    match /bookings/{bookingId} {
+      // Users can read their own bookings, companions their own, and admins all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.companionId ||
+        isAdmin()
+      );
+
+      // Users can create their own bookings
+      allow create: if isCustomer() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+
+      // Admins can create, update, and delete any booking
+      allow create, update, delete: if isAdmin();
+
+      // Users can request cancellation, companions can confirm/complete, admins can update all
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+        (isCompanion() && exists(/databases/$(database)/documents/companions/$(resource.data.companionId)) && request.auth.uid == get(/databases/$(database)/documents/companions/$(resource.data.companionId)).data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+        isAdmin()
+      );
+    }
+
+    // Booking Locks Collection: /booking_locks/{lockId}
+    match /booking_locks/{lockId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && !exists(/databases/$(database)/documents/booking_locks/$(lockId));
+      allow update, delete: if isAdmin();
+    }
+
+    // Reviews Collection: /reviews/{reviewId}
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if true;
+
+      // Users can create their own reviews linked to a booking
+      allow create: if isCustomer() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+
+      // Admins can create, update, and delete reviews
+      allow create, update, delete: if isAdmin();
+
+      // Users can update their own reviews
+      allow update: if isCustomer() && request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'comment', 'updatedAt']);
+    }
+
+    // Conversations Collection: /conversations/{conversationId}
+    match /conversations/{conversationId} {
+      // Only participants or admins can read
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        request.auth.uid in conversationId.split('_') ||
+        (resource != null && request.auth.uid in resource.data.participantIds)
+      );
+
+      // New conversation creation
+      allow create: if isAuthenticated() && 
+                    (
+                      request.auth.uid in conversationId.split('_') ||
+                      (request.resource.data.keys().hasAll(['participantIds']) && request.auth.uid in request.resource.data.participantIds)
+                    ) && 
+                    isValidData(request.resource.data);
+
+      // Admins can create, update, and delete conversations
+      allow create, update, delete: if isAdmin();
+
+      // Only participants or admins can update
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        request.auth.uid in conversationId.split('_') ||
+        (resource != null && request.auth.uid in resource.data.participantIds)
+      ) && isValidData(request.resource.data);
+
+      // Only admins can delete
+      allow delete: if isAdmin();
+      allow write: if isAuthenticated();
+
+      // Typing indicators subcollection
+      match /typing/{userId} {
+        allow read: if isAuthenticated() && request.auth.uid in conversationId.split('_');
+        allow create, update, delete: if isAuthenticated() && request.auth.uid == userId;
+      }
+    }
+
+    // Messages Collection: /messages/{messageId}
+    match /messages/{messageId} {
+      // Only participants of the message's conversation or admins can read
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        (resource != null && request.auth.uid in resource.data.conversationId.split('_')) ||
+        (resource != null && exists(/databases/$(database)/documents/conversations/$(resource.data.conversationId)) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.participantIds)
+      );
+
+      // Admins can create, update, and delete messages
+      allow create, update, delete: if isAdmin();
+
+      // Only sender can create messages in their conversation
+      allow create: if isAuthenticated() && 
+                    request.auth.uid == request.resource.data.senderId && 
+                    (
+                      request.auth.uid in request.resource.data.conversationId.split('_') ||
+                      (exists(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId)) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId)).data.participantIds)
+                    ) && 
+                    isValidData(request.resource.data);
+
+      // Only participants can update (e.g. read status)
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        (resource != null && request.auth.uid in resource.data.conversationId.split('_')) ||
+        (resource != null && exists(/databases/$(database)/documents/conversations/$(resource.data.conversationId)) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.participantIds)
+      ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'status', 'updatedAt']);
+
+      allow delete: if false;
+      allow write: if isAdmin();
+    }
+
+    // Notifications Collection: /notifications/{notificationId}
+    match /notifications/{notificationId} {
+      allow read, update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow create, update, delete: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Payments Collection: /payments/{paymentId}
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow create, update, delete: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Community Posts Collection: /community_posts/{postId}
+    match /community_posts/{postId} {
+      // Publicly readable for all published posts, or if author or admin
+      allow read: if true;
+
+      // Authenticated users can create posts
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+
+      // Admins can create, update, and delete any post
+      allow create, update, delete: if isAdmin();
+
+      // Authors can update their own posts
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'category', 'tags', 'imageUrl', 'updatedAt', 'status']);
+
+      // Any authenticated user can update counter fields, but values must be
+      // sane: non-negative numbers only. Aggregate integrity beyond this is
+      // maintained transactionally by the client repositories.
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'updatedAt'])
+        && (!('likesCount' in request.resource.data) || (request.resource.data.likesCount is number && request.resource.data.likesCount >= 0))
+        && (!('commentsCount' in request.resource.data) || (request.resource.data.commentsCount is number && request.resource.data.commentsCount >= 0));
+    }
+
+    // Comments Collection: /comments/{commentId}
+    match /comments/{commentId} {
+      // Anyone can read comments
+      allow read: if true;
+
+      // Authenticated users can create comments
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+
+      // Authors can update and delete their own comments
+      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+
+      // Admins can create, update, and delete any comment
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Companion Applications: /companion_applications/{applicationId}
+    // Lifecycle: DRAFT -> SUBMITTED -> (UNDER_REVIEW) -> APPROVED / REJECTED / CHANGES_REQUIRED
+    match /companion_applications/{applicationId} {
+      // Owner and authorized admins can read; admins include KYC reviewers.
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isKYCReviewer() ||
+        isAdmin()
+      );
+
+      // A user may only create their OWN application, starting as DRAFT or SUBMITTED.
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.status in ['DRAFT', 'SUBMITTED']
+        && request.resource.data.kyc.verificationStatus == 'UNVERIFIED'
+        && isValidData(request.resource.data);
+
+      // Owner may edit profile/kyc fields ONLY while DRAFT or CHANGES_REQUIRED,
+      // and may (re)submit by setting status to SUBMITTED. Nothing else.
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId
+        && resource.data.status in ['DRAFT', 'CHANGES_REQUIRED']
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['applicationData', 'kyc', 'status', 'submittedAt', 'updatedAt'])
+        && (
+          request.resource.data.status == resource.data.status ||
+          request.resource.data.status == 'SUBMITTED'
+        )
+        && isValidData(request.resource.data);
+
+      // Admins have full control of applications.
+      allow update: if isKYCReviewer() || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // Admin Audit Logs: /admin_audit_logs/{logId}
+    // Immutable trail written only by elevated admin paths; readable by admins.
+    match /admin_audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // Likes Collection: /likes/{likeId}
+    match /likes/{likeId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    // Story Likes Collection: /story_likes/{likeId}
+    match /story_likes/{likeId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    // Stories Collection: /stories/{storyId}
+    match /stories/{storyId} {
+      // Anyone can view stories
+      allow read: if true;
+
+      // Users can create their own stories
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+
+      // Admins can create, update, and delete stories
+      allow create, update, delete: if isAdmin();
+
+      // Users can edit their own stories
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'imageUrl', 'updatedAt']);
+
+      // Any authenticated user can update like counters
+      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likesCount', 'updatedAt']);
+    }
+
+    // Events Collection: /events/{eventId}
+    match /events/{eventId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+
+      match /participants/{userId} {
+        allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+        allow create: if isAuthenticated() && request.auth.uid == userId;
+        allow update: if isAuthenticated() && request.auth.uid == userId || isAdmin();
+        allow delete: if isAuthenticated() && request.auth.uid == userId || isAdmin();
+      }
+    }
+
+    // Event Participants Collection: /event_participants/{registrationId}
+    match /event_participants/{registrationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow create, update, delete: if isAdmin();
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId || isAdmin();
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId || isAdmin();
+    }
+
+    // Partners Collection: /partners/{partnerId}
+    match /partners/{partnerId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Hotels Collection: /hotels/{hotelId}
+    match /hotels/{hotelId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Restaurants Collection: /restaurants/{restaurantId}
+    match /restaurants/{restaurantId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Cafes Collection: /cafes/{cafeId}
+    match /cafes/{cafeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Cities Collection: /cities/{cityId}
+    match /cities/{cityId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Reports Collection: /reports/{reportId}
+    match /reports/{reportId} {
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.reporterId && isValidData(request.resource.data);
+      allow read, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Support Tickets Collection: /support_tickets/{ticketId}
+    match /support_tickets/{ticketId} {
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow read, update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+    }
+
+    // Verification Requests Collection: /verification_requests/{requestId}
+    match /verification_requests/{requestId} {
+      allow create: if isCompanion() && request.auth.uid == request.resource.data.companionId && isValidData(request.resource.data);
+      allow read: if isCompanion() && request.auth.uid == resource.data.companionId;
+      allow read, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Analytics Collection: /analytics/{analyticId}
+    match /analytics/{analyticId} {
+      allow read: if isAdmin();
+      allow create: if false;
+      allow update, delete: if false;
+    }
+
+    // Admins Collection: /admins/{adminId}
+    match /admins/{adminId} {
+      allow read: if isAuthenticated() && request.auth.uid == adminId;
+      allow write: if isAdmin();
+    }
+
+    // Audit Logs Collection: /auditLogs/{logId}
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.actorId;
+      allow update, delete: if false;
+    }
+
+    // SOS Alerts Collection: /sosAlerts/{alertId}
+    match /sosAlerts/{alertId} {
+      allow read: if isAdmin() || resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow delete: if false;
+    }
+
+    // Suspicious Activity Collection: /suspiciousActivity/{activityId}
+    match /suspiciousActivity/{activityId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Guide Applications Collection: /guideApplications/{applicationId}
+    match /guideApplications/{applicationId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Feedback Collection: /feedback/{feedbackId}
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Booking Locations Collection: /booking_locations/{bookingId}
+    match /booking_locations/{bookingId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.companionId ||
+        isAdmin()
+      );
+      allow create, update: if isAuthenticated() && (
+        request.auth.uid == resource.data.companionId ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+      
+      match /locations/{locationId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid == get(/databases/$(database)/documents/booking_locations/$(bookingId)).data.userId ||
+          request.auth.uid == get(/databases/$(database)/documents/booking_locations/$(bookingId)).data.companionId ||
+          isAdmin()
+        );
+        allow create: if isAuthenticated() && request.auth.uid == get(/databases/$(database)/documents/booking_locations/$(bookingId)).data.companionId;
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Presence Collection: /presence/{userId}
+    match /presence/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Booking Reminders Collection: /booking_reminders/{reminderId}
+    match /booking_reminders/{reminderId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.companionId ||
+        isAdmin()
+      );
+      allow create, update, delete: if isAdmin();
+    }
+
+  }
+}

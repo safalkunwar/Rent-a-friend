@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { mediaDeadline } from '../services/mediaDeadline';
 import { mediaTime } from '../services/mediaContract';
-afterEach(() => vi.useRealTimers());
+afterEach(() => { vi.useRealTimers(); });
 describe('media wait bounds', () => {
   it('releases a stalled upload and cancels its transfer', async () => {
     vi.useFakeTimers();

@@ -1,0 +1,9 @@
+{
+  "storageReleaseUpdatedAt": "2026-09-06T17:07:09.778929Z",
+  "firestoreRuleset": "projects/hamrosathi1/rulesets/1e525175-decd-4957-8c03-c41efd1d89ed",
+  "firestoreRelease": "projects/hamrosathi1/releases/cloud.firestore",
+  "storageRuleset": "projects/hamrosathi1/rulesets/a6a1bdb8-9113-4eb8-8b1c-5c93af389ad7",
+  "storageRelease": "projects/hamrosathi1/releases/firebase.storage/hamrosathi1.firebasestorage.app",
+  "capturedAtUtc": "2026-09-06T17:14:33.2428363Z",
+  "firestoreReleaseUpdatedAt": "2026-09-04T16:46:40.593099Z"
+}

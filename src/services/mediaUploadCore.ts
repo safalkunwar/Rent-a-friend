@@ -123,7 +123,7 @@ export async function saveMedia(deps: MediaDependencies, draft: MediaDraft, fiel
       const oldPath = before.data()?.photoPath;
       if (typeof oldPath === 'string' && oldPath !== draft.path && oldPath.startsWith(`avatars/${draft.uid}/`) && /^avatars\/[^/]+\/[^/]+\.(jpg|jpeg|png|webp)$/.test(oldPath)) {
         // Only after the canonical write; failure must not turn a saved photo into an upload error.
-        void wait(deleteObject(ref(deps.storage, oldPath)), 'Previous photo cleanup').catch(() => {});
+        try { await wait(deleteObject(ref(deps.storage, oldPath)), 'Previous photo cleanup'); } catch { /* New canonical photo remains valid. */ }
       }
     }
     return result;

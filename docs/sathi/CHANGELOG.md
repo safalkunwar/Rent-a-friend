@@ -420,3 +420,29 @@ Each session entry records the test count AT THE TIME of the work. Current total
 - **Tests performed:** Local browser inspected in light mode at desktop and 390x844 mobile viewport; production build and PWA generation passed. No new unit tests for palette/copy changes. Existing large-bundle warning remains.
 - **Known issues:** Pre-existing Stories query failure remains visible; this task does not change backend behavior. Physical-device visual checks were not performed.
 - **Next recommended task:** Review the light appearance before publishing; continue the separately tracked application work as requested.
+
+## 2026-09-06 — Story confirmation and avatar replacement verification
+- **Task:** Complete the narrowly approved Story/profile-photo reliability work without changing Home, dark mode, routing, or unrelated domains.
+- **Objective:** Confirm the server-assigned Story lifetime exactly, prevent upload waits from being indefinite, and prove that a replaced avatar cannot leave its prior owned object behind.
+- **Files changed:** src/services/mediaUploadCore.ts; src/types.ts; src/__tests__/media-deadline.test.ts; tests/media-flows.test.ts; this log. The existing logo-aligned light-theme files remain unchanged in this continuation.
+- **Architecture changes:** A Story is owner-only while its server Timestamp resolves, then makes a single guarded transition to active with expiry exactly 24 hours after that server time. Avatar state still flows through the shared authenticated profile state.
+- **Firebase changes:** Existing Story/Profile media rules and the active-Story composite query contract are exercised locally; no deployment, production write, migration, billing, or Functions activation.
+- **UI changes:** No layout change in this continuation. Existing retry/preview progress and the profile-avatar edit entry point remain intact.
+- **Security implications:** The pending-to-active transition is owner-scoped and moderation fields remain protected. Prior avatars are removed only after the new canonical `users/{uid}` reference succeeds; cleanup failure cannot undo the saved replacement.
+- **Performance implications:** One bounded confirmation read/transaction per Story and no listener, scan, or per-component profile fetch. Upload-stage timeouts free a stalled UI while retaining the same stable draft for safe retry.
+- **Tests performed:** Root TypeScript 0 diagnostics; media deadline unit tests 3/3; Story/profile UI and query tests 8/8; actual loopback Firestore/Storage media suite 11/11, including exact 24-hour expiry and avatar replacement cleanup. No live Firebase/device upload performed.
+- **Known issues:** Existing production rules/indexes are not deployed or live-qualified. Read-only 2026-09-06 Cloud Storage inventory found no bucket in `hamrosathi1`; the configured `hamrosathi1.firebasestorage.app` endpoint therefore fails browser preflight and all direct uploads. Provisioning a new Firebase Storage bucket now requires Blaze/billing approval. Already-issued download URLs cannot be retroactively revoked; device camera and load behavior remain untested.
+- **Next recommended task:** Review the scoped local changes and, only with separate rollout approval, deploy the exact existing Story index/rules and perform authenticated live checks.
+
+## 2026-09-06 — Production rules safety gate
+- **Task:** Compare deployed Firebase rules with local rules before the explicitly authorized Story/profile rollout.
+- **Objective:** Stop any deployment whose semantic scope extends beyond Stories, Story media, profile photos/media, and necessary helpers.
+- **Files changed:** New `docs/sathi/rollbacks/2026-09-06-production-rules/` exact production-rule rollback artifacts and release manifest; new `PRODUCTION_RULES_SAFETY_GATE_2026-09-06.md`; this log. No application code changed.
+- **Architecture changes:** None.
+- **Firebase changes:** No rules, indexes, CORS configuration, Functions, data, billing, or production document writes deployed. The newly created bucket's Firebase preflight was read-only verified as HTTP 200.
+- **UI changes:** None.
+- **Security implications:** STOPPED: production Firestore and Storage rules are substantially different from checked-in rules outside Story/profile scope. Full deployment would change authorization for users, Community, comments, likes, events, bookings, messaging, notifications, KYC/private, and additional paths.
+- **Performance implications:** None; the required Story index was validated locally but intentionally not created.
+- **Tests performed:** Captured both active rulesets read-only with release IDs and SHA-256 hashes; semantic branch inventory and line-stat comparison completed. Per owner stop condition, no post-diff rollout tests ran.
+- **Known issues:** The newly created bucket remains on its default deny-all Storage policy, and the deployed Story query index is still absent. Stories/profile uploads cannot be production-qualified until a minimal reviewed policy is prepared.
+- **Next recommended task:** Prepare a separately reviewed, minimal patch against the archived production rule sources. Do not deploy the broad local files.

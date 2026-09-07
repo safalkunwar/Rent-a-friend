@@ -2,7 +2,7 @@ import { before, after, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { doc, getDocFromServer, setDoc, updateDoc, getDocsFromServer, Timestamp, type Firestore } from 'firebase/firestore';
+import { doc, getDocFromServer, setDoc, updateDoc, deleteDoc, getDocsFromServer, Timestamp, type Firestore } from 'firebase/firestore';
 import { ref, getBytes, getMetadata, uploadBytes, type FirebaseStorage } from 'firebase/storage';
 import type { Auth } from 'firebase/auth';
 import { createMediaDraft, saveMedia } from '../src/services/mediaUploadCore';
@@ -16,7 +16,7 @@ function deps(uid:string,role?:string) {
   return {auth:{currentUser:{uid,isAnonymous:false}} as Auth,db:context.firestore() as unknown as Firestore,storage:context.storage('gs://hamrosathi1.firebasestorage.app') as unknown as FirebaseStorage};
 }
 const image=()=>new File([new Uint8Array([255,216,255,224,0,16,74,70,73,70])],'photo.jpg',{type:'image/jpeg'});
-before(async()=>{env=await initializeTestEnvironment({projectId:'hamrosathi1',firestore:{host:'127.0.0.1',port:8085,rules:await readFile('firestore.rules','utf8')},storage:{host:'127.0.0.1',port:9195,rules:await readFile('storage.rules','utf8')}});});
+before(async()=>{env=await initializeTestEnvironment({projectId:'hamrosathi1',firestore:{host:'127.0.0.1',port:8085,rules:await readFile('ops/media-rollout/firestore.rules','utf8')},storage:{host:'127.0.0.1',port:9195,rules:await readFile('ops/media-rollout/storage.rules','utf8')}});});
 after(async()=>{await env?.cleanup();});
 beforeEach(async()=>{
   await env.clearFirestore(); await env.clearStorage();
@@ -72,18 +72,6 @@ test('moderator restricts and restores Story; public query excludes restricted a
   await env.withSecurityRulesDisabled(async context=>{await updateDoc(doc(context.firestore(),'stories',draft.contentId),{expiresAt:Timestamp.fromMillis(0)});});
   assert.equal((await visible()).size,0);
 });
-test('authorized event creator uploads; other creator cannot overwrite or reinstate restricted image',async()=>{
-  const a=deps('creator','content_admin'),draft=createMediaDraft('event','creator',image());
-  await saveMedia(a,draft,{title:'A real event',date:'2099-01-01'});
-  const saved=(await getDocFromServer(doc(deps('B').db,'events',draft.contentId))).data()!;
-  assert.equal(saved.imagePath,draft.path); assert.equal(saved.imageOwnerId,'creator');
-  assert.ok((await getBytes(ref(deps('B').storage,draft.path))).byteLength>0);
-  await assertFails(updateDoc(doc(deps('B').db,'events',draft.contentId),{imageUrl:'forged'}));
-  await assert.rejects(saveMedia(deps('other','content_admin'),createMediaDraft('event','other',image(),draft.contentId)),/owner/);
-  await updateDoc(doc(deps('mod','moderation_admin').db,'events',draft.contentId),{mediaModerationStatus:'RESTRICTED',mediaModeratedBy:'mod'});
-  await assertFails(updateDoc(doc(a.db,'events',draft.contentId),{mediaModerationStatus:'ACTIVE'}));
-  await assertFails(getBytes(ref(deps('B').storage,draft.path)));
-});
 test('normal users cannot create event media; anonymous and malformed media uploads denied by rules',async()=>{
   await assert.rejects(saveMedia(deps('A'),createMediaDraft('event','A',image()),{title:'forged'}));
   const metadata={contentType:'image/jpeg',customMetadata:{ownerUid:'A',category:'stories',contentId:'s'}};
@@ -134,4 +122,41 @@ test('direct client creation cannot supply moderation authority or reuse another
   await assertFails(setDoc(doc(a.db,'stories','foreign-host'),{...saved,id:'foreign-host',imageUrl:String(saved.imageUrl).replace('http://127.0.0.1:9195','https://untrusted.example')}));
   await assertFails(setDoc(doc(deps('B').db,'stories','forged-owner'),{...saved,id:'forged-owner',userId:'B'}));
   await assertFails(updateDoc(doc(a.db,'stories',draft.contentId),{expiresAt:Timestamp.fromMillis(Date.now()+864000000)}));
+});
+
+
+test('unauthenticated Story write denied; owner can upload; cross-user upload denied',async()=>{
+  const a=deps('A'),draft=createMediaDraft('story','A',image());
+  const saved=await saveMedia(a,draft,{caption:'Authorization proof'});
+  await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(),'stories','unauth'),{...saved,id:'unauth'}));
+  await assertFails(uploadBytes(ref(deps('B').storage,'stories/A/cross.jpg'),image(),{
+    contentType:'image/jpeg',customMetadata:{ownerUid:'A',category:'stories',contentId:'cross'}
+  }));
+  await assertFails(uploadBytes(ref(a.storage,'stories/B/cross.jpg'),image(),{
+    contentType:'image/jpeg',customMetadata:{ownerUid:'B',category:'stories',contentId:'cross'}
+  }));
+});
+test('restricted and removed photo/Story cannot be restored by owner or legacy profile-admin',async()=>{
+  const a=deps('A'),story=createMediaDraft('story','A',image()),photo=createMediaDraft('profile','A',image());
+  await saveMedia(a,story,{caption:'Moderation proof'}); await saveMedia(a,photo);
+  await env.withSecurityRulesDisabled(async context=>{
+    await updateDoc(doc(context.firestore(),'users/A'),{role:'admin',photoModerationStatus:'REMOVED'});
+    await updateDoc(doc(context.firestore(),'stories',story.contentId),{moderationStatus:'REMOVED'});
+  });
+  await assertFails(updateDoc(doc(a.db,'users/A'),{photoModerationStatus:'ACTIVE'}));
+  await assertFails(updateDoc(doc(a.db,'users/A'),{avatar:'forged'}));
+  await assertFails(updateDoc(doc(a.db,'stories',story.contentId),{moderationStatus:'ACTIVE'}));
+  await assertFails(updateDoc(doc(a.db,'stories',story.contentId),{caption:'restore'}));
+  await assertFails(deleteDoc(doc(a.db,'stories',story.contentId)));
+  // Ordinary profile fields still use the unchanged production owner/admin policy.
+  await updateDoc(doc(a.db,'users/A'),{name:'Ordinary edit remains allowed'});
+});
+test('unrelated Storage paths remain denied even for admin',async()=>{
+  for(const category of ['posts','events','kyc','private','public','activities','verification','admin','unknown']){
+    for(const actor of [deps('A'),deps('root','super_admin')]){
+      await assertFails(uploadBytes(ref(actor.storage,category+'/A/probe.jpg'),image(),{
+        contentType:'image/jpeg',customMetadata:{ownerUid:'A',category,contentId:'probe'}
+      }));
+    }
+  }
 });

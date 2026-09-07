@@ -1,0 +1,9 @@
+{
+  "project": "hamrosathi1",
+  "member": "serviceAccount:service-932995524964@gcp-sa-firebasestorage.iam.gserviceaccount.com",
+  "role": "roles/firebaserules.firestoreServiceAgent",
+  "includedPermissions": ["datastore.entities.get"],
+  "presentBeforeRollout": false,
+  "reason": "Required Firebase-managed cross-service identity for reviewed avatar/Story firestore.get/exists conditions.",
+  "rollback": "Remove only this member from this role if rolling back both media rulesets; retain its pre-existing roles/firebasestorage.serviceAgent membership."
+}
