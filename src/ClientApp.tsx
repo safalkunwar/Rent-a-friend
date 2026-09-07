@@ -30,8 +30,6 @@ import { Companion, ExperienceStory, Activity, Event as SathiEvent } from './typ
 import { socialRepository } from './repositories/SocialRepository';
 import { visibleStory } from './services/mediaContract';
 import { groupStories } from './services/storyGroups';
-import { ContentDetail } from './components/social/ContentDetail';
-import { ContentInteractions } from './components/social/ContentInteractions';
 import { CreateEventModal } from './components/modals/CreateEventModal';
 import { notificationTarget } from './services/notificationTarget';
 import { ownerStoriesQuery } from './services/mediaQueries';
@@ -207,7 +205,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [joinedEvents, setJoinedEvents] = useState<Record<string, boolean>>({});
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [showCreateEventModal, setShowCreateEventModal] = useState(false);
-  const contentRoute = /^\/(story|event)\/([a-zA-Z0-9_-]+)$/.exec(location.pathname);
   const [showDeleteStoryConfirm, setShowDeleteStoryConfirm] = useState(false);
   const [isDeletingStory, setIsDeletingStory] = useState(false);
   const storyReaction = useFeedReaction('story', viewingStory?.id ?? '', viewingStory?.likesCount ?? viewingStory?.likes ?? 0);
@@ -2037,7 +2034,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     const eventDate = evt.date ? new Date(evt.date) : null;
                     const hasValidDate = !!eventDate && !Number.isNaN(eventDate.getTime());
                     return (
-                      <div key={`${item.type}-${item.data.id}-${idx}`} onClick={() => showToast(`Event: ${evt.title} • capacity: ${evt.spots ?? 'unavailable'}`, 'info')} className="bg-surface border border-white/5 p-3 rounded-2xl flex items-center gap-3 cursor-pointer">
+                      <div key={`${item.type}-${item.data.id}-${idx}`} onClick={() => navigate(`/event/${evt.id}`)} className="bg-surface border border-white/5 p-3 rounded-2xl flex items-center gap-3 cursor-pointer">
                         <div className="shrink-0 w-10 h-10 rounded-xl bg-surface-elevated flex flex-col items-center justify-center border border-white/10">
                           <span className="text-primary-action text-[7px] font-black leading-none uppercase">
                             {hasValidDate ? eventDate.toLocaleString('en-US', { month: 'short' }) : 'TBA'}
@@ -2244,7 +2241,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 {(events || []).slice(0, 5).map((evt) => (
                   <div 
                     key={evt.id}
-                    onClick={() => showToast(`Event details: ${evt.title}`, 'info')}
+                    onClick={() => navigate(`/event/${evt.id}`)}
                     className="shrink-0 w-64 bg-surface border border-white/5 rounded-2xl p-3 flex gap-3 cursor-pointer active:scale-98 transition-all"
                   >
                     <div className="w-16 h-16 rounded-xl overflow-hidden bg-surface-elevated shrink-0">
@@ -3006,7 +3003,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       {filteredEvents.map((evt, evtIdx) => (
                         <div 
                           key={`${evt.id || 'evt'}-${evtIdx}`}
-                          onClick={() => showToast(`Event: ${evt.title} • spots left: ${evt.spots}`, 'info')}
+                          onClick={() => navigate(`/event/${evt.id}`)}
                           className="bg-surface border border-white/5 rounded-2xl overflow-hidden flex flex-col p-3 gap-3 cursor-pointer hover:border-primary-action/30 active:scale-98 transition-all text-left"
                         >
                           <div className="flex items-center gap-3">
@@ -3150,9 +3147,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       {/* ==================== ACTIVE MODALS & DIALOG OVERLAYS ==================== */}
 
       {/* Story View Modal */}
-      {contentRoute && <ContentDetail kind={contentRoute[1] as 'story' | 'event'} id={contentRoute[2]} comments={new URLSearchParams(location.search).has('comments')} onClose={() => navigate('/')} />}
       {showCreateEventModal && <CreateEventModal onClose={() => setShowCreateEventModal(false)} onSaved={id => { void retryEvents(); navigate(`/event/${id}`); }} />}
-      {!contentRoute && (activeTab === 'home' || activeTab === 'explore') && <button className="fixed bottom-24 right-4 z-40 bg-primary-action text-background rounded-xl px-4 py-2 shadow-lg" onClick={() => setShowCreateEventModal(true)}>Create Event</button>}
+      {(activeTab === 'home' || activeTab === 'explore') && <button className="fixed bottom-24 right-4 z-40 bg-primary-action text-background rounded-xl px-4 py-2 shadow-lg" onClick={() => setShowCreateEventModal(true)}>Create Event</button>}
       {viewingStory && viewingStory.id && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setViewingStory(null)}>
           <div className="relative w-full max-w-sm aspect-[9/16] bg-surface rounded-3xl overflow-hidden border border-border-token/80" onClick={e => e.stopPropagation()}>

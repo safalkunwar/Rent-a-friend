@@ -3,6 +3,7 @@ import { CommunityPost, ExperienceStory } from '../../types';
 import { SocialPostCard } from './SocialPostCard';
 import { CommentsPanel } from './CommentsPanel';
 import { useFeedReaction } from '../../hooks/useFeedReaction';
+import { useNavigate } from 'react-router-dom';
 
 interface FeedSocialCardProps {
   onOpenMediaViewer?: (images: string[], index: number) => void;
@@ -10,11 +11,13 @@ interface FeedSocialCardProps {
 }
 
 export const FeedStoryCard: React.FC<FeedSocialCardProps & { story: ExperienceStory }> = ({ story, onOpenMediaViewer, onToast }) => {
+  const navigate = useNavigate();
   const reaction = useFeedReaction('story', story.id, story.likesCount ?? story.likes ?? 0);
   return (
     <div className="max-w-2xl mx-auto">
       <SocialPostCard post={story} type="story" reaction={reaction}
-        onOpenMediaViewer={onOpenMediaViewer} onFeedback={onToast} />
+        onToggleComments={() => navigate(`/story/${story.id}?comments=1`)}
+        onOpenMediaViewer={() => navigate(`/story/${story.id}`)} onFeedback={onToast} />
     </div>
   );
 };

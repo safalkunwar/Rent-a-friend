@@ -1,0 +1,3 @@
+{
+  "firestore": { "rules": "ops/media-rollout/cutover.firestore.rules" }
+}

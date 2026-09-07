@@ -7,6 +7,7 @@ import { MapPin, Star } from 'lucide-react';
 import { chunkFeedByHeader } from '../../services/feedStabilizer';
 import { FeedStoryCard, FeedPostCard } from '../social/FeedSocialCards';
 import { groupStories } from '../../services/storyGroups';
+import { useNavigate } from 'react-router-dom';
 
 interface DiscoveryFeedProps {
   stories: ExperienceStory[];
@@ -48,6 +49,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   onLoadMore,
 }) => {
   const [lightboxImages, setLightboxImages] = useState<string[] | null>(null);
+  const navigate = useNavigate();
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
 
@@ -277,7 +279,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
               return (
                 <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
                   <div
-                    onClick={() => onShowToast(`Event: ${(item.data as Event).title} • capacity: ${(item.data as Event).spots ?? 'unavailable'}`, 'info')}
+                    onClick={() => navigate(`/event/${item.data.id}`)}
                     className="bg-surface border border-white/5 rounded-2xl p-4 flex gap-4 cursor-pointer active:scale-98 transition-all"
                   >
                     <div className="w-20 h-20 rounded-xl overflow-hidden bg-surface-elevated shrink-0">

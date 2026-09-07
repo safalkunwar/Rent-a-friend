@@ -2,6 +2,7 @@ import * as admin from 'firebase-admin';
 import { createHash } from 'node:crypto';
 import { onDocumentWritten, onDocumentDeleted } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onObjectFinalized } from 'firebase-functions/v2/storage';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const db = () => admin.firestore();
@@ -15,7 +16,7 @@ export async function reconcileInteraction(kind: Kind, action: 'likes' | 'commen
   const receipt = db().doc(`media_interaction_receipts/${hash(sourcePath)}`);
   const notification = db().doc(`notifications/media_${hash(sourcePath)}`);
   await db().runTransaction(async tx => {
-    const [live, previous, content, notified] = await Promise.all([tx.get(source), tx.get(receipt), tx.get(target), tx.get(notification)]);
+    const [live, previous, content, notified, actor] = await Promise.all([tx.get(source), tx.get(receipt), tx.get(target), tx.get(notification), tx.get(db().doc(`users/${actorId}`))]);
     const wasPresent = previous.data()?.present === true;
     const present = live.exists;
     const delta = Number(present) - Number(wasPresent);
@@ -28,15 +29,17 @@ export async function reconcileInteraction(kind: Kind, action: 'likes' | 'commen
       const count = Math.max(0, Number(parent[field] || 0) + delta);
       tx.update(target, { [field]: count, ...(kind === 'story' && action === 'likes' ? { likes: count } : {}) });
     }
-    tx.set(receipt, { present, targetId, kind, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    if (parent || present) tx.set(receipt, { present, targetId, kind, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    else tx.delete(receipt);
     const ownerId = kind === 'story' ? parent?.userId : parent?.ownerId;
     // One notification per like identity for its lifetime, including unlike/re-like.
     if (present && eligible && ownerId && ownerId !== actorId && !notified.exists) {
       const type = `${kind.toUpperCase()}_${action === 'likes' ? 'LIKE' : 'COMMENT'}`;
       const commentId = action === 'comments' ? sourceId : undefined;
-      tx.create(notification, { userId: ownerId, actorId, type, targetType: kind, targetId,
+      const actorName = typeof actor.data()?.name === 'string' ? actor.data()!.name.slice(0,100) : 'Someone';
+      tx.create(notification, { userId: ownerId, actorId, actorName, type, targetType: kind, targetId,
         ...(commentId ? { commentId } : {}), title: `${kind === 'story' ? 'Story' : 'Event'} ${action === 'likes' ? 'like' : 'comment'}`,
-        message: `Someone ${action === 'likes' ? 'liked' : 'commented on'} your ${kind}.`, isRead: false,
+        message: `${actorName} ${action === 'likes' ? 'liked' : 'commented on'} your ${kind}.`, isRead: false,
         timestamp: new Date().toISOString(), createdAt: admin.firestore.FieldValue.serverTimestamp(),
         link: `/${kind}/${targetId}${commentId ? '?comments=1' : ''}` });
     }
@@ -89,4 +92,33 @@ export const onStoryDeletedMedia = onDocumentDeleted({ document: 'stories/{story
     remaining ||= page.size === 100;
   }
   if (remaining) throw new Error('Story interaction cleanup has more bounded work; retry.');
+});
+
+// Indexed, distributed cleanup tickets avoid scanning the bucket for failed publications.
+export const onMediaUploadFinalized = onObjectFinalized({ bucket: 'hamrosathi1.firebasestorage.app', region: 'us-east1', retry: true, maxInstances: 5 }, async event => {
+  const object = event.data;
+  const match = /^(avatars|stories|events)\/([a-zA-Z0-9_-]+)\/[a-zA-Z0-9_-]+\.(jpg|jpeg|png|webp)$/.exec(object.name);
+  if (!match || object.metadata?.ownerUid !== match[2] || !/^[a-zA-Z0-9_-]+$/.test(object.metadata?.contentId || '')) return;
+  const reference = db().doc(`media_upload_cleanup/${hash(object.name + ':' + object.generation)}`);
+  await db().runTransaction(async tx => {
+    if ((await tx.get(reference)).exists) return;
+    tx.create(reference, { path: object.name, generation: object.generation, category: match[1], ownerId: match[2],
+      contentId: object.metadata!.contentId, checkAfter: admin.firestore.Timestamp.fromMillis(new Date(object.timeCreated || Date.now()).getTime() + 48 * 3600000) });
+  });
+});
+export const cleanupMediaOrphans = onSchedule({ schedule: 'every 60 minutes', maxInstances: 1, timeoutSeconds: 300, retryCount: 3 }, async () => {
+  const page = await db().collection('media_upload_cleanup').where('checkAfter', '<=', admin.firestore.Timestamp.now()).orderBy('checkAfter').limit(100).get();
+  for (const ticket of page.docs) {
+    const data = ticket.data();
+    const match = /^(avatars|stories|events)\/([a-zA-Z0-9_-]+)\/[a-zA-Z0-9_-]+\.(jpg|jpeg|png|webp)$/.exec(data.path || '');
+    if (!match || match[1] !== data.category || match[2] !== data.ownerId || !/^[a-zA-Z0-9_-]+$/.test(data.contentId || '')) throw new Error('Invalid cleanup ticket');
+    const collection = data.category === 'avatars' ? 'users' : data.category;
+    const canonical = (await db().doc(`${collection}/${data.contentId}`).get()).data();
+    const fields = data.category === 'avatars' ? ['photoPath','photoPreviewPath'] : data.category === 'stories' ? ['mediaPath','mediaPreviewPath'] : ['imagePath','mediaPreviewPath'];
+    const linked = canonical && fields.some(field => canonical[field] === data.path);
+    if (!linked) {
+      await admin.storage().bucket('hamrosathi1.firebasestorage.app').file(data.path).delete({ ignoreNotFound: true, ifGenerationMatch: Number(data.generation) });
+    }
+    await ticket.ref.delete();
+  }
 });

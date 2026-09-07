@@ -88,7 +88,7 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
     if (images.length === 1) {
       return (
         <div className="relative aspect-[4/3] w-full bg-surface-elevated cursor-pointer" onClick={() => openViewer(0)}>
-          <SafeImage src={images[0]} className="w-full h-full object-cover" alt={caption} />
+          <SafeImage src={storyPost?.mediaPreviewUrl || images[0]} className="w-full h-full object-cover" alt={caption} />
         </div>
       );
     }

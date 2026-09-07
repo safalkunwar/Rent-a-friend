@@ -13,6 +13,7 @@ import { PaymentVerifyPage } from './pages/PaymentVerifyPage';
 import { EsewaVerifyPage } from './pages/EsewaVerifyPage';
 import { EsewaFailurePage } from './pages/EsewaFailurePage';
 import { PostPage } from './pages/PostPage';
+import { MediaContentPage } from './pages/MediaContentPage';
 import { AdminApplicationsPage } from './pages/AdminApplicationsPage';
 
 function AppRoutes() {
@@ -71,8 +72,8 @@ function AppRoutes() {
         }
       />
       <Route path="/post/:postId" element={<PostPage />} />
-      <Route path="/story/:storyId" element={<ClientApp initialTab="home" />} />
-      <Route path="/event/:eventId" element={<ClientApp initialTab="home" />} />
+      <Route path="/story/:storyId" element={<MediaContentPage kind="story" />} />
+      <Route path="/event/:eventId" element={<MediaContentPage kind="event" />} />
       <Route
         path="/admin/applications"
         element={
