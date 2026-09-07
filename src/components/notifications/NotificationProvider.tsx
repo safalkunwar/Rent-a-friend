@@ -13,8 +13,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     const setupNotifications = async () => {
       try {
-        const granted = await notificationService.requestPermission();
-        if (!granted) return;
+        // Permission prompts must follow an explicit user gesture, never login/mount.
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
         const token = await notificationService.getFcmToken();
         if (!token) return;

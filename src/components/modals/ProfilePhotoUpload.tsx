@@ -34,7 +34,7 @@ export function ProfilePhotoUpload() {
         const photo = saved as Partial<User>;
         // Do not replace normalized Auth role/claims or other application state with a raw user document.
         setCurrentUser(previous => previous?.id !== currentUser.id ? previous : { ...previous, avatar: visibleAvatar(photo), photoPath: photo.photoPath,
-          photoUpdatedAt: photo.photoUpdatedAt, photoModerationStatus: photo.photoModerationStatus,
+          photoUpdatedAt: photo.photoUpdatedAt, photoPreviewPath: photo.photoPreviewPath, photoPreviewUrl: photo.photoPreviewUrl, photoModerationStatus: photo.photoModerationStatus,
           photoVisibilityStatus: photo.photoVisibilityStatus });
         draft.current = null; setPreview(''); setMessage('Profile photo saved.');
       } catch (error) { setMessage(error instanceof Error ? error.message : 'Upload failed. Retry with your selection.'); }

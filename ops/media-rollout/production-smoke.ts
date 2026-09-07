@@ -151,7 +151,11 @@ try{
           assert.equal(removed.status,200);
         }
       }catch(error:any){cleanupErrors.push('test profile '+item.uid+' '+error.message);}
-      try{if(item.auth.currentUser)await deleteUser(item.auth.currentUser);}
+      try{
+        // A held browser check may outlast Firebase's recent-login window.
+        await signInWithEmailAndPassword(item.auth,item.email,item.password);
+        if(item.auth.currentUser)await deleteUser(item.auth.currentUser);
+      }
       catch(error:any){cleanupErrors.push('test auth '+item.uid+' '+error.code);}
     }
     await deleteApp(item.app);

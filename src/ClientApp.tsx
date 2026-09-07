@@ -29,6 +29,14 @@ import { MapPreview } from './components/maps/MapPreview';
 import { Companion, ExperienceStory, Activity, Event as SathiEvent } from './types';
 import { socialRepository } from './repositories/SocialRepository';
 import { visibleStory } from './services/mediaContract';
+import { groupStories } from './services/storyGroups';
+import { ContentDetail } from './components/social/ContentDetail';
+import { ContentInteractions } from './components/social/ContentInteractions';
+import { CreateEventModal } from './components/modals/CreateEventModal';
+import { notificationTarget } from './services/notificationTarget';
+import { ownerStoriesQuery } from './services/mediaQueries';
+import { getDocsFromServer, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { db as mediaDb } from './firebase';
 import { CreateStoryModal } from './components/modals/CreateStoryModal';
 import { Modal } from './components/ui/Modal';
 import { 
@@ -46,6 +54,7 @@ import { useCompanionCategories } from './hooks/useCompanionCategories';
 import { useDiscoveryFeed } from './hooks/useDiscoveryFeed';
 import { useProgressiveReveal } from './hooks/useProgressiveReveal';
 import { useFeedReaction } from './hooks/useFeedReaction';
+import { useAuthModalTrigger } from './hooks/useAuthModalTrigger';
 import { type FeedItem } from './services/feedGenerator';
 import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
@@ -146,27 +155,59 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingStory, setViewingStory] = useState<ExperienceStory | null>(null);
+  const storyGroups = useMemo(() => groupStories(fetchedStories), [fetchedStories]);
+  const [ownerStories, setOwnerStories] = useState<ExperienceStory[]>([]);
+  const ownerPage = useRef<{ uid?: string; cursor?: QueryDocumentSnapshot; more: boolean }>({ more: false });
   const storyRequest = useRef(0);
   const openVisibleStory = useCallback(async (story: ExperienceStory | null) => {
     const request = ++storyRequest.current;
     if (!story) {
       setViewingStory(null);
+      ownerPage.current = { more: false }; setOwnerStories([]);
       return;
     }
     try {
       const current = await socialRepository.getVisibleStory(story.id);
       if (request === storyRequest.current) {
-        if (current) setViewingStory(current);
+        if (current) {
+          if (current.userId && ownerPage.current.uid !== current.userId && mediaDb) {
+            const page = await getDocsFromServer(ownerStoriesQuery(mediaDb, current.userId, Date.now()));
+            if (request !== storyRequest.current) return;
+            const items = page.docs.map(document => ({ ...document.data(), id: document.id } as ExperienceStory)).filter(item => visibleStory(item));
+            ownerPage.current = { uid: current.userId, cursor: page.docs.at(-1), more: page.size === 20 };
+            setOwnerStories(items); setViewingStory(items[0] ?? null);
+          } else setViewingStory(current);
+        }
         else showToast('This Story is no longer available.','info');
       }
     } catch { if (request === storyRequest.current) showToast('Story unavailable. Refresh or try again online.','error'); }
   },[showToast]);
   useEffect(() => {
     if (!viewingStory) return;
-    if (!visibleStory(viewingStory) || !fetchedStories.some(story => story.id === viewingStory.id)) void openVisibleStory(null);
-  },[fetchedStories,viewingStory,openVisibleStory]);
+    if (!visibleStory(viewingStory)) { void openVisibleStory(null); return; }
+    const expiry = typeof viewingStory.expiresAt === 'string' ? Date.parse(viewingStory.expiresAt) : viewingStory.expiresAt?.toMillis() ?? 0;
+    const timer = window.setTimeout(() => { void openVisibleStory(null); }, Math.max(0, expiry - Date.now()));
+    return () => window.clearTimeout(timer);
+  },[viewingStory,openVisibleStory]);
+  const nextOwnerStory = async () => {
+    if (!viewingStory) return;
+    const index = ownerStories.findIndex(item => item.id === viewingStory.id);
+    if (index < ownerStories.length - 1) { await openVisibleStory(ownerStories[index + 1]); return; }
+    const pageState = ownerPage.current;
+    if (!pageState.more || !pageState.uid || !mediaDb) { await openVisibleStory(null); return; }
+    const request = ++storyRequest.current;
+    try {
+      const page = await getDocsFromServer(ownerStoriesQuery(mediaDb, pageState.uid, Date.now(), pageState.cursor));
+      if (request !== storyRequest.current) return;
+      const items = page.docs.map(document => ({ ...document.data(), id: document.id } as ExperienceStory)).filter(item => visibleStory(item));
+      ownerPage.current = { uid: pageState.uid, cursor: page.docs.at(-1), more: page.size === 20 };
+      setOwnerStories(items); setViewingStory(items[0] ?? null);
+    } catch { showToast('Could not load the next Stories. Tap next to retry.', 'error'); }
+  };
   const [joinedEvents, setJoinedEvents] = useState<Record<string, boolean>>({});
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
+  const [showCreateEventModal, setShowCreateEventModal] = useState(false);
+  const contentRoute = /^\/(story|event)\/([a-zA-Z0-9_-]+)$/.exec(location.pathname);
   const [showDeleteStoryConfirm, setShowDeleteStoryConfirm] = useState(false);
   const [isDeletingStory, setIsDeletingStory] = useState(false);
   const storyReaction = useFeedReaction('story', viewingStory?.id ?? '', viewingStory?.likesCount ?? viewingStory?.likes ?? 0);
@@ -242,6 +283,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   };
 
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'guide' | null>(null);
+  useAuthModalTrigger(setAuthMode);
   const [isGuide, setIsGuide] = useState(false);
   const [showGuideSetup, setShowGuideSetup] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -723,7 +765,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       <div className="max-h-72 overflow-y-auto divide-y divide-border-token-light">
                         {notifications && notifications.length > 0 ? (
                           notifications.slice(0, 5).map(n => (
-                            <div key={n.id} onClick={() => { markNotificationRead(n.id); setShowNotificationsDropdown(false); }} className={`p-3 text-left hover:bg-surface-elevated transition-colors cursor-pointer ${!n.isRead ? 'bg-primary-action/5' : ''}`}>
+                            <div key={n.id} onClick={() => { markNotificationRead(n.id); setShowNotificationsDropdown(false); const target = notificationTarget(n); if (target) navigate(target); }} className={`p-3 text-left hover:bg-surface-elevated transition-colors cursor-pointer ${!n.isRead ? 'bg-primary-action/5' : ''}`}>
                               <p className={`text-xs ${!n.isRead ? 'font-bold text-text-primary' : 'text-gray-300'}`}>{n.title}</p>
                               <p className="text-[10px] text-text-secondary mt-0.5 leading-relaxed">{n.message}</p>
                               <span className="text-[8px] text-text-muted block mt-1">{new Date(n.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
@@ -1905,9 +1947,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 </div>
                 
                 {/* Dynamic Stories based on companions */}
-                {fetchedStories.map((st, i) => (
+                {storyGroups.map(({ ownerId, stories: [st] }) => (
                   <div 
-                    key={`${st.id}-${i}`} 
+                    key={ownerId}
                     onClick={() => openVisibleStory(st)}
                     className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start"
                   >
@@ -3023,7 +3065,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 notifications.map((n, idx) => (
                   <div 
                     key={`${n.id || 'notif'}-${idx}`} 
-                    onClick={() => { markNotificationRead(n.id); }} 
+                    onClick={() => { markNotificationRead(n.id); const target = notificationTarget(n); if (target) navigate(target); }} 
                     className={`p-4 rounded-2xl border transition-colors cursor-pointer text-left ${!n.isRead ? 'bg-primary-action/5 border-primary-action/20' : 'bg-surface border-white/5'}`}
                   >
                     <div className="flex justify-between items-start">
@@ -3108,6 +3150,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       {/* ==================== ACTIVE MODALS & DIALOG OVERLAYS ==================== */}
 
       {/* Story View Modal */}
+      {contentRoute && <ContentDetail kind={contentRoute[1] as 'story' | 'event'} id={contentRoute[2]} comments={new URLSearchParams(location.search).has('comments')} onClose={() => navigate('/')} />}
+      {showCreateEventModal && <CreateEventModal onClose={() => setShowCreateEventModal(false)} onSaved={id => { void retryEvents(); navigate(`/event/${id}`); }} />}
+      {!contentRoute && (activeTab === 'home' || activeTab === 'explore') && <button className="fixed bottom-24 right-4 z-40 bg-primary-action text-background rounded-xl px-4 py-2 shadow-lg" onClick={() => setShowCreateEventModal(true)}>Create Event</button>}
       {viewingStory && viewingStory.id && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setViewingStory(null)}>
           <div className="relative w-full max-w-sm aspect-[9/16] bg-surface rounded-3xl overflow-hidden border border-border-token/80" onClick={e => e.stopPropagation()}>
@@ -3142,8 +3187,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             </div>
 
             {/* Nav click zones */}
-            <div className="absolute inset-y-20 left-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = fetchedStories.findIndex(s => s.id === viewingStory.id); if (idx > 0) void openVisibleStory(fetchedStories[idx - 1]); }}></div>
-            <div className="absolute inset-y-20 right-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = fetchedStories.findIndex(s => s.id === viewingStory.id); if (idx < fetchedStories.length - 1) void openVisibleStory(fetchedStories[idx + 1]); else void openVisibleStory(null); }}></div>
+            <div className="absolute inset-y-20 left-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = ownerStories.findIndex(s => s.id === viewingStory.id); if (idx > 0) void openVisibleStory(ownerStories[idx - 1]); }}></div>
+            <div className="absolute inset-y-20 right-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); void nextOwnerStory(); }}></div>
 
             {/* Bottom story details */}
             <div className="absolute bottom-6 inset-x-0 p-5 flex flex-col justify-end text-left space-y-3 z-10">
@@ -3163,11 +3208,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 </button>
               </div>
               {storyReaction.error && <p role="alert" className="text-xs text-text-secondary">{storyReaction.error} <button onClick={() => { void storyReaction.refresh(); }} className="text-primary-action">Refresh likes</button></p>}
+              <button onClick={() => { setViewingStory(null); navigate(`/story/${viewingStory.id}?comments=1`); }}>View comments</button>
               
               <div className="flex gap-1">
-                {stories.map((s, idx) => {
-                  const sIdx = stories.findIndex(x => x.id === s.id);
-                  const activeIdx = stories.findIndex(x => x.id === viewingStory.id);
+                {ownerStories.map((s, idx) => {
+                  const sIdx = idx;
+                  const activeIdx = ownerStories.findIndex(x => x.id === viewingStory.id);
                   return (
                     <div key={`${s.id}-${idx}`} className="h-1 rounded-full flex-1 bg-white/20 overflow-hidden relative">
                       {s.id === viewingStory.id && (
@@ -3177,11 +3223,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                           transition={{ duration: 5, ease: 'linear' }}
                           className="absolute inset-y-0 left-0 bg-primary-action"
                           onAnimationComplete={() => {
-                            if (activeIdx < stories.length - 1) {
-                              void openVisibleStory(stories[activeIdx + 1]);
-                            } else {
-                              setViewingStory(null);
-                            }
+                            void nextOwnerStory();
                           }}
                         />
                       )}

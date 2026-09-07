@@ -71,6 +71,8 @@ function AppRoutes() {
         }
       />
       <Route path="/post/:postId" element={<PostPage />} />
+      <Route path="/story/:storyId" element={<ClientApp initialTab="home" />} />
+      <Route path="/event/:eventId" element={<ClientApp initialTab="home" />} />
       <Route
         path="/admin/applications"
         element={

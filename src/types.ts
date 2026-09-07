@@ -4,6 +4,8 @@ export interface User {
   email: string;
   avatar: string;
   photoPath?: string;
+  photoPreviewPath?: string;
+  photoPreviewUrl?: string;
   photoUpdatedAt?: string;
   photoModerationStatus?: 'ACTIVE' | 'UNDER_REVIEW' | 'RESTRICTED' | 'REMOVED';
   photoVisibilityStatus?: 'PUBLIC' | 'PRIVATE';
@@ -39,6 +41,8 @@ export interface ExperienceStory {
   userAvatar: string;
   imageUrl: string;
   mediaPath?: string;
+  mediaPreviewPath?: string;
+  mediaPreviewUrl?: string;
   timeAgo: string;
   caption: string;
   likes?: number;
@@ -189,6 +193,8 @@ export interface Activity {
 }
 
 export interface Event {
+  mediaPreviewPath?: string;
+  mediaPreviewUrl?: string;
   id: string;
   imagePath?: string;
   imageOwnerId?: string;
@@ -208,11 +214,15 @@ export interface Event {
 }
 
 export interface Notification {
+  targetType?: 'story' | 'event';
+  targetId?: string;
+  actorId?: string;
+  commentId?: string;
   id: string;
   userId: string;
   title: string;
   message: string;
-  type: 'booking' | 'message' | 'system';
+  type: 'booking' | 'message' | 'system' | 'STORY_LIKE' | 'STORY_COMMENT' | 'EVENT_LIKE' | 'EVENT_COMMENT';
   isRead: boolean;
   timestamp: string;
   link?: string;

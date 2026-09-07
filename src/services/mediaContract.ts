@@ -21,7 +21,7 @@ export const mediaTime = (value: ExperienceStory['expiresAt']): number =>
 export const visibleStory = (story: ExperienceStory, now = Date.now()): boolean => !!story &&
   story.status === 'active' && story.moderationStatus === 'ACTIVE' && story.visibilityStatus === 'PUBLIC' &&
   !!story.mediaPath && mediaTime(story.expiresAt) > now;
-export const visibleAvatar = (user: Pick<Partial<User>, 'avatar' | 'photoModerationStatus' | 'photoVisibilityStatus'>): string =>
-  user.photoModerationStatus === 'ACTIVE' && user.photoVisibilityStatus === 'PUBLIC' ? user.avatar || '' : '';
+export const visibleAvatar = (user: Pick<Partial<User>, 'avatar' | 'photoPreviewUrl' | 'photoModerationStatus' | 'photoVisibilityStatus'>): string =>
+  user.photoModerationStatus === 'ACTIVE' && user.photoVisibilityStatus === 'PUBLIC' ? user.photoPreviewUrl || user.avatar || '' : '';
 export const visibleEventImage = (event: Event): string =>
-  event.mediaModerationStatus === 'ACTIVE' && event.mediaVisibilityStatus === 'PUBLIC' ? event.imageUrl || '' : '';
+  event.mediaModerationStatus === 'ACTIVE' && event.mediaVisibilityStatus === 'PUBLIC' ? event.mediaPreviewUrl || event.imageUrl || '' : '';

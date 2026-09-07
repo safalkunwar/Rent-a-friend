@@ -12,6 +12,7 @@ import { visibleStory } from '../services/mediaContract';
 import { saveAppMedia } from '../services/mediaUploads';
 import type { MediaDraft } from '../services/mediaUploadCore';
 import { commentText, commentWrite, type Comment } from '../services/commentContract';
+import { contentInteractions } from '../services/contentInteractions';
 export type { Comment } from '../services/commentContract';
 
 
@@ -341,74 +342,14 @@ export class SocialRepository extends BaseRepository {
     requireUid(userId);
     if (!db) throw new Error('Social service unavailable.');
     this.invalidateLikedState('story', userId, storyId);
-    const likeId = `${userId}_${storyId}`;
-    const likeRef = doc(db, 'story_likes', likeId);
-    const storyRef = doc(db, 'stories', storyId);
-
-    await this.executeWithRetry(
-      async () => {
-        await runTransaction(db!, async (transaction) => {
-          const likeDoc = await transaction.get(likeRef);
-          if (likeDoc.exists()) {
-            return; // Already liked
-          }
-
-          const storyDoc = await transaction.get(storyRef);
-          const currentLikes = storyDoc.exists() ? (storyDoc.data()?.likes || storyDoc.data()?.likesCount || 0) : 0;
-
-          transaction.set(likeRef, {
-            userId,
-            storyId,
-            createdAt: new Date().toISOString()
-          });
-
-          if (storyDoc.exists()) {
-            transaction.update(storyRef, {
-              likes: currentLikes + 1,
-              likesCount: currentLikes + 1,
-              updatedAt: new Date().toISOString()
-            });
-          }
-        });
-      },
-      OperationType.WRITE,
-      `stories/${storyId}/likes`
-    );
+    await contentInteractions.setLiked('story', storyId, true);
   }
 
   async unlikeStory(userId: string, storyId: string): Promise<void> {
     requireUid(userId);
     if (!db) throw new Error('Social service unavailable.');
     this.invalidateLikedState('story', userId, storyId);
-    const likeId = `${userId}_${storyId}`;
-    const likeRef = doc(db, 'story_likes', likeId);
-    const storyRef = doc(db, 'stories', storyId);
-
-    await this.executeWithRetry(
-      async () => {
-        await runTransaction(db!, async (transaction) => {
-          const likeDoc = await transaction.get(likeRef);
-          if (!likeDoc.exists()) {
-            return; // Not liked
-          }
-
-          const storyDoc = await transaction.get(storyRef);
-          const currentLikes = storyDoc.exists() ? (storyDoc.data()?.likes || storyDoc.data()?.likesCount || 0) : 0;
-
-          transaction.delete(likeRef);
-
-          if (storyDoc.exists() && currentLikes > 0) {
-            transaction.update(storyRef, {
-              likes: currentLikes - 1,
-              likesCount: currentLikes - 1,
-              updatedAt: new Date().toISOString()
-            });
-          }
-        });
-      },
-      OperationType.WRITE,
-      `stories/${storyId}/likes`
-    );
+    await contentInteractions.setLiked('story', storyId, false);
   }
 
   async checkUserLikedStory(userId: string, storyId: string): Promise<boolean> {

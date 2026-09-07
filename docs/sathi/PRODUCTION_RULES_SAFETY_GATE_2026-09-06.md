@@ -1,5 +1,7 @@
 # Production rules safety gate — STOPPED
 
+**Historical result for the broad root rules.** The subsequent minimal candidate rollout and live results are recorded in [PRODUCTION_MEDIA_ROLLOUT_2026-09-06.md](PRODUCTION_MEDIA_ROLLOUT_2026-09-06.md). The root files were not deployed; the separate candidate and exact Story index were deployed after their own successful safety gate.
+
 ## Decision
 
 No production rule or index deployment was performed. The requested semantic-scope gate failed: the checked-in rule files are not limited to Stories, Story media, or profile photo media relative to the active production releases.

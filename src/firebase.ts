@@ -4,6 +4,7 @@ import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getMessaging, type Messaging } from 'firebase/messaging';
 import appletConfig from '../firebase-applet-config.json';
+import { initializeWebAppCheck } from './services/appCheck';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || appletConfig.apiKey || 'AIzaSyBE-RD9iszOTqSLuugWxuYCpIWIrPVIjsI',
@@ -39,6 +40,7 @@ console.log('[SATHI] Firebase config loaded:', {
 if (hasValidConfig && !getApps().length) {
   try {
     app = initializeApp(firebaseConfig);
+    initializeWebAppCheck(app);
     auth = getAuth(app);
     setPersistence(auth, browserLocalPersistence)
       .then(() => console.log('[SATHI] Firebase Auth persistence configured: LOCAL'))

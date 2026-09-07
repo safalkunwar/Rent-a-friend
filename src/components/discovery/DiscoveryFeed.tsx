@@ -6,6 +6,7 @@ import { DiscoveryContentContainer } from './DiscoveryContentContainer';
 import { MapPin, Star } from 'lucide-react';
 import { chunkFeedByHeader } from '../../services/feedStabilizer';
 import { FeedStoryCard, FeedPostCard } from '../social/FeedSocialCards';
+import { groupStories } from '../../services/storyGroups';
 
 interface DiscoveryFeedProps {
   stories: ExperienceStory[];
@@ -131,9 +132,9 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
             </div>
             <span className="text-[10px] text-text-secondary font-bold">Your Story</span>
           </div>
-          {stories.map((st, i) => (
+          {groupStories(stories).map(({ ownerId, stories: [st] }) => (
             <div
-              key={`${st.id}-${i}`}
+              key={ownerId}
               onClick={() => onViewStory(st)}
               className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start"
             >

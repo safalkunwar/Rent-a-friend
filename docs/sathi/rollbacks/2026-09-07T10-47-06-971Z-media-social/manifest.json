@@ -1,0 +1,16 @@
+{
+  "firestore": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/da300c1a-96a9-4f72-8a3d-7a68bf210b3a",
+    "createTime": "2026-07-12T04:35:43.978011Z",
+    "updateTime": "2026-09-06T17:34:55.064759Z",
+    "sha256": "c3fd015ab478d9c65d19d1faa92c3736679fbea8ef58246b0cbeb5dc42180a34"
+  },
+  "storage": {
+    "name": "projects/hamrosathi1/releases/firebase.storage/hamrosathi1.firebasestorage.app",
+    "rulesetName": "projects/hamrosathi1/rulesets/46c817a1-2a89-405f-9263-7f3c7d3888c2",
+    "createTime": "2026-09-06T17:07:09.778929Z",
+    "updateTime": "2026-09-06T17:34:53.495835Z",
+    "sha256": "10aa38490d12b512bf30f178254a99fb0ed29b7e9cca8f2ca66cf6fce0cdd0a1"
+  }
+}

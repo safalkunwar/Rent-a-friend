@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { User, Image as ImageIcon } from 'lucide-react';
 
 interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
@@ -9,22 +9,34 @@ interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   textForInitials?: string;
 }
 
-export const SafeImage: React.FC<SafeImageProps> = ({
+// A new source gets its own readiness state; a late event from the previous
+// image cannot hide or fail its replacement.
+export const SafeImage: React.FC<SafeImageProps> = (props) => (
+  <SafeImageSource key={JSON.stringify([props.src, props.srcSet])} {...props} />
+);
+
+const SafeImageSource: React.FC<SafeImageProps> = ({
   src,
   alt,
   className = '',
   fallbackType = 'thumbnail',
   textForInitials,
+  onLoad,
+  onError,
+  referrerPolicy = 'no-referrer',
   ...props
 }) => {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Reset state if src changes
-  useEffect(() => {
-    setError(false);
-    setLoading(true);
-  }, [src]);
+  // Cached images can finish before React receives a load event. Never reset
+  // readiness in a passive effect after that event has already fired.
+  const imageRef = useCallback((image: HTMLImageElement | null) => {
+    if (image?.complete) {
+      if (image.naturalWidth > 0) setLoading(false);
+      else setError(true);
+    }
+  }, []);
 
   // Handle empty or invalid src up front
   const hasNoSrc = !src || src.trim() === '' || src === 'null' || src === 'undefined';
@@ -75,14 +87,15 @@ export const SafeImage: React.FC<SafeImageProps> = ({
         </div>
       )}
       <img
+        {...props}
+        ref={imageRef}
         src={src || undefined}
         alt={alt}
-        loading="lazy"
-        onError={() => setError(true)}
-        onLoad={() => setLoading(false)}
-        referrerPolicy="no-referrer"
+        loading={props.loading ?? 'lazy'}
+        onError={(event) => { setError(true); onError?.(event); }}
+        onLoad={(event) => { setLoading(false); onLoad?.(event); }}
+        referrerPolicy={referrerPolicy}
         className={`${className} ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
-        {...props}
       />
     </div>
   );

@@ -5,11 +5,13 @@ import { imageExtension, mediaCategory, mediaPath, type MediaKind } from './medi
 import { validateFileSignature } from './uploadContract';
 import type { ExperienceStory } from '../types';
 import { mediaDeadline } from './mediaDeadline';
+import { eventFields } from './eventContract';
 
 export interface MediaDependencies { auth: Auth; db: Firestore; storage: FirebaseStorage }
 export interface MediaDraft {
   kind: MediaKind; uid: string; id: string; contentId: string; path: string; file: File;
   url?: string; busy?: boolean; uploadAttempted?: boolean; uploaded?: boolean;
+  preview?: { file: File; path: string; url?: string; uploaded?: boolean };
 }
 export function createMediaDraft(kind: MediaKind, uid: string, file: File, contentId?: string): MediaDraft {
   if (contentId && !/^[a-zA-Z0-9_-]+$/.test(contentId)) throw new Error('Invalid media content identity.');
@@ -88,6 +90,25 @@ export async function saveMedia(deps: MediaDependencies, draft: MediaDraft, fiel
       draft.url = await wait(getDownloadURL(object), 'Obtaining image URL');
     }
     requireOwner(deps.auth,draft.uid);
+    if (draft.preview && !draft.preview.url) {
+      const preview = draft.preview, object = ref(deps.storage, preview.path);
+      // Immutable variants recover acknowledgement loss before attempting upload again.
+      try {
+        const existing = await wait(getMetadata(object), 'Checking image preview');
+        if (existing.customMetadata?.ownerUid !== draft.uid || existing.customMetadata?.contentId !== draft.contentId || existing.size !== preview.file.size) throw new Error('Preview identity conflict.');
+        preview.uploaded = true;
+      } catch (error) { if ((error as { code?: string }).code !== 'storage/object-not-found') throw error; }
+      if (!preview.uploaded) {
+        const task = uploadBytesResumable(object, preview.file, { contentType: preview.file.type, cacheControl: 'public, max-age=300',
+          customMetadata: { ownerUid: draft.uid, category: mediaCategory(draft.kind), contentId: draft.contentId } });
+        await wait(new Promise<void>((resolve, reject) => task.on('state_changed', () => {
+          if (deps.auth.currentUser?.uid !== draft.uid) task.cancel();
+        }, reject, resolve)), 'Uploading preview', () => task.cancel());
+        preview.uploaded = true;
+      }
+      preview.url = await wait(getDownloadURL(object), 'Obtaining preview URL');
+      requireOwner(deps.auth, draft.uid);
+    }
     const result = await wait(runTransaction(deps.db, async tx => {
       const current = await tx.get(target);
       if (current.exists() && current.data()[pathField(draft.kind)] === draft.path) return { ...current.data(), id: current.id };
@@ -103,10 +124,12 @@ export async function saveMedia(deps: MediaDependencies, draft: MediaDraft, fiel
           expiresAt: null, status: 'publishing',
           moderationStatus: 'ACTIVE', visibilityStatus: 'PUBLIC', reportedCount: 0,
           likes: 0, likesCount: 0, comments: 0, commentsCount: 0 };
+        if (draft.preview?.url) Object.assign(data, { mediaPreviewPath: draft.preview.path, mediaPreviewUrl: draft.preview.url });
         tx.set(target,data);
       } else if (draft.kind === 'profile') {
         data = { avatar: draft.url, photoPath: draft.path, photoUpdatedAt: now,
           photoModerationStatus: 'ACTIVE', photoVisibilityStatus: 'PUBLIC', photoReportedCount: current.data()?.photoReportedCount ?? 0 };
+        if (draft.preview?.url) Object.assign(data, { photoPreviewPath: draft.preview.path, photoPreviewUrl: draft.preview.url });
         tx.update(target,data);
       } else {
         const allowed = ['title','description','location','category','date','time','spots'];
@@ -114,12 +137,26 @@ export async function saveMedia(deps: MediaDependencies, draft: MediaDraft, fiel
         data = { ...content, imageUrl: draft.url, imagePath: draft.path, imageOwnerId: draft.uid,
           mediaModerationStatus: 'ACTIVE', mediaVisibilityStatus: 'PUBLIC', mediaReportedCount: current.data()?.mediaReportedCount ?? 0,
           imageUpdatedAt: now, updatedAt: now, ...(!current.exists() ? { id: draft.contentId, createdAt: now } : {}) };
+        // Explicit user-event contract. Existing admin form stays on its current schema.
+        if (fields.userCreated === true) {
+          if (current.exists()) throw new Error('Event already exists.');
+          const validated = eventFields(fields);
+          const { startAtMillis, ...eventContent } = validated;
+          data = { ...data, ...eventContent, ownerId: draft.uid, moderationStatus: 'ACTIVE', visibilityStatus: 'PUBLIC',
+            startAt: Timestamp.fromMillis(startAtMillis), createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+            likesCount: 0, commentsCount: 0 };
+        }
+        if (draft.preview?.url) Object.assign(data, { mediaPreviewPath: draft.preview.path, mediaPreviewUrl: draft.preview.url });
         if (current.exists()) tx.update(target,data); else tx.set(target,data);
       }
       return { ...(current.exists() ? current.data() : {}), ...data, id: draft.contentId };
     }), 'Saving image metadata');
     if (draft.kind === 'story') return await confirmStory();
     if (draft.kind === 'profile') {
+      const oldPreview = before.data()?.photoPreviewPath;
+      if (typeof oldPreview === 'string' && oldPreview !== draft.preview?.path && oldPreview.startsWith(`avatars/${draft.uid}/`) && /^avatars\/[^/]+\/[a-zA-Z0-9_-]+\.(jpg|jpeg|png|webp)$/.test(oldPreview)) {
+        try { await wait(deleteObject(ref(deps.storage, oldPreview)), 'Previous preview cleanup'); } catch { /* Canonical replacement already saved. */ }
+      }
       const oldPath = before.data()?.photoPath;
       if (typeof oldPath === 'string' && oldPath !== draft.path && oldPath.startsWith(`avatars/${draft.uid}/`) && /^avatars\/[^/]+\/[^/]+\.(jpg|jpeg|png|webp)$/.test(oldPath)) {
         // Only after the canonical write; failure must not turn a saved photo into an upload error.

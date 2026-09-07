@@ -55,7 +55,57 @@ Investigation found the Firebase-managed Storage service account had its ordinar
 
 Added that one read-only role to `service-932995524964@gcp-sa-firebasestorage.iam.gserviceaccount.com`, the documented prerequisite for Storage's Firestore-backed authorization helpers. No user/group membership, general role or application collection/path permission was changed. Before-state and exact rollback target are recorded in `ops/media-rollout/service-agent-change.json`. [Firebase cross-service requirements](https://firebase.google.com/docs/storage/security/rules-conditions#enhance_with_cloud_firestore).
 
-Final live verification is pending the rerun. The probe `ops/media-rollout/production-smoke.ts` requires explicit live/project flags and tests through ordinary non-admin SDK accounts. IAM is used only to delete its own run-marked, newly created profile fixtures, with an update-time precondition; no existing account is impersonated.
+### Live results — completed 2026-09-07
+
+After IAM propagation, two separate normal-client probes passed (`media-rollout-fcbfe071-0148-4fbc-8d2a-bf9df4655b2e` and `media-rollout-93c95546-68c9-4293-8cf7-662249b11d08`):
+
+| Check | Verified result |
+| --- | --- |
+| Exact public Story query | Successful; no missing-index error |
+| Profile upload | Storage success, canonical users document updated, second user reads binary |
+| Story upload | Storage success, server-created document finalized active, exact 24-hour lifetime |
+| Indexed second-user Story visibility | Test Story present in the exact production query; direct record and binary reads succeed |
+| Fresh authenticated SDK instance | Profile reference and Story query survive a new sign-in/client instance |
+| Render URLs | Both return HTTP 200 and decode as the expected 120-by-120 synthetic PNG |
+| Cross-user Story edit | DENIED |
+| Cross-user profile photo edit | DENIED |
+| Cross-user Story-path upload | DENIED |
+| Owner changing Story moderation status | DENIED |
+
+The probe `ops/media-rollout/production-smoke.ts` requires explicit live/project flags and uses ordinary non-admin SDK accounts for all assertions. IAM is cleanup-only for its own run-marked newly created profiles, with an update-time precondition. No existing account was impersonated.
+
+### Actual browser UI checks
+
+Performed against the current app at `http://localhost:3000`, connected to live `hamrosathi1`. This is not a claim that the Vercel build, mobile or installed PWA were independently tested.
+
+- Guest Home displayed the test Story and retained it after a full page reload.
+- An uploaded avatar was verified in the DOM as complete with naturalWidth/naturalHeight 120.
+- Signed in normally through the profile-menu login form using disposable account A.
+- Story: actual file chooser selected `public/sathi-logo-circle.png`; typed the caption “Temporary UI rollout verification — Story picker”; clicked Publish Story. UI progressed through uploading and server confirmation, closed the composer, and added the Story to Home. Opening it displayed the exact caption in the Story viewer. Image presentation has the caveat below.
+- Profile: Settings → Account → actual Choose File → same logo → Upload profile photo. UI reported “Profile photo saved.” The canonical preview was complete, 1024 pixels wide, with computed opacity 1.
+- Refreshed the authenticated Settings page; the account and avatar elements reloaded. The final post-refresh natural-dimensions measurement and the additional UI-specific second-user verifier were interrupted. Do not conflate them with the successful separate fresh-client/second-user SDK checks above.
+
+### Cleanup
+
+All generated profile/Story documents and media were removed. The held browser probe exceeded Firebase's recent-login window before Auth deletion; cleanup was corrected to reauthenticate its own disposable accounts before deleting them.
+
+Recovery explicitly verified zero Story documents and absent profile documents for the two remaining generated UIDs, then deleted those two Auth accounts. Exact bucket-prefix inspection returned empty arrays (no continuation token) for both `avatars/` and `stories/` under:
+
+- `cKgwJPpVJDZ6PAn9n8a0W70KK2y2`
+- `afVDWdU438ZblsEPtGtVbNiotpG2`
+
+No existing user's data was removed. Deleted fixtures are disposable verification records; no recovery copy was retained. All earlier probe cleanups completed without errors.
+
+## Confirmed UI follow-ups — NOT fixed during this rollout
+
+1. **Loaded images can remain hidden.** Browser DOM inspection returned `complete: true, naturalWidth: 120, opacity: 0` for two Story-strip images while the header copy had opacity 1. `src/components/ui/SafeImage.tsx` resets loading in a src effect and hides the image while loading; a cached-load/reset race is a plausible cause, not yet isolated by a regression test. The Story viewer also showed its image-loading placeholder while the correct persisted caption was visible. Do not claim fully verified Story-image presentation.
+   - Proposed fix: make image readiness resilient to cached/already-complete images; test uncached load, cached mount, source replacement, errors and remount/refresh. Review whether the five-second Story advancement should wait for image readiness.
+   - Regression risk: shared component affects avatars, feeds and other media, so verify all fallback types.
+2. **Guest Story Sign In entry does not open login.** Clicking Your Story → Sign In closed the prompt without displaying authentication. The profile-menu Sign In / Register path worked. `AppContext.openAuthModal` dispatches `sathi_open_auth_modal`; verify the event consumer and connect the dialog entry consistently.
+   - Proposed fix: connect the existing auth-modal trigger; test the guest Story entry and profile-menu entry without duplicating auth state.
+   - Regression risk: shared auth prompts across features.
+
+Both need application-code approval. No React, styling or application service code was changed in this rollout.
 
 ## Preserved risks and limits
 

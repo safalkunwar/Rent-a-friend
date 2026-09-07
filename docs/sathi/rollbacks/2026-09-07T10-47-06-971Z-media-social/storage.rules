@@ -26,8 +26,7 @@ service firebase.storage {
       allow read: if (member() && request.auth.uid == uid) || mediaModerator() ||
         (firestore.get(/databases/(default)/documents/users/$(uid)).data.photoModerationStatus == 'ACTIVE' &&
          firestore.get(/databases/(default)/documents/users/$(uid)).data.photoVisibilityStatus == 'PUBLIC' &&
-         ('avatars/' + uid + '/' + filename in [firestore.get(/databases/(default)/documents/users/$(uid)).data.photoPath,
-           firestore.get(/databases/(default)/documents/users/$(uid)).data.get('photoPreviewPath','')]));
+         firestore.get(/databases/(default)/documents/users/$(uid)).data.photoPath == 'avatars/' + uid + '/' + filename);
       allow create: if ownedUpload(uid,'avatars') && image() && mediaFilename(filename) && request.resource.size <= 10 * 1024 * 1024 &&
         request.resource.metadata.contentId == uid && firestore.get(/databases/(default)/documents/users/$(uid)).data.get('photoModerationStatus','ACTIVE') == 'ACTIVE';
       allow delete: if (member() && request.auth.uid == uid) || mediaModerator();
@@ -37,25 +36,11 @@ service firebase.storage {
         (firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.moderationStatus == 'ACTIVE' &&
          firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.visibilityStatus == 'PUBLIC' &&
          firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.status == 'active' &&
-         ('stories/' + uid + '/' + filename in [firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.mediaPath,
-           firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.get('mediaPreviewPath','')]) &&
+         firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.mediaPath == 'stories/' + uid + '/' + filename &&
          firestore.get(/databases/(default)/documents/stories/$(resource.metadata.contentId)).data.expiresAt > request.time);
       allow create: if ownedUpload(uid,'stories') && image() && mediaFilename(filename) && request.resource.size <= 10 * 1024 * 1024 &&
         request.resource.metadata.contentId.matches('[a-zA-Z0-9_-]+') &&
         !firestore.exists(/databases/(default)/documents/stories/$(request.resource.metadata.contentId));
-      allow delete: if (member() && request.auth.uid == uid) || mediaModerator();
-    }
-    match /events/{uid}/{filename} {
-      allow read: if (member() && request.auth.uid == uid) || mediaModerator() ||
-        (firestore.get(/databases/(default)/documents/events/$(resource.metadata.contentId)).data.moderationStatus == 'ACTIVE' &&
-         firestore.get(/databases/(default)/documents/events/$(resource.metadata.contentId)).data.visibilityStatus == 'PUBLIC' &&
-         firestore.get(/databases/(default)/documents/events/$(resource.metadata.contentId)).data.mediaModerationStatus == 'ACTIVE' &&
-         firestore.get(/databases/(default)/documents/events/$(resource.metadata.contentId)).data.mediaVisibilityStatus == 'PUBLIC' &&
-         ('events/' + uid + '/' + filename in [firestore.get(/databases/(default)/documents/events/$(resource.metadata.contentId)).data.imagePath,
-           firestore.get(/databases/(default)/documents/events/$(resource.metadata.contentId)).data.get('mediaPreviewPath','')]));
-      allow create: if ownedUpload(uid,'events') && image() && mediaFilename(filename) && request.resource.size <= 10 * 1024 * 1024 &&
-        request.resource.metadata.contentId.matches('[a-zA-Z0-9_-]+') &&
-        !firestore.exists(/databases/(default)/documents/events/$(request.resource.metadata.contentId));
       allow delete: if (member() && request.auth.uid == uid) || mediaModerator();
     }
     // Preserve the active production deny-all policy for every other path.

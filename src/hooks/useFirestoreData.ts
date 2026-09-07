@@ -19,6 +19,7 @@ export interface PaginationState {
 }
 const inflightPages = new Map<string, Promise<PageResult<unknown>>>();
 const EMPTY_QUERY: QueryOptions = {};
+const PUBLIC_EVENTS_QUERY: QueryOptions = { where: [{ field: 'moderationStatus', operator: '==', value: 'ACTIVE' }, { field: 'visibilityStatus', operator: '==', value: 'PUBLIC' }] };
 const POSTS_QUERY: QueryOptions = { where: [{ field: 'status', operator: '==', value: 'published' }] };
 
 const fetchPage = <T extends { id: string }>(
@@ -109,7 +110,7 @@ export const useActivities = () => {
   return { activities: items, ...state };
 };
 export const useEvents = () => {
-  const { items, ...state } = usePaginatedCollection<Event>('events', 10, EMPTY_QUERY);
+  const { items, ...state } = usePaginatedCollection<Event>('events', 10, PUBLIC_EVENTS_QUERY);
   const events = useMemo(() => items.map(event => ({ ...event, imageUrl: visibleEventImage(event), image: visibleEventImage(event) })), [items]);
   return { events, ...state };
 };
