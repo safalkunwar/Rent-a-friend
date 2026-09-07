@@ -6,6 +6,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Timestamp } from 'firebase/firestore';
 import { CompanionProfileModal } from './components/modals/CompanionProfileModal';
 import { AuthModal } from './components/AuthModal';
 import { MessagesTab } from './components/messages/MessagesTab';
@@ -29,6 +30,7 @@ import { Companion, ExperienceStory, Activity, Event as SathiEvent } from './typ
 import { socialRepository } from './repositories/SocialRepository';
 import { visibleStory } from './services/mediaContract';
 import { CreateStoryModal } from './components/modals/CreateStoryModal';
+import { Modal } from './components/ui/Modal';
 import { 
   MapPin, Star, ShieldCheck, Languages, Search, Play, Clock, 
   Home, Compass, Users, Calendar, MessageSquare, BookOpen, Heart, 
@@ -54,6 +56,19 @@ import { firestore } from './services/firestore';
 interface ClientAppProps {
   initialTab?: 'home' | 'explore' | 'companions' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings';
 }
+
+const formatStoryTimeAgo = (value?: string | Timestamp | null, now = Date.now()): string => {
+  if (!value) return 'Now';
+  const date = value instanceof Timestamp ? value.toDate() : new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Now';
+  const seconds = Math.max(0, Math.floor((now - date.getTime()) / 1000));
+  if (seconds < 60) return 'Now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr${hours === 1 ? '' : 's'}`;
+  return `${Math.floor(hours / 24)}d`;
+};
 
 export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const navigate = useNavigate();
@@ -134,8 +149,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const storyRequest = useRef(0);
   const openVisibleStory = useCallback(async (story: ExperienceStory | null) => {
     const request = ++storyRequest.current;
-    setViewingStory(null);
-    if (!story) return;
+    if (!story) {
+      setViewingStory(null);
+      return;
+    }
     try {
       const current = await socialRepository.getVisibleStory(story.id);
       if (request === storyRequest.current) {
@@ -150,7 +167,16 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   },[fetchedStories,viewingStory,openVisibleStory]);
   const [joinedEvents, setJoinedEvents] = useState<Record<string, boolean>>({});
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
+  const [showDeleteStoryConfirm, setShowDeleteStoryConfirm] = useState(false);
+  const [isDeletingStory, setIsDeletingStory] = useState(false);
   const storyReaction = useFeedReaction('story', viewingStory?.id ?? '', viewingStory?.likesCount ?? viewingStory?.likes ?? 0);
+  const [storyNow, setStoryNow] = useState(Date.now());
+  useEffect(() => {
+    if (!viewingStory) return;
+    setStoryNow(Date.now());
+    const id = window.setInterval(() => setStoryNow(Date.now()), 30000);
+    return () => window.clearInterval(id);
+  }, [viewingStory]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -3094,30 +3120,23 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 <SafeImage src={viewingStory.userId === currentUser?.id ? currentUser.avatar : viewingStory.userAvatar} className="w-9 h-9 rounded-full border border-primary-action object-cover" alt={viewingStory.userName} fallbackType="avatar" textForInitials={viewingStory.userName} />
                 <div>
                   <span className="text-text-primary font-bold text-xs block leading-tight">{viewingStory.userName}</span>
-                  <span className="text-text-secondary text-[9px]">with {viewingStory.companionName || 'SATHI'} • {viewingStory.timeAgo || 'Recently'}</span>
+                  <span className="text-text-secondary text-[9px]">with {viewingStory.companionName || 'SATHI'} • {formatStoryTimeAgo(viewingStory.createdAt, storyNow)}</span>
                 </div>
               </div>
               
               <div className="flex items-center gap-2">
-                {currentUser && currentUser.id === viewingStory.userId && (
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      try {
-                        await socialRepository.deleteStory(viewingStory.id);
-                        removeStory(viewingStory.id);
-                        showToast('Story deleted', 'success');
-                        setViewingStory(null);
-                      } catch (err) {
-                        showToast('Failed to delete story', 'error');
-                      }
-                    }}
-                    className="text-text-primary/80 hover:text-red-500 bg-black/40 rounded-full w-7 h-7 flex items-center justify-center backdrop-blur-sm"
-                    title="Delete Story"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                 {currentUser && currentUser.id === viewingStory.userId && (
+                   <button
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       setShowDeleteStoryConfirm(true);
+                     }}
+                     className="text-text-primary/80 hover:text-red-500 bg-black/40 rounded-full w-7 h-7 flex items-center justify-center backdrop-blur-sm"
+                     title="Delete Story"
+                   >
+                     <Trash2 className="w-3.5 h-3.5" />
+                   </button>
+                 )}
                 <button onClick={() => setViewingStory(null)} className="text-text-primary bg-black/40 rounded-full w-7 h-7 flex items-center justify-center backdrop-blur-sm hover:bg-black/60">✕</button>
               </div>
             </div>
@@ -3177,6 +3196,45 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           </div>
         </div>
       )}
+
+      {/* Delete Story Confirmation */}
+      <Modal isOpen={showDeleteStoryConfirm} onClose={() => !isDeletingStory && setShowDeleteStoryConfirm(false)} title="Delete Story?">
+        <div className="space-y-4">
+          <p className="text-sm text-text-secondary">Are you sure you want to delete this story? This action cannot be undone.</p>
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setShowDeleteStoryConfirm(false)}
+              disabled={isDeletingStory}
+              className="px-4 py-2 rounded-xl text-sm font-semibold bg-surface-elevated border border-border-token text-text-primary hover:bg-surface disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!viewingStory || isDeletingStory) return;
+                setIsDeletingStory(true);
+                try {
+                  await socialRepository.deleteStory(viewingStory.id);
+                  removeStory(viewingStory.id);
+                  showToast('Story deleted', 'success');
+                  setViewingStory(null);
+                  setShowDeleteStoryConfirm(false);
+                } catch (err) {
+                  showToast('Failed to delete story', 'error');
+                } finally {
+                  setIsDeletingStory(false);
+                }
+              }}
+              disabled={isDeletingStory}
+              className="px-4 py-2 rounded-xl text-sm font-semibold bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
+            >
+              {isDeletingStory ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Wallet Active Balance Overlay Modal */}
       <AnimatePresence>
