@@ -72,7 +72,7 @@ test('moderator restricts and restores Story; public query excludes restricted a
   await env.withSecurityRulesDisabled(async context=>{await updateDoc(doc(context.firestore(),'stories',draft.contentId),{expiresAt:Timestamp.fromMillis(0)});});
   assert.equal((await visible()).size,0);
 });
-test('normal users cannot create event media; anonymous and malformed media uploads denied by rules',async()=>{
+test('normal users cannot use the legacy admin Event publication path; anonymous and malformed media uploads denied',async()=>{
   await assert.rejects(saveMedia(deps('A'),createMediaDraft('event','A',image()),{title:'forged'}));
   const metadata={contentType:'image/jpeg',customMetadata:{ownerUid:'A',category:'stories',contentId:'s'}};
   await assertFails(uploadBytes(ref(deps('B').storage,'stories/A/s.jpg'),image(),metadata));
@@ -152,7 +152,8 @@ test('restricted and removed photo/Story cannot be restored by owner or legacy p
   await updateDoc(doc(a.db,'users/A'),{name:'Ordinary edit remains allowed'});
 });
 test('unrelated Storage paths remain denied even for admin',async()=>{
-  for(const category of ['posts','events','kyc','private','public','activities','verification','admin','unknown']){
+  // Events are now an explicitly authorized media branch, covered by media-social-gate.
+  for(const category of ['posts','kyc','private','public','activities','verification','admin','unknown']){
     for(const actor of [deps('A'),deps('root','super_admin')]){
       await assertFails(uploadBytes(ref(actor.storage,category+'/A/probe.jpg'),image(),{
         contentType:'image/jpeg',customMetadata:{ownerUid:'A',category,contentId:'probe'}

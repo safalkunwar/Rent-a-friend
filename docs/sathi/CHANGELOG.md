@@ -13,6 +13,21 @@
 - **Known issues:** Live acceptance and rollout still pending at entry creation. Backend counts are asynchronous; no 10k-concurrency or physical-device claim. Existing large bundle warning remains.
 - **Next recommended task:** Complete scoped production release, verify two-user live flows, record results and remove disposable fixtures.
 
+### Release verification follow-up
+- **Task:** Complete the approved rollout and record evidence.
+- **Objective:** Reopen scoped interactions only with active handlers and verify real production persistence.
+- **Files changed:** MEDIA_SOCIAL_RELEASE_RESULT.md; production-media-gate.test.ts (remove obsolete Events-as-unrelated expectation); this changelog.
+- **Architecture changes:** None beyond the release above.
+- **Firebase changes:** Final scoped Firestore/Storage rules deployed and read back exactly; temporary pause removed; seven media functions ACTIVE; newly obsolete onStoryComment removed. Required indexes READY; App Check enforcement remains off.
+- **UI changes:** Released likes-only Story UI through existing GitHub/Vercel integration.
+- **Security implications:** Live cross-user profile/Story and moderation writes denied; Story comment writes denied. App Check browser 403 is an unresolved enforcement prerequisite.
+- **Performance implications:** No new changes. CLI warns registry build-image cleanup failed; no broad registry purge attempted.
+- **Tests performed:** 251 main tests; 8 media-social emulator tests; 13 additional media-gate tests; 2 scope checks; TypeScript/build. Two-user live SDK acceptance passed. Exact release-build browser double tap confirmed animation, persisted like after refresh, and repeat-tap idempotency against production Firebase.
+- **Known issues:** Existing production PWA/browser retained an older cached asset despite reload; direct HTTP serves the new build. App Check 403, physical-device QA and live scheduled expiry acceptance remain open. Full results and evidence limits are in MEDIA_SOCIAL_RELEASE_RESULT.md.
+- **Next recommended task:** Resolve App Check attestation and verify PWA upgrade delivery without weakening protections.
+
+Cleanup follow-up: added `ops/media-rollout/cleanup-acceptance-run.mjs`, an exact-run, inspect-by-default recovery script with identity/ownership/path/generation checks. Removed interrupted acceptance-test leftovers only. Read-only verification returned no remaining target documents, objects, profiles or Auth accounts. Script syntax check and `git diff --check` passed. No application or rules changes in this cleanup follow-up.
+
 Every development session (human or AI) MUST append an entry here.
 
 Entry format (all fields mandatory):
