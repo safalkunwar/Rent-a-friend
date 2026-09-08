@@ -28,7 +28,8 @@ describe('media social contracts', () => {
     await expect(optimizeImage(file,'story')).rejects.toThrow('content');
   });
   it('uses safe exact document routes and opens comment context', () => {
-    expect(notificationTarget({targetType:'story',targetId:'abc_1',commentId:'c'})).toBe('/story/abc_1?comments=1');
+    expect(notificationTarget({targetType:'story',targetId:'abc_1',commentId:'c'})).toBe('/story/abc_1');
+    expect(notificationTarget({targetType:'event',targetId:'abc_1',commentId:'c'})).toBe('/event/abc_1?comments=1');
     expect(notificationTarget({targetType:'event',targetId:'xyz'})).toBe('/event/xyz');
     expect(notificationTarget({targetType:'event',targetId:'../admin'})).toBeNull();
     expect(notificationTarget({targetType:'https://attacker.test',targetId:'x'})).toBeNull();

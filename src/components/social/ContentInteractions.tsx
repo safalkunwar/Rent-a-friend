@@ -5,7 +5,7 @@ import { useAppContext } from '../../context/AppContext';
 
 export function ContentInteractions(props: { kind: InteractionTarget; id: string; openComments?: boolean }) {
   const { currentUser } = useAppContext();
-  return <InteractionSession key={`${props.kind}:${props.id}:${currentUser?.id ?? 'guest'}`} {...props} />;
+  return props.kind === 'story' ? null : <InteractionSession key={`${props.kind}:${props.id}:${currentUser?.id ?? 'guest'}`} {...props} />;
 }
 function InteractionSession({ kind, id, openComments = false }: { kind: InteractionTarget; id: string; openComments?: boolean }) {
   const { currentUser, openAuthModal } = useAppContext();

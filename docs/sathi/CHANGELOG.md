@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-08 — Stories likes-only and coordinated media rollout
+- **Task:** Resume production media release; replace Story comments with double-tap likes.
+- **Objective:** Consistent persisted Story likes and confirmation animation without comments; preserve Event comments.
+- **Files changed:** StoryLikeSurface; ClientApp; social ContentDetail/ContentInteractions/FeedSocialCards/SocialPostCard; index.css; contentInteractions; notificationTarget; mediaSocial functions/exports; scoped rollout rules/index definitions/API/smoke test; gesture/contract/emulator tests; this changelog.
+- **Architecture changes:** Shared pointer gesture across feed, owner viewer and direct Story routes; double tap sets liked=true and never toggles unlike. Existing authenticated reaction service remains authoritative. Delayed single-tap navigation prevents swallowing the second tap.
+- **Firebase changes:** Candidate rejects Story comment creation/update; remove only newly introduced onStoryComment handler. Historical comments remain; unused deployed comment index retained pending deliberate cleanup. Seven remaining media functions previously verified ACTIVE; required indexes READY. Final deployment results recorded in rollout report.
+- **UI changes:** No Story comments controls. Confirmed heart pop/fade, reduced-motion support, accessible heart toggle and explicit previous/next controls.
+- **Security implications:** No unrelated rule branches changed (2 scope checks passed); no CORS changes or App Check enforcement changes. Cross-user and moderation-denial emulator checks pass.
+- **Performance implications:** No new listeners; constant-size pointer state and per-gesture timer; no speculative reads on a single tap.
+- **Tests performed:** Eight Firebase/Storage emulator integration cases pass, including Story comment denial and three deduplicated notifications. Gesture tests pass. Main/backend TypeScript and production/PWA build pass. Full suite rerun after updating obsolete Story-comment deep-link expectation; see final rollout report for result.
+- **Known issues:** Live acceptance and rollout still pending at entry creation. Backend counts are asynchronous; no 10k-concurrency or physical-device claim. Existing large bundle warning remains.
+- **Next recommended task:** Complete scoped production release, verify two-user live flows, record results and remove disposable fixtures.
+
 Every development session (human or AI) MUST append an entry here.
 
 Entry format (all fields mandatory):

@@ -6,7 +6,7 @@ import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 
 admin.initializeApp();
-export { onStoryLike, onStoryComment, onEventLike, onEventComment, cleanupExpiredStories, onStoryDeletedMedia, onMediaUploadFinalized, cleanupMediaOrphans } from './mediaSocial';
+export { onStoryLike, onEventLike, onEventComment, cleanupExpiredStories, onStoryDeletedMedia, onMediaUploadFinalized, cleanupMediaOrphans } from './mediaSocial';
 
 setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 

@@ -16,6 +16,7 @@ import { SettingsTab } from './components/settings/SettingsTab';
 import { SafetyWidget } from './components/SafetyWidget';
 import { CommunityFeed } from './components/social/CommunityFeed';
 import { FeedStoryCard, FeedPostCard } from './components/social/FeedSocialCards';
+import { StoryLikeSurface } from './components/social/StoryLikeSurface';
 import { DiscoveryFeed } from './components/discovery/DiscoveryFeed';
 import { DiscoveryPageControl } from './components/discovery/DiscoveryPageControl';
 import { filterCompanions, homeSourceError, searchText } from './services/discoverySearch';
@@ -3182,9 +3183,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </div>
             </div>
 
-            {/* Nav click zones */}
-            <div className="absolute inset-y-20 left-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); const idx = ownerStories.findIndex(s => s.id === viewingStory.id); if (idx > 0) void openVisibleStory(ownerStories[idx - 1]); }}></div>
-            <div className="absolute inset-y-20 right-0 w-1/3 cursor-pointer" onClick={(e) => { e.stopPropagation(); void nextOwnerStory(); }}></div>
+            <div className="absolute inset-y-20 inset-x-0"><StoryLikeSurface key={viewingStory.id} className="h-full w-full" onLike={() => storyReaction.setLiked(true)} /></div>
+            <button aria-label="Previous Story" className="absolute left-2 top-1/2 z-30 p-2 rounded-full bg-black/40 text-white" onClick={() => { const idx = ownerStories.findIndex(s => s.id === viewingStory.id); if (idx > 0) void openVisibleStory(ownerStories[idx - 1]); }}>‹</button>
+            <button aria-label="Next Story" className="absolute right-2 top-1/2 z-30 p-2 rounded-full bg-black/40 text-white" onClick={() => { void nextOwnerStory(); }}>›</button>
 
             {/* Bottom story details */}
             <div className="absolute bottom-6 inset-x-0 p-5 flex flex-col justify-end text-left space-y-3 z-10">
@@ -3204,7 +3205,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 </button>
               </div>
               {storyReaction.error && <p role="alert" className="text-xs text-text-secondary">{storyReaction.error} <button onClick={() => { void storyReaction.refresh(); }} className="text-primary-action">Refresh likes</button></p>}
-              <button onClick={() => { setViewingStory(null); navigate(`/story/${viewingStory.id}?comments=1`); }}>View comments</button>
+              <p className="text-xs text-text-secondary">Double tap the photo to like</p>
               
               <div className="flex gap-1">
                 {ownerStories.map((s, idx) => {

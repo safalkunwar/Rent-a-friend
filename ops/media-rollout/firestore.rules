@@ -476,7 +476,7 @@ service cloud.firestore {
     match /story_comments/{commentId} {
       allow get: if sathiMediaMember() && !exists(/databases/$(database)/documents/story_comments/$(commentId));
       allow read: if sathiInteractionVisible('stories',resource.data.storyId) || sathiMediaModerator();
-      allow create: if sathiCommentCreate('stories','storyId');
+      allow create, update: if false; // Stories are likes-only; historical documents retained.
       allow delete: if sathiMediaOwn(resource.data.userId) || sathiMediaModerator();
     }
     match /event_comments/{commentId} {

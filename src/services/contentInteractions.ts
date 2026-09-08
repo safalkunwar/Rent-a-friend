@@ -22,6 +22,7 @@ export const contentInteractions = {
     });
   },
   async comment(kind: InteractionTarget, id: string, text: string, commentId: string) {
+    if (kind === 'story') throw new Error('Stories support likes only.');
     const uid = requireUid();
     const trimmed = text.trim();
     if (!trimmed || trimmed.length > 500) throw new Error('Comments must contain 1–500 characters.');
@@ -37,6 +38,7 @@ export const contentInteractions = {
     });
   },
   async comments(kind: InteractionTarget, id: string, cursor?: QueryDocumentSnapshot) {
+    if (kind === 'story') throw new Error('Stories support likes only.');
     if (!db) throw new Error('Comments unavailable.');
     const result = await getDocsFromServer(query(collection(db, interactionCollection(kind, 'comments')),
       where(targetField(kind), '==', id), orderBy('createdAt', 'desc'), ...(cursor ? [startAfter(cursor)] : []), limit(20)));

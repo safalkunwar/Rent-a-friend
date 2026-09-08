@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { StoryLikeSurface } from './StoryLikeSurface';
 import { ExperienceStory, CommunityPost } from '../../types';
 import { SafeImage } from '../ui/SafeImage';
 import { ExpandableText } from './ExpandableText';
@@ -86,6 +87,9 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
     if (images.length === 0) return null;
 
     if (images.length === 1) {
+      if (isStory) return <StoryLikeSurface key={post.id} className="aspect-[4/3] w-full bg-surface-elevated cursor-pointer" onLike={() => reaction.setLiked(true)} onSingleTap={() => openViewer(0)}>
+        <SafeImage src={storyPost?.mediaPreviewUrl || images[0]} className="w-full h-full object-cover pointer-events-none" alt={caption} />
+      </StoryLikeSurface>;
       return (
         <div className="relative aspect-[4/3] w-full bg-surface-elevated cursor-pointer" onClick={() => openViewer(0)}>
           <SafeImage src={storyPost?.mediaPreviewUrl || images[0]} className="w-full h-full object-cover" alt={caption} />
@@ -201,7 +205,7 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
               <Heart className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
               <span>{likes}</span>
             </button>
-            <button
+            {!isStory && <button
               onClick={(e) => void handleCommentClick(e)}
               disabled={!onToggleComments}
               aria-label={onToggleComments ? 'Comments' : 'Story comments unavailable'}
@@ -210,7 +214,7 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
             >
               <MessageCircle className="w-5 h-5" />
               <span>{comments}</span>
-            </button>
+            </button>}
             <button
               onClick={handleShare}
               disabled={isStory}

@@ -10,6 +10,7 @@ type Kind = 'story' | 'event';
 
 /** Reconcile against CURRENT source, not delivery order. A transaction receipt makes retries harmless. */
 export async function reconcileInteraction(kind: Kind, action: 'likes' | 'comments', sourceId: string, targetId: string, actorId: string) {
+  if (kind === 'story' && action === 'comments') return;
   const sourcePath = `${kind}_${action}/${sourceId}`;
   const source = db().doc(sourcePath);
   const target = db().doc(`${kind === 'story' ? 'stories' : 'events'}/${targetId}`);
@@ -55,7 +56,6 @@ function interaction(kind: Kind, action: 'likes' | 'comments') {
   });
 }
 export const onStoryLike = interaction('story', 'likes');
-export const onStoryComment = interaction('story', 'comments');
 export const onEventLike = interaction('event', 'likes');
 export const onEventComment = interaction('event', 'comments');
 

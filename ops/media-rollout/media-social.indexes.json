@@ -13,10 +13,6 @@
       { "fieldPath": "visibilityStatus", "order": "ASCENDING" },
       { "fieldPath": "__name__", "order": "ASCENDING" }
     ]},
-    { "collectionGroup": "story_comments", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "storyId", "order": "ASCENDING" },
-      { "fieldPath": "createdAt", "order": "DESCENDING" }
-    ]},
     { "collectionGroup": "event_comments", "queryScope": "COLLECTION", "fields": [
       { "fieldPath": "eventId", "order": "ASCENDING" },
       { "fieldPath": "createdAt", "order": "DESCENDING" }

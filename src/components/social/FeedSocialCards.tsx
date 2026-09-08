@@ -16,7 +16,6 @@ export const FeedStoryCard: React.FC<FeedSocialCardProps & { story: ExperienceSt
   return (
     <div className="max-w-2xl mx-auto">
       <SocialPostCard post={story} type="story" reaction={reaction}
-        onToggleComments={() => navigate(`/story/${story.id}?comments=1`)}
         onOpenMediaViewer={() => navigate(`/story/${story.id}`)} onFeedback={onToast} />
     </div>
   );

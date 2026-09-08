@@ -5,6 +5,23 @@ import { visibleStory, mediaTime } from '../../services/mediaContract';
 import { ContentInteractions } from './ContentInteractions';
 import { SafeImage } from '../ui/SafeImage';
 import type { ExperienceStory } from '../../types';
+import { StoryLikeSurface } from './StoryLikeSurface';
+import { useFeedReaction } from '../../hooks/useFeedReaction';
+import { Heart } from 'lucide-react';
+
+function StoryDetailMedia({ data, id }: { data: Record<string, any>; id: string }) {
+  const reaction = useFeedReaction('story', id, data.likesCount ?? data.likes ?? 0);
+  return <>
+    <StoryLikeSurface onLike={() => reaction.setLiked(true)}>
+      <SafeImage src={data.imageUrl} alt={data.caption || 'Story'} className="w-full max-h-[55vh] object-contain pointer-events-none" />
+    </StoryLikeSurface>
+    <p className="text-xs text-text-secondary">Double tap the photo to like</p>
+    <button aria-label={reaction.liked ? 'Unlike Story' : 'Like Story'} aria-pressed={reaction.liked} disabled={reaction.busy || !!reaction.error} onClick={() => { void reaction.setLiked(!reaction.liked); }} className="flex items-center gap-2">
+      <Heart className={reaction.liked ? 'fill-rose-500 text-rose-500' : ''} />{reaction.count}
+    </button>
+    {reaction.error && <p role="alert">{reaction.error} <button onClick={() => { void reaction.refresh(); }}>Refresh likes</button></p>}
+  </>;
+}
 
 export function ContentDetail({ kind, id, onClose, comments }: { kind: 'story' | 'event'; id: string; comments: boolean; onClose: () => void }) {
   const [data, setData] = useState<Record<string, any> | null>(null), [loading, setLoading] = useState(true);
@@ -31,10 +48,10 @@ export function ContentDetail({ kind, id, onClose, comments }: { kind: 'story' |
       <button onClick={onClose}>Close</button>
       {loading ? <p>Loading…</p> : !data ? <p>This content is no longer available.</p> : <>
         <h2 className="font-bold">{data.title || data.userName}</h2>
-        <SafeImage src={kind === 'story' || (data.mediaModerationStatus === 'ACTIVE' && data.mediaVisibilityStatus === 'PUBLIC') ? data.imageUrl : ''} alt={data.title || 'Story'} className="w-full max-h-[55vh] object-contain" />
+        {kind === 'story' ? <StoryDetailMedia key={id} data={data} id={id} /> : <SafeImage src={data.mediaModerationStatus === 'ACTIVE' && data.mediaVisibilityStatus === 'PUBLIC' ? data.imageUrl : ''} alt={data.title || 'Event'} className="w-full max-h-[55vh] object-contain" />}
         <p className="break-words">{data.caption || data.description}</p>
         {kind === 'event' && <p>{data.date} {data.time} (Nepal time) · {data.location}</p>}
-        <ContentInteractions kind={kind} id={id} openComments={comments} />
+        {kind === 'event' && <ContentInteractions kind="event" id={id} openComments={comments} />}
       </>}
     </div>
   </div>;

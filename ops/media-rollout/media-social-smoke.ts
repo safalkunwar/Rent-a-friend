@@ -54,20 +54,24 @@ try {
   assert.equal((await getDocFromServer(doc(b.db,'events',event.contentId))).data()?.ownerId,a.uid);
   for(const [kind,id] of [['story',first.contentId],['event',event.contentId]] as const) {
     for(const action of ['likes','comments'] as const) {
+      if(kind==='story' && action==='comments') {
+        await assert.rejects(setDoc(doc(b.db,'story_comments',randomUUID()),{userId:b.uid,storyId:id,text:'Not supported',createdAt:serverTimestamp()}));
+        continue;
+      }
       const identity=action==='likes'?`${b.uid}_${id}`:randomUUID();
       interactions.push({collection:`${kind}_${action}`,id:identity});
       await setDoc(doc(b.db,`${kind}_${action}`,identity),{userId:b.uid,[`${kind}Id`]:id,createdAt:serverTimestamp(),...(action==='comments'?{text:'Production acceptance comment'}:{})});
     }
-    await getDocsFromServer(query(collection(b.db,`${kind}_comments`),where(`${kind}Id`,'==',id),orderBy('createdAt','desc'),limit(20)));
+    if(kind==='event') await getDocsFromServer(query(collection(b.db,'event_comments'),where('eventId','==',id),orderBy('createdAt','desc'),limit(20)));
   }
   let notifications:any[]=[];
   for(let attempt=0;attempt<24;attempt++) {
     notifications=(await getDocsFromServer(query(collection(a.db,'notifications'),where('userId','==',a.uid),orderBy('timestamp','desc'),limit(20)))).docs;
-    if(notifications.length===4) break;
+    if(notifications.length===3) break;
     await pause(5000);
   }
-  assert.equal(notifications.length,4,'Four backend notifications must arrive');
-  assert.deepEqual(notifications.map(item=>item.data().type).sort(),['EVENT_COMMENT','EVENT_LIKE','STORY_COMMENT','STORY_LIKE']);
+  assert.equal(notifications.length,3,'Three backend notifications must arrive');
+  assert.deepEqual(notifications.map(item=>item.data().type).sort(),['EVENT_COMMENT','EVENT_LIKE','STORY_LIKE']);
   for(const note of notifications) {
     assert.ok([first.contentId,event.contentId].includes(note.data().targetId));
     await updateDoc(doc(a.db,'notifications',note.id),{isRead:true});
@@ -77,7 +81,7 @@ try {
   await assert.rejects(updateDoc(doc(a.db,'stories',first.contentId),{moderationStatus:'REMOVED'}),{code:'permission-denied'});
   await signInWithEmailAndPassword(a.auth,a.email,password);
   assert.equal((await getDocFromServer(doc(a.db,'users',a.uid))).data()?.photoPath,avatar.path);
-  console.log(JSON.stringify({run,result:'LIVE SDK ACCEPTANCE PASSED',accounts:accounts.map(({email,uid})=>({email,uid})),storyIds:[first.contentId,second.contentId],eventId:event.contentId,notifications:4,profileBytes:(await getMetadata(ref(a.storage,avatar.path))).size,profilePreviewBytes:(await getMetadata(ref(a.storage,avatar.preview!.path))).size}));
+  console.log(JSON.stringify({run,result:'LIVE SDK ACCEPTANCE PASSED',accounts:accounts.map(({email,uid})=>({email,uid})),storyIds:[first.contentId,second.contentId],eventId:event.contentId,notifications:3,profileBytes:(await getMetadata(ref(a.storage,avatar.path))).size,profilePreviewBytes:(await getMetadata(ref(a.storage,avatar.preview!.path))).size}));
   if(process.env.SATHI_MEDIA_UI_HOLD==='1') {
     console.log('UI fixtures held for at most 10 minutes; send any input to clean up.');
     await Promise.race([pause(600000),new Promise(resolve=>process.stdin.once('data',resolve))]);

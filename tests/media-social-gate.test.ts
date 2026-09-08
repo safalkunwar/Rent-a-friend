@@ -57,10 +57,14 @@ test('protected moderation/counters cannot be changed; restricted content cannot
   await assertFails(updateDoc(doc(a.db,'stories',story.contentId),{moderationStatus:'ACTIVE'}));
   await assertFails(setDoc(doc(deps('B').db,'story_likes',`B_${story.contentId}`),{userId:'B',storyId:story.contentId,createdAt:serverTimestamp()}));
 });
-test('four real interactions generate four owner-only notifications; replay and unlike/re-like do not duplicate',async()=>{
+test('three real interactions generate owner-only notifications; Story comments denied and retries deduplicated',async()=>{
   const {story,event}=await content(), b=deps('B');
   for(const [kind,id] of [['story',story.contentId],['event',event.contentId]] as const) {
     for(const action of ['likes','comments'] as const) {
+      if (kind === 'story' && action === 'comments') {
+        await assertFails(setDoc(doc(b.db,'story_comments','disabled'),{userId:'B',storyId:id,text:'Not supported',createdAt:serverTimestamp()}));
+        continue;
+      }
       const identity=action==='likes'?`B_${id}`:`comment_${kind}`;
       const data={userId:'B',[`${kind}Id`]:id,createdAt:serverTimestamp(),...(action==='comments'?{text:'Genuine comment'}:{})};
       await setDoc(doc(b.db,`${kind}_${action}`,identity),data);
@@ -72,15 +76,15 @@ test('four real interactions generate four owner-only notifications; replay and 
     }
   }
   const notes=await getDocsFromServer(query(collection(deps('A').db,'notifications'),where('userId','==','A')));
-  assert.equal(notes.size,4);
-  assert.deepEqual(notes.docs.map(d=>d.data().type).sort(),['EVENT_COMMENT','EVENT_LIKE','STORY_COMMENT','STORY_LIKE']);
+  assert.equal(notes.size,3);
+  assert.deepEqual(notes.docs.map(d=>d.data().type).sort(),['EVENT_COMMENT','EVENT_LIKE','STORY_LIKE']);
   for(const note of notes.docs) {
     await assertFails(getDocFromServer(doc(b.db,'notifications',note.id)));
     await assertFails(updateDoc(doc(deps('A').db,'notifications',note.id),{targetId:'forged'}));
     await updateDoc(doc(deps('A').db,'notifications',note.id),{isRead:true});
   }
   for(const [collection,id] of [['stories',story.contentId],['events',event.contentId]]) {
-    const parent=(await admin.firestore().doc(`${collection}/${id}`).get()).data(); assert.equal(parent.likesCount,1); assert.equal(parent.commentsCount,1);
+    const parent=(await admin.firestore().doc(`${collection}/${id}`).get()).data(); assert.equal(parent.likesCount,1); assert.equal(parent.commentsCount,collection === 'stories' ? 0 : 1);
   }
 });
 test('self interaction produces no notification; clients cannot forge media notifications',async()=>{
