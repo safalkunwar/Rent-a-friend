@@ -193,6 +193,10 @@ export interface Activity {
 }
 
 export interface Event {
+  ownerId?: string;
+  status?: 'ACTIVE' | 'DELETED';
+  participationVersion?: 1;
+  participantCount?: number;
   mediaPreviewPath?: string;
   mediaPreviewUrl?: string;
   id: string;

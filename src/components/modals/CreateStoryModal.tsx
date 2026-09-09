@@ -31,7 +31,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
 
   if (!currentUser) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="story-composer-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="bg-surface border border-border-token rounded-[32px] w-full max-w-sm p-6 text-center space-y-4">
           <Sparkles className="w-10 h-10 text-primary-action mx-auto" />
           <h3 className="text-lg font-bold text-text-primary">Sign In to Share Your Moment</h3>
@@ -93,14 +93,14 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <div className="bg-surface border border-border-token rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
+    <div className="story-composer-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="story-composer-panel bg-surface border border-border-token rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-border-token flex justify-between items-center bg-background">
           <h3 className="text-sm font-extrabold text-text-primary flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary-action" /> Share Story Moment
           </h3>
-          <button disabled={submitting} onClick={onClose} className="text-text-secondary hover:text-text-primary transition-all">
+          <button disabled={submitting} onClick={onClose} className="story-composer-close text-text-secondary hover:text-text-primary transition-all">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -119,8 +119,8 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               Select Photo
             </label>
             {imagePreview ? (
-              <div className="relative aspect-[9/12] w-full rounded-2xl overflow-hidden bg-black/50 border border-border-token">
-                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+              <div className="story-composer-preview relative aspect-[9/12] w-full rounded-2xl overflow-hidden border border-border-token">
+                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover lg:object-contain" />
                 <button
                   type="button"
                   disabled={submitting}

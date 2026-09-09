@@ -8,6 +8,7 @@ import type { ExperienceStory } from '../../types';
 import { StoryLikeSurface } from './StoryLikeSurface';
 import { useFeedReaction } from '../../hooks/useFeedReaction';
 import { Heart } from 'lucide-react';
+import { EventActions } from '../events/EventActions';
 
 function StoryDetailMedia({ data, id }: { data: Record<string, any>; id: string }) {
   const reaction = useFeedReaction('story', id, data.likesCount ?? data.likes ?? 0);
@@ -25,9 +26,11 @@ function StoryDetailMedia({ data, id }: { data: Record<string, any>; id: string 
 
 export function ContentDetail({ kind, id, onClose, comments }: { kind: 'story' | 'event'; id: string; comments: boolean; onClose: () => void }) {
   const [data, setData] = useState<Record<string, any> | null>(null), [loading, setLoading] = useState(true);
+  const [eventDeleted, setEventDeleted] = useState<string | null>(null);
   useEffect(() => {
     let active = true, timer: ReturnType<typeof setTimeout>;
     setLoading(true); setData(null);
+    if (kind === 'event') setEventDeleted(null);
     const read = async () => {
       try {
         if (!db) throw new Error('Unavailable');
@@ -46,11 +49,12 @@ export function ContentDetail({ kind, id, onClose, comments }: { kind: 'story' |
   return <div role="dialog" aria-modal="true" aria-label={`${kind} detail`} className="fixed inset-0 z-[45] bg-black/80 p-4 flex items-center justify-center">
     <div className="bg-surface text-text-primary rounded-2xl p-5 w-full max-w-lg max-h-[90vh] overflow-auto space-y-4">
       <button onClick={onClose}>Close</button>
-      {loading ? <p>Loading…</p> : !data ? <p>This content is no longer available.</p> : <>
+      {loading ? <p>Loading…</p> : !data ? <p>{(kind === 'event' && eventDeleted) || 'This content is no longer available.'}</p> : <>
         <h2 className="font-bold">{data.title || data.userName}</h2>
         {kind === 'story' ? <StoryDetailMedia key={id} data={data} id={id} /> : <SafeImage src={data.mediaModerationStatus === 'ACTIVE' && data.mediaVisibilityStatus === 'PUBLIC' ? data.imageUrl : ''} alt={data.title || 'Event'} className="w-full max-h-[55vh] object-contain" />}
         <p className="break-words">{data.caption || data.description}</p>
         {kind === 'event' && <p>{data.date} {data.time} (Nepal time) · {data.location}</p>}
+        {kind === 'event' && <EventActions id={id} data={data} onDeleted={pending => { setData(null); setEventDeleted(pending ? 'Event deleted. Image cleanup is pending.' : 'Event deleted.'); }} />}
         {kind === 'event' && <ContentInteractions kind="event" id={id} openComments={comments} />}
       </>}
     </div>

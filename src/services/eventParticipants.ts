@@ -1,6 +1,7 @@
 import { firestore } from './firestore';
-import { auth, db } from '../firebase';
-import { doc, query, where, collection, getDocs, documentId, limit, type Firestore } from 'firebase/firestore';
+import { auth, db, storage } from '../firebase';
+import { setEventParticipation, readEventParticipation, deleteOwnedEvent } from './eventParticipationCore';
+import { doc, getDocFromServer } from 'firebase/firestore';
 import { requireUid } from './identity';
 
 export interface EventParticipant {
@@ -9,90 +10,31 @@ export interface EventParticipant {
   userId: string;
   userName: string;
   status: 'joined' | 'cancelled';
-  joinedAt: string;
-  updatedAt: string;
+  joinedAt: string | import('firebase/firestore').Timestamp;
+  updatedAt: string | import('firebase/firestore').Timestamp;
 }
 
 const EVENT_PARTICIPANTS_COLLECTION = 'event_participants';
 
 export const eventParticipantsService = {
   async joinEvent(eventId: string): Promise<string> {
-    const user = auth.currentUser;
-    if (!user) throw new Error('Must be logged in to join event');
-
-    const registrationId = `${eventId}_${user.uid}`;
-    const timestamp = new Date().toISOString();
-
-    await firestore.runTransaction(async (tx) => {
-      const eventRef = doc(db!, `events/${eventId}`);
-      const eventSnap = await tx.get(eventRef);
-      if (!eventSnap.exists()) {
-        throw new Error('Event not found');
-      }
-      const eventData = eventSnap.data() as any;
-      const spots = eventData.spots || 0;
-
-      const participantsQuery = query(collection(db!, EVENT_PARTICIPANTS_COLLECTION), where('eventId', '==', eventId), where('status', '==', 'joined'));
-      const participantsSnap = await tx.get(participantsQuery);
-      const currentCount = participantsSnap.size;
-
-      if (currentCount >= spots) {
-        throw new Error('Event is full');
-      }
-
-      const registrationRef = doc(db!, `${EVENT_PARTICIPANTS_COLLECTION}/${registrationId}`);
-      const regSnap = await tx.get(registrationRef);
-      if (regSnap.exists()) {
-        const regData = regSnap.data() as any;
-        if (regData.status === 'joined') {
-          return registrationId;
-        }
-        if (regData.status === 'cancelled') {
-          tx.update(registrationRef, {
-            status: 'joined',
-            updatedAt: timestamp,
-          });
-          return registrationId;
-        }
-      }
-
-      tx.set(registrationRef, {
-        id: registrationId,
-        eventId,
-        userId: user.uid,
-        userName: user.displayName || 'User',
-        status: 'joined',
-        joinedAt: timestamp,
-        updatedAt: timestamp,
-      });
-    });
-
-    return registrationId;
+    if (!db) throw new Error('Events are unavailable.');
+    return setEventParticipation({auth,db},eventId,true);
   },
 
   async leaveEvent(eventId: string): Promise<void> {
-    const user = auth.currentUser;
-    if (!user) throw new Error('Must be logged in to leave event');
+    if (!db) throw new Error('Events are unavailable.');
+    await setEventParticipation({auth,db},eventId,false);
+  },
 
-    const registrationId = `${eventId}_${user.uid}`;
-    const timestamp = new Date().toISOString();
+  async getParticipation(eventId: string) {
+    if (!db) throw new Error('Events are unavailable.');
+    return readEventParticipation({auth,db},eventId);
+  },
 
-    await firestore.runTransaction(async (tx) => {
-      const registrationRef = doc(db!, `${EVENT_PARTICIPANTS_COLLECTION}/${registrationId}`);
-      const regSnap = await tx.get(registrationRef);
-      if (!regSnap.exists()) {
-        throw new Error('Registration not found');
-      }
-      const regData = regSnap.data() as any;
-      if (regData.status !== 'joined') {
-        throw new Error('Not joined to this event');
-      }
-
-      tx.update(registrationRef, {
-        status: 'cancelled',
-        updatedAt: timestamp,
-      });
-    });
+  async deleteEvent(eventId: string) {
+    if (!db) throw new Error('Events are unavailable.');
+    return deleteOwnedEvent({auth,db,storage},eventId);
   },
 
   async getEventParticipants(eventId: string): Promise<EventParticipant[]> {
@@ -119,17 +61,18 @@ export const eventParticipantsService = {
   },
 
   async getUserJoinedEventSummaries(userId: string) {
-    const registrations = (await this.getUserJoinedEvents(userId)).slice(0, 5);
+    const registrations: EventParticipant[] = (await this.getUserJoinedEvents(userId)).slice(0, 5);
     if (!registrations.length) return [];
     if (!db) throw new Error('Events are unavailable.');
     const ids = [...new Set(registrations.map(item => item.eventId))];
-    const snapshot = await getDocs(query(collection(db, 'events'), where(documentId(), 'in', ids), limit(5)));
-    const events = new Map(snapshot.docs.map(item => [item.id, item.data()]));
+    // Bounded direct reads can resolve member-only tombstones without a public-list query.
+    const snapshots = await Promise.all(ids.map(id => getDocFromServer(doc(db!, 'events', id))));
+    const events = new Map(snapshots.map(item => [item.id, item.data()]));
     return registrations.map(registration => {
       const event = events.get(registration.eventId);
       return {
         id: registration.eventId,
-        title: typeof event?.title === 'string' ? event.title : 'Event details unavailable',
+        title: event?.status === 'DELETED' ? 'Event deleted' : typeof event?.title === 'string' ? event.title : 'Event details unavailable',
         date: typeof event?.date === 'string' ? event.date : '',
         time: typeof event?.time === 'string' ? event.time : '',
         location: typeof event?.location === 'string' ? event.location : '',
@@ -138,6 +81,7 @@ export const eventParticipantsService = {
   },
 
   async isUserJoined(eventId: string, userId: string): Promise<boolean> {
+    requireUid(userId);
     const registrationId = `${eventId}_${userId}`;
     const doc = await firestore.getDocument<EventParticipant>(`${EVENT_PARTICIPANTS_COLLECTION}/${registrationId}`);
     return !!doc && doc.status === 'joined';

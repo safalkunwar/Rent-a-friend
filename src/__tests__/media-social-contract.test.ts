@@ -35,7 +35,7 @@ describe('media social contracts', () => {
     expect(notificationTarget({targetType:'https://attacker.test',targetId:'x'})).toBeNull();
   });
   it('validates event fields and interprets local event time in Nepal, not device timezone', () => {
-    const result = eventFields({title:' Hike ',description:'A walk',location:'Pokhara',category:'Outdoor',date:'2099-12-20',time:'10:30',ownerId:'B'});
+    const result = eventFields({title:' Hike ',description:'A walk',location:'Pokhara',category:'Outdoor',date:'2099-12-20',time:'10:30',spots:20,ownerId:'B'});
     expect(result.title).toBe('Hike'); expect(result).not.toHaveProperty('ownerId');
     expect(new Date(result.startAtMillis).toISOString()).toBe('2099-12-20T04:45:00.000Z');
     expect(() => eventFields({})).toThrow();

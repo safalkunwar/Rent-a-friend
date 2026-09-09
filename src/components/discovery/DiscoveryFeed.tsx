@@ -121,7 +121,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="desktop-discovery-feed space-y-6 pb-20">
       {/* Stories */}
       <DiscoveryContentContainer>
         <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 snap-x">
@@ -160,11 +160,11 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
 
       {/* Continuous Mixed Discovery Feed */}
       <DiscoveryContentContainer>
-        <div className="space-y-8">
+        <div className="desktop-feed-grid space-y-8">
           {groupedVisibleItems.map((group, idx) => {
             if (group.type === 'category-header') {
               return (
-                <div key={`category-${group.category}-${idx}`} className="flex items-center gap-3 pb-2 border-b border-white/5">
+                <div key={`category-${group.category}-${idx}`} className="feed-section-heading flex items-center gap-3 pb-2 border-b border-white/5">
                   <span className="text-2xl">{group.emoji}</span>
                   <div>
                     <h3 className="text-lg font-extrabold text-text-primary">{group.category}</h3>
@@ -176,12 +176,12 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
 
             if (group.type === 'companions') {
               return (
-                <div key={`companion-group-${idx}`} className="max-w-2xl mx-auto">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div key={`companion-group-${idx}`} className="feed-companion-row max-w-2xl mx-auto">
+                  <div className="feed-companion-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {group.items.map((item) => {
                       const companion = item.data as Companion;
                       return (
-                        <div key={item.data.id} className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer hover:border-primary-action/30 transition-all">
+                        <div key={item.data.id} className="feed-compact-card bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer hover:border-primary-action/30 transition-all">
                           <div className="relative h-40 bg-surface-elevated">
                             <SafeImage src={companion.imageUrl || companion.images?.[0]} className="w-full h-full object-cover" alt={companion.name} />
                             <span className="absolute top-3 left-3 bg-primary-action text-background text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
@@ -228,7 +228,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
             const item = group.item;
             if (item.type === 'story') {
               return (
-                <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
+                <div key={`${item.data.id}-${idx}`} className="feed-media-item max-w-2xl mx-auto">
                   <FeedStoryCard story={item.data as ExperienceStory} onOpenMediaViewer={openLightbox} onToast={onShowToast} />
                 </div>
               );
@@ -236,7 +236,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
 
             if (item.type === 'post') {
               return (
-                <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
+                <div key={`${item.data.id}-${idx}`} className="feed-media-item max-w-2xl mx-auto">
                   <FeedPostCard post={item.data as CommunityPost} onOpenMediaViewer={openLightbox} onToast={onShowToast} />
                 </div>
               );
@@ -244,10 +244,10 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
 
             if (item.type === 'activity') {
               return (
-                <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
+                <div key={`${item.data.id}-${idx}`} className="feed-standard-item max-w-2xl mx-auto">
                   <div
                     onClick={() => onNavigateExplore((item.data as Activity).category || 'All')}
-                    className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer hover:border-primary-action/30 transition-all"
+                    className="feed-standard-card bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-lg flex flex-col cursor-pointer hover:border-primary-action/30 transition-all"
                   >
                     <div className="relative h-48 bg-surface-elevated">
                       <SafeImage src={(item.data as Activity).imageUrl || (item.data as Activity).image} className="w-full h-full object-cover" alt={(item.data as Activity).title} />
@@ -277,10 +277,10 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
 
             if (item.type === 'event') {
               return (
-                <div key={`${item.data.id}-${idx}`} className="max-w-2xl mx-auto">
+                <div key={`${item.data.id}-${idx}`} className="feed-standard-item max-w-2xl mx-auto">
                   <div
                     onClick={() => navigate(`/event/${item.data.id}`)}
-                    className="bg-surface border border-white/5 rounded-2xl p-4 flex gap-4 cursor-pointer active:scale-98 transition-all"
+                    className="feed-standard-card feed-event-card bg-surface border border-white/5 rounded-2xl p-4 flex gap-4 cursor-pointer active:scale-98 transition-all"
                   >
                     <div className="w-20 h-20 rounded-xl overflow-hidden bg-surface-elevated shrink-0">
                       <SafeImage src={(item.data as Event).imageUrl} className="w-full h-full object-cover" alt={(item.data as Event).title} fallbackType="thumbnail" />

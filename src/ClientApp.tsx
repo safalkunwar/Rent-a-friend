@@ -59,10 +59,11 @@ import { SafeImage } from './components/ui/SafeImage';
 import { AnimatePresence } from 'motion/react';
 import { saveStoredPreferences } from './services/preferences';
 import { eventParticipantsService } from './services/eventParticipants';
+import { eventCapacity } from './services/eventParticipationCore';
 import { firestore } from './services/firestore';
 
 interface ClientAppProps {
-  initialTab?: 'home' | 'explore' | 'companions' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings';
+  initialTab?: 'home' | 'explore' | 'events' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings';
 }
 
 const formatStoryTimeAgo = (value?: string | Timestamp | null, now = Date.now()): string => {
@@ -91,8 +92,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       setActiveTab('bookings');
       setMobileTab('bookings');
     } else if (path === '/companions') {
-      setActiveTab('companions');
+      setActiveTab('explore');
       setMobileTab('search');
+      setDiscoveryTab('companions');
+    } else if (path === '/events') {
+      setActiveTab('events');
+      setMobileTab('events');
     } else if (path === '/explore') {
       setActiveTab('explore');
       setMobileTab('explore');
@@ -150,7 +155,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     enabled: location.pathname === '/',
   });
 
-  const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'companions' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings'>(initialTab || 'home');
+  const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'events' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings'>(initialTab || 'home');
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingStory, setViewingStory] = useState<ExperienceStory | null>(null);
@@ -250,6 +255,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     try {
       await eventParticipantsService.joinEvent(eventId);
       setJoinedEvents(prev => ({ ...prev, [eventId]: true }));
+      void retryEvents();
       showToast('Successfully joined event!', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to join event', 'error');
@@ -261,22 +267,24 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     try {
       await eventParticipantsService.leaveEvent(eventId);
       setJoinedEvents(prev => ({ ...prev, [eventId]: false }));
+      void retryEvents();
       showToast('Left event', 'info');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to leave event', 'error');
     }
   };
 
-  const isEventFull = (event: any) => {
-    const currentParticipants = event.participants?.length || event.participants || 0;
-    return currentParticipants >= event.spots;
+  const eventSpotsLabel = (event: any) => {
+    const capacity = eventCapacity(event);
+    return capacity.valid ? `${capacity.count} / ${event.spots} joined · ${capacity.remaining} spots left` : 'Capacity awaiting verification';
   };
 
   const getEventButtonState = (event: any) => {
-    if (!currentUser) return { text: 'Join', disabled: false, action: 'join' };
+    const capacity = eventCapacity(event);
     const isJoined = joinedEvents[event.id];
     if (isJoined) return { text: 'Joined', disabled: false, action: 'leave' };
-    if (isEventFull(event)) return { text: 'Full', disabled: true, action: 'none' };
+    if (!capacity.valid) return { text: 'Registration unavailable', disabled: true, action: 'none' };
+    if (capacity.remaining === 0) return { text: 'Event Full', disabled: true, action: 'none' };
     return { text: 'Join', disabled: false, action: 'join' };
   };
 
@@ -303,7 +311,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const [showProfileEditModal, setShowProfileEditModal] = useState<boolean>(false);
   const [showProfilePhoto, setShowProfilePhoto] = useState(false);
   const [showCalculator, setShowCalculator] = useState<boolean>(false);
-  const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'explore' | 'experiences' | 'bookings' | 'messages' | 'profile' | 'notifications'>('home');
+  const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'explore' | 'events' | 'experiences' | 'bookings' | 'messages' | 'profile' | 'notifications'>('home');
   
   // SATHI Mobile Navigation Scroll Persistence & Tab Redirection
   const previousMobileTabRef = React.useRef<string>(mobileTab);
@@ -322,6 +330,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   useEffect(() => {
     const prevTab = previousMobileTabRef.current;
     const nextTab = mobileTab;
+    // Desktop route/hash navigation must not be overwritten by mobile tab restoration.
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      previousMobileTabRef.current = nextTab;
+      isRestoringScrollRef.current = false;
+      return;
+    }
     if (prevTab !== nextTab) {
       isRestoringScrollRef.current = true;
       const savedPosition = scrollPositionsRef.current[nextTab] || 0;
@@ -349,11 +363,17 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     };
   }, [mobileTab]);
   const [discoveryTab, setDiscoveryTab] = useState<'all' | 'companions' | 'activities' | 'events'>('all');
+  useEffect(() => {
+    if (activeTab !== 'explore' || location.pathname !== '/explore' || location.hash !== '#activities-section') return;
+    const frame = requestAnimationFrame(() => document.getElementById('activities-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    return () => cancelAnimationFrame(frame);
+  }, [activeTab, location.pathname, location.hash, location.key]);
+  const [partnerFilter, setPartnerFilter] = useState<'All' | 'Hotel' | 'Restaurant' | 'Cafe'>('All');
   const openCompanionSearch = () => {
-    setActiveTab('companions');
+    setActiveTab('explore');
     setMobileTab('search');
     setDiscoveryTab('companions');
-    navigate('/companions');
+    navigate('/explore');
   };
   const [activeChatCompanionId, setActiveChatCompanionId] = useState<string | null>(null);
   const [activeDocType, setActiveDocType] = useState<'terms' | 'privacy' | 'help' | null>(null);
@@ -388,7 +408,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     } else {
       setActiveTab('explore');
       setDiscoveryTab('activities');
-      navigate('/companions');
+      navigate('/explore#activities-section');
     }
   };
   
@@ -453,6 +473,282 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const estWeeklyEarnings = calcHourlyRate * calcWeeklyHours;
   const estMonthlyEarnings = Math.round(estWeeklyEarnings * 4.33);
 
+  const renderEventListing = () => (
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="desktop-event-list space-y-6">
+                 <div className="flex items-center justify-between">
+                   <h2 className="text-xl md:text-2xl font-extrabold text-text-primary">Upcoming Group Events</h2>
+                   <button onClick={() => setShowCreateEventModal(true)} className="flex items-center gap-2 px-4 py-2 bg-primary-action text-background font-bold text-xs rounded-xl hover:bg-primary-action-hover">
+                     <span className="text-sm leading-none">+</span> Create Event
+                   </button>
+                 </div>
+
+                 <div className="space-y-3.5">
+                   {eventsLoading ? (
+                     <div className="space-y-2 animate-pulse">
+                       <div className="h-16 bg-surface rounded-xl"></div>
+                       <div className="h-16 bg-surface rounded-xl"></div>
+                     </div>
+                   ) : events.length === 0 ? (
+                     <div className="text-center py-16 bg-surface border border-border-token/50 rounded-3xl space-y-4">
+                       <p className="text-sm font-bold text-text-secondary">No events yet</p>
+                       <p className="text-xs text-text-secondary">Be the first to create one!</p>
+                     </div>
+                   ) : (
+                     events.map((event, idx) => {
+                       const dateObj = new Date(event.date);
+                       const month = dateObj.toLocaleString('en-US', { month: 'short' });
+                       const day = dateObj.getDate();
+                       return (
+                         <div key={`${event.id || 'evt'}-${idx}`} className="bg-surface border border-border-token/40 p-4 rounded-2xl flex gap-3.5 hover:border-primary-action/40 transition-colors text-left relative group">
+                           <div className="shrink-0 w-12 h-12 rounded-xl bg-surface-elevated border border-border-token/60 flex flex-col items-center justify-center">
+                             <span className="text-primary-action text-[9px] font-extrabold uppercase leading-none">{month}</span>
+                             <span className="text-text-primary font-black text-sm mt-0.5 leading-none">{day}</span>
+                           </div>
+
+                           <div className="flex-1 min-w-0 space-y-1">
+                             <h5 className="font-bold text-text-primary text-xs truncate group-hover:text-primary-action transition-colors"><button onClick={() => navigate(`/event/${event.id}`)}>{event.title}</button></h5>
+                             <p className="text-[10px] text-text-secondary flex items-center gap-1 truncate"><MapPin className="w-3 h-3 text-primary-action" /> {event.location}</p>
+                             <p className="text-[10px] text-text-secondary flex items-center gap-1"><Clock className="w-3 h-3" /> {event.time}</p>
+
+                             <div className="flex items-center justify-between pt-2">
+                               <span className="text-[9px] text-text-secondary">{eventSpotsLabel(event)}</span>
+                               {(() => {
+                                 const btn = getEventButtonState(event);
+                                 return (
+                                   <button
+                                     onClick={() => {
+                                       if (btn.action === 'join') handleJoinEvent(event.id);
+                                       else if (btn.action === 'leave') handleLeaveEvent(event.id);
+                                     }}
+                                     disabled={btn.disabled}
+                                     className="px-2.5 py-1 bg-surface-elevated text-text-primary border border-border-token/60 text-[9px] font-bold rounded-lg hover:bg-primary-action hover:text-background hover:border-primary-action transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                   >
+                                     {btn.text}
+                                   </button>
+                                 );
+                               })()}
+                             </div>
+                           </div>
+                         </div>
+                       );
+                     })
+                   )}
+                 </div>
+
+                 <DiscoveryPageControl source="events" loaded={events.length} matches={filteredEvents.length}
+                   loading={eventsLoading} loadingMore={eventsLoadingMore} hasMore={eventsHasMore}
+                   error={eventsError} onLoadMore={loadMoreEvents} onRetry={retryEvents} />
+               </motion.div>
+  );
+
+  // Reuse the existing discovery interface for the desktop /companions destination.
+  const renderDiscoverySearch = () => (
+          <div className="desktop-discovery-search p-4 space-y-6 pb-20 select-none">
+            <h2 className="text-xl font-extrabold text-text-primary text-left">Universal Discovery</h2>
+            
+            {/* Compact Search Header with Filters button */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-primary-action absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text" 
+                  placeholder="Search companions, activities, and events..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-11 pl-10 pr-9 bg-surface-elevated/60 backdrop-blur-md rounded-xl border border-white/10 text-xs text-text-primary focus:outline-none focus:border-primary-action transition-all"
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-text-secondary hover:text-text-primary"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={() => setIsFilterDrawerOpen(true)}
+                className="h-11 px-3.5 bg-surface-elevated border border-border-token hover:border-primary-action rounded-xl flex items-center gap-1.5 text-xs font-bold text-text-primary transition-all shrink-0 relative"
+              >
+                <SlidersHorizontal className="w-4 h-4 text-primary-action" />
+                <span>Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Unified Entity Category Selector Tabs */}
+            <div className="flex gap-1 bg-surface p-1 rounded-xl border border-white/5">
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'companions', label: `Buddies (${filteredCompanions.length})` },
+                { id: 'activities', label: `Activities (${filteredActivities.length})` },
+                { id: 'events', label: `Events (${filteredEvents.length})` }
+              ].map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setDiscoveryTab(sub.id as any)}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${discoveryTab === sub.id ? 'bg-primary-action text-background' : 'text-text-secondary hover:text-text-primary'}`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Combined Results Container */}
+            <div className="space-y-6 pt-2 select-none">
+              
+              {/* 1. Companions Block */}
+              {(discoveryTab === 'all' || discoveryTab === 'companions') && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+                      🤝 Local Companions ({filteredCompanions.length})
+                    </span>
+                    {favorites.length > 0 && (
+                      <button 
+                        onClick={() => { setShowSavedOnly(!showSavedOnly); }} 
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full border transition-all ${showSavedOnly ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-transparent border-white/10 text-text-secondary'}`}
+                      >
+                        ❤️ Saved Only
+                      </button>
+                    )}
+                  </div>
+
+                  {filteredCompanions.length === 0 ? (
+                    <div className="py-8 text-center text-text-secondary text-xs bg-surface rounded-2xl border border-white/5">
+                      {companionsLoading ? 'Loading companions…' : 'No matches in loaded companions.'}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {filteredCompanions.map((comp, idx) => (
+                        <CompanionCard
+                          key={`${comp.id}-${idx}`}
+                          companion={comp}
+                          isFav={favorites.includes(comp.id)}
+                          onToggleFavorite={toggleFavorite}
+                          onViewCompanion={handleViewCompanion}
+                          onShowToast={showToast}
+                          layout="compact"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <DiscoveryPageControl source="companions" loaded={companions.length} matches={filteredCompanions.length}
+                    loading={companionsLoading} loadingMore={companionsLoadingMore} hasMore={companionsHasMore}
+                    error={companionsError} onLoadMore={loadMoreCompanions} onRetry={retryCompanions} />
+                </div>
+              )}
+
+              {/* 2. Activities Block */}
+              {(discoveryTab === 'all' || discoveryTab === 'activities') && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+                      🥾 Curated Experiences ({filteredActivities.length})
+                    </span>
+                  </div>
+
+                  {filteredActivities.length === 0 ? (
+                    <div className="py-8 text-center text-text-secondary text-xs bg-surface rounded-2xl border border-white/5">
+                      {activitiesLoading ? 'Loading activities…' : 'No matches in loaded activities.'}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {filteredActivities.map((act, actIdx) => (
+                        <div 
+                          key={`${act.id || 'act'}-${actIdx}`}
+                          onClick={() => { setSelectedCategory(act.category || 'All'); showToast(`Filtered by ${act.title}`, 'success'); }}
+                          className="desktop-search-activity-card bg-surface border border-white/5 rounded-2xl overflow-hidden flex items-center p-2 gap-3 cursor-pointer hover:border-primary-action/30 active:scale-98 transition-all text-left"
+                        >
+                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-surface-elevated shrink-0">
+                            <SafeImage src={act.imageUrl || act.image} alt={act.title} className="w-full h-full object-cover" fallbackType="thumbnail" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[8px] bg-primary-action/10 text-primary-action px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                              {act.category || 'Activity'}
+                            </span>
+                            <h4 className="text-xs font-bold text-text-primary truncate mt-1 leading-snug">
+                              {act.title}
+                            </h4>
+                            <p className="text-[10px] text-text-secondary mt-0.5 flex items-center gap-1 truncate">
+                              <Clock className="w-3 h-3 text-primary-action" /> {act.duration || 'Flexible'} • {act.location || 'Nepal'}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0 pr-1">
+                            <span className="text-[9px] font-bold text-primary-action block font-mono">
+                              NPR {act.avgPrice || act.price}
+                            </span>
+                            <span className="text-[8px] text-text-secondary block font-light">average</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <DiscoveryPageControl source="activities" loaded={activities.length} matches={filteredActivities.length}
+                    loading={activitiesLoading} loadingMore={activitiesLoadingMore} hasMore={activitiesHasMore}
+                    error={activitiesError} onLoadMore={loadMoreActivities} onRetry={retryActivities} />
+                </div>
+              )}
+
+              {/* 3. Events Block */}
+              {(discoveryTab === 'all' || discoveryTab === 'events') && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+                      📅 Upcoming Events ({filteredEvents.length})
+                    </span>
+                  </div>
+
+                  {filteredEvents.length === 0 ? (
+                    <div className="py-8 text-center text-text-secondary text-xs bg-surface rounded-2xl border border-white/5">
+                      {eventsLoading ? 'Loading events…' : 'No matches in loaded events.'}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {filteredEvents.map((evt, evtIdx) => (
+                        <div 
+                          key={`${evt.id || 'evt'}-${evtIdx}`}
+                          onClick={() => navigate(`/event/${evt.id}`)}
+                          className="desktop-search-event-card bg-surface border border-white/5 rounded-2xl overflow-hidden flex flex-col p-3 gap-3 cursor-pointer hover:border-primary-action/30 active:scale-98 transition-all text-left"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-surface-elevated shrink-0">
+                              <SafeImage src={evt.imageUrl} alt={evt.title} className="w-full h-full object-cover" fallbackType="thumbnail" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start">
+                                <span className="text-[8px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                                  {eventSpotsLabel(evt)}
+                                </span>
+                                <span className="text-[9px] font-mono text-text-secondary">{evt.date}</span>
+                              </div>
+                              <h4 className="text-xs font-bold text-text-primary truncate mt-1 leading-snug">
+                                {evt.title}
+                              </h4>
+                              <p className="text-[10px] text-text-secondary mt-0.5 flex items-center gap-1 truncate font-light">
+                                <MapPin className="w-3 h-3 text-primary-action" /> {evt.location}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <DiscoveryPageControl source="events" loaded={events.length} matches={filteredEvents.length}
+                    loading={eventsLoading} loadingMore={eventsLoadingMore} hasMore={eventsHasMore}
+                    error={eventsError} onLoadMore={loadMoreEvents} onRetry={retryEvents} />
+                </div>
+              )}
+
+            </div>
+          </div>
+  );
+
   return (
     <div className="min-h-screen bg-background font-sans text-text-primary flex flex-col lg:flex-row relative overflow-x-hidden selection:bg-primary-action/30 selection:text-primary-action">
       
@@ -491,20 +787,20 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               <Compass className="w-4 h-4" /> Explore
             </button>
             <button 
-              onClick={() => { navigate('/companions'); setSelectedCategory('All'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} 
+              onClick={() => { navigate('/companions'); setSelectedCategory('All'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }}
               className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/companions' && !showSavedOnly ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
             >
               <span className="flex items-center gap-3"><Users className="w-4 h-4" /> Companions</span>
               <span className="text-[10px] bg-primary-action/20 text-primary-action px-1.5 py-0.5 rounded font-bold">Active</span>
             </button>
             <button 
-              onClick={() => { navigate('/'); const actSection = document.getElementById('activities-section'); if (actSection) actSection.scrollIntoView({ behavior: 'smooth' }); }} 
+              onClick={() => { navigate('/explore#activities-section'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }}
               className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40 focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none"
             >
               <BookOpen className="w-4 h-4" /> Activities
             </button>
             <button 
-              onClick={() => { navigate('/'); const evSection = document.getElementById('events-section'); if (evSection) evSection.scrollIntoView({ behavior: 'smooth' }); }} 
+              onClick={() => { navigate('/events'); setIsMobileSidebarOpen(false); }} 
               className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40 focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none"
             >
               <Calendar className="w-4 h-4" /> Events
@@ -523,8 +819,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               <Calendar className="w-4 h-4" /> Bookings
             </button>
             <button 
-              onClick={() => { navigate('/companions'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); showToast("Viewing Saved Companions", "success"); }} 
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/companions' && showSavedOnly ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
+              onClick={() => { navigate('/explore'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); showToast("Viewing Saved Companions", "success"); }} 
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/explore' && showSavedOnly ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
             >
               <Heart className="w-4 h-4" /> Saved
             </button>
@@ -609,7 +905,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   <button onClick={() => { navigate('/'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/' && !showSavedOnly ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
                     <Home className="w-4 h-4" /> Home
                   </button>
-                  <button onClick={() => { navigate('/companions'); setSelectedCategory('All'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/companions' && !showSavedOnly ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
+                  <button onClick={() => { navigate('/explore'); setActiveTab('explore'); setDiscoveryTab('companions'); setSelectedCategory('All'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/explore' && !showSavedOnly ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
                     <Users className="w-4 h-4" /> Companions
                   </button>
                   <button onClick={() => { navigate('/messages'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/messages' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
@@ -618,7 +914,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   <button onClick={() => { navigate('/bookings'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/bookings' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
                     <Calendar className="w-4 h-4" /> Bookings
                   </button>
-                  <button onClick={() => { navigate('/companions'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/companions' && showSavedOnly ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
+                  <button onClick={() => { navigate('/explore'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/explore' && showSavedOnly ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
                     <Heart className="w-4 h-4" /> Saved Companions
                   </button>
                   <button onClick={() => { setShowWalletModal(true); setIsMobileSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-text-secondary">
@@ -828,7 +1124,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         <button onClick={() => { setActiveTab('messages'); navigate('/messages'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <MessageSquare className="w-4 h-4 text-primary-action" /> Messages
                         </button>
-                        <button onClick={() => { setShowSavedOnly(true); setActiveTab('explore'); navigate('/companions'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
+                        <button onClick={() => { setShowSavedOnly(true); setActiveTab('explore'); navigate('/explore'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <Heart className="w-4 h-4 text-red-500 fill-current" /> Favorites
                         </button>
                         {(currentUser?.role === 'companion' || currentUser?.role === 'admin') && (
@@ -913,10 +1209,10 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
         </header>
 
         {/* ==================== SCREEN CONTENT LAYOUT ==================== */}
-        <div className="grid grid-cols-12 w-full flex-1">
+        <div className="desktop-content-layout grid grid-cols-12 w-full flex-1">
           
           {/* ==================== CENTRAL FEED / ACTIVE TAB CONTAINER ==================== */}
-          <main className="col-span-12 xl:col-span-9 p-4 md:p-8 space-y-12 min-w-0">
+          <main className="desktop-main-content col-span-12 xl:col-span-9 p-4 md:p-8 space-y-12 min-w-0">
             
             {/* Complete Guide Setup prompt if verified guide */}
             {isGuide && showGuideSetup && (
@@ -951,7 +1247,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               />
             )}
 
-            {activeTab === 'explore' && (
+            {location.pathname === '/companions' && renderDiscoverySearch()}
+            {activeTab === 'explore' && location.pathname !== '/companions' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
                 
                 {/* Desktop Interactive Map */}
@@ -1037,103 +1334,66 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   </div>
                 </div>
 
-                  {/* Companion Marketplace Feed */}
-                  <section id="marketplace-section" className="space-y-6">
+                  {/* Places with SATHI Benefits */}
+                  <section id="benefits-section" className="space-y-6">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border-token/40 pb-4">
                       <div>
-                        <h2 className="text-xl md:text-3xl font-extrabold text-text-primary flex items-center gap-2">
-                          Top Companions for You <span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">Local Companions</span>
-                        </h2>
-                        <p className="text-xs text-text-secondary mt-1">Book safely. Hourly rates listed in NPR. Zero commission or matching fee.</p>
+                        <h2 className="text-xl md:text-3xl font-extrabold text-text-primary">Places with SATHI Benefits</h2>
+                        <p className="text-xs text-text-secondary mt-1">Discover hotels, restaurants and local places where SATHI members receive exclusive benefits.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(['All', 'Hotel', 'Restaurant', 'Cafe'] as const).map(cat => (
+                          <button
+                            key={cat}
+                            onClick={() => setPartnerFilter(cat)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${partnerFilter === cat ? 'bg-primary-action text-background border-primary-action' : 'bg-surface-elevated border-border-token text-text-primary hover:border-primary-action'}`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
-                    {companionsLoading ? (
-                    <div className="text-center py-20 text-text-secondary flex flex-col items-center gap-2">
-                      <div className="w-10 h-10 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
-                      <span>Syncing companion profiles...</span>
-                    </div>
-                  ) : filteredCompanions.length === 0 ? (
-                    <div className="text-center py-16 bg-surface border border-border-token/50 rounded-3xl space-y-4">
-                      <Search className="w-12 h-12 text-text-secondary mx-auto mb-2" />
-                      <h3 className="text-lg font-bold text-text-primary">No companions match your criteria</h3>
-                      <p className="text-xs text-text-secondary max-w-sm mx-auto">Try resetting filters, selecting a different city, or checking your Saved list.</p>
-                      <button 
-                        onClick={() => { setSelectedCategory('All'); setSelectedCity('All'); setShowSavedOnly(false); setSearchQuery(''); }}
-                        className="px-5 py-2.5 bg-primary-action text-background font-bold text-xs rounded-xl hover:bg-primary-action-hover"
-                      >
-                        Reset All Filters
-                      </button>
-                    </div>
-                  ) : selectedCategory === 'All' && !searchQuery && selectedCity === 'All' && !showSavedOnly ? (
-                    /* Grouped category-based horizontal scrolling rows */
-                    (() => {
-                      const categories = companionCategories;
-
-                      return (
-                        <div className="space-y-10">
-                          {categories.map(cat => (
-                            <div key={cat.category} className="space-y-4 text-left">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xl" role="img" aria-label={cat.category}>{cat.emoji}</span>
-                                  <h3 className="text-lg font-bold text-text-primary tracking-tight">{cat.category}</h3>
-                                  <span className="text-[10px] bg-surface-elevated text-text-secondary px-2.5 py-0.5 rounded-full border border-border-token/30">
-                                    {cat.companions.length} {cat.companions.length === 1 ? 'guide' : 'guides'}
-                                  </span>
-                                </div>
-                                <button 
-                                  onClick={() => {
-                                    setSelectedCategory(cat.category);
-                                    showToast(`Viewing all ${cat.category} guides`, 'success');
-                                  }}
-                                  className="text-xs font-bold text-primary-action hover:underline flex items-center gap-1"
-                                >
-                                  See all <ChevronRight className="w-3 h-3" />
-                                </button>
+                    {partnersLoading ? (
+                      <div className="text-center py-20 text-text-secondary flex flex-col items-center gap-2">
+                        <div className="w-10 h-10 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                        <span>Loading partner places...</span>
+                      </div>
+                    ) : (() => {
+                      const visible = partnerFilter === 'All' ? partners : partners.filter(p => p.category === partnerFilter);
+                      const shown = visible.slice(0, 8);
+                      return shown.length === 0 ? (
+                        <div className="text-center py-16 bg-surface border border-border-token/50 rounded-3xl space-y-4">
+                          <p className="text-sm font-bold text-text-secondary">No partners found</p>
+                          <p className="text-xs text-text-secondary">Try changing the filter or check back later.</p>
+                        </div>
+                      ) : (
+                        <div className="desktop-standard-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                          {shown.map((partner, i) => (
+                            <div key={`${partner.id || 'p'}-${i}`} className="bg-surface border border-border-token/50 rounded-2xl overflow-hidden hover:border-primary-action/30 hover:shadow-md transition-all">
+                              <div className="aspect-[4/3] bg-surface-elevated border-b border-border-token/60 flex items-center justify-center">
+                                {partner.imageUrl ? (
+                                  <img src={partner.imageUrl} alt={partner.name} className="w-full h-full object-cover" loading="lazy" />
+                                ) : (
+                                  <span className="text-primary-action font-black text-sm">{partner.name.substring(0, 2)}</span>
+                                )}
                               </div>
-
-                              <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory pt-1">
-                                {cat.companions.map((comp, compIdx) => {
-                                    const isFav = favorites && favorites.includes(comp.id);
-                                    return (
-                                      <div key={`${cat.category}-${comp.id}-${compIdx}`}>
-                                        <CompanionCard
-                                          companion={comp}
-                                          isFav={isFav}
-                                          onToggleFavorite={toggleFavorite}
-                                          onViewCompanion={handleViewCompanion}
-                                          onShowToast={showToast}
-                                          layout="featured"
-                                        />
-                                      </div>
-                                    );
-                                  })}
+                              <div className="p-4 space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <h4 className="text-xs font-bold text-text-primary truncate">{partner.name}</h4>
+                                  <span className="text-[9px] text-text-secondary bg-surface-elevated border border-border-token px-2 py-0.5 rounded-full font-bold">{partner.category}</span>
+                                </div>
+                                <p className="text-[10px] text-text-secondary flex items-center gap-1 truncate"><MapPin className="w-3 h-3 text-primary-action" /> {partner.loc}</p>
+                                <span className="text-[10px] text-primary-action bg-primary-action/10 px-2 py-1 rounded-lg font-bold block">{partner.disc}</span>
                               </div>
                             </div>
                           ))}
                         </div>
                       );
-                    })()
-                  ) : (
-                    /* High-fidelity Companion grid */
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {filteredCompanions.map((comp, idx) => (
-                        <CompanionCard
-                          key={`${comp.id}-${idx}`}
-                          companion={comp}
-                          isFav={favorites.includes(comp.id)}
-                          onToggleFavorite={toggleFavorite}
-                          onViewCompanion={handleViewCompanion}
-                          onShowToast={showToast}
-                          layout="featured"
-                        />
-                      ))}
-                    </div>
-                  )}
-                </section>
+                    })()}
+                  </section>
 
-                {/* 2. IMMERSIVE HERO SECTION WITH INTEGRATED MINIMAL SEARCH */}
+                  {/* 2. IMMERSIVE HERO SECTION WITH INTEGRATED MINIMAL SEARCH */}
                 <section className="relative rounded-[32px] overflow-hidden min-h-[340px] md:min-h-[460px] border border-border-token/40 bg-surface group shadow-2xl">
                   {/* Background Carousel Image */}
                   <AnimatePresence mode="wait">
@@ -1208,7 +1468,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 </section>
 
                 {/* 5. EXPLORE CURATED NEPAL EXPERIENCES */}
-                <section id="activities-section" className="space-y-6">
+                <section id="activities-section" className="space-y-6 scroll-mt-24">
                   <SectionHeader
                     title="📍 Explore Nepal Experiences"
                     subtitle="Book direct curated local adventures guided by trusted hosts."
@@ -1222,7 +1482,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     }
                   />
 
-                  <div id="activities-section" className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div id="activities-grid" className="desktop-standard-grid grid grid-cols-1 md:grid-cols-3 gap-6">
                     {activitiesLoading ? (
                       [1, 2, 3].map(i => (
                         <div key={i} className="aspect-[4/3] bg-surface border border-border-token/40 rounded-3xl animate-pulse"></div>
@@ -1454,79 +1714,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </motion.div>
             )}
 
-             {activeTab === 'companions' && (
-               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                 <SectionHeader
-                   title="Discover Companions"
-                   subtitle="Browse local companions by category, location, and interest."
-                   badge={<span className="text-xs text-primary-action bg-primary-action/10 border border-primary-action/20 px-2.5 py-0.5 rounded-full">Local Companions</span>}
-                   action={
-                     <button 
-                       onClick={() => setIsFilterDrawerOpen(true)}
-                       className="flex items-center gap-2 px-3.5 py-2 bg-surface-elevated hover:bg-border-token border border-border-token hover:border-primary-action rounded-xl text-xs font-bold text-text-primary transition-all shadow-sm"
-                     >
-                       <SlidersHorizontal className="w-3.5 h-3.5 text-primary-action" />
-                       <span>Filters</span>
-                       {activeFilterCount > 0 && (
-                         <span className="w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">{activeFilterCount}</span>
-                       )}
-                     </button>
-                   }
-                 />
+             {activeTab === 'events' && renderEventListing()}
 
-                 {companionsLoading ? (
-                   <div className="text-center py-20 text-text-secondary flex flex-col items-center gap-2">
-                     <div className="w-10 h-10 rounded-full border-2 border-t-primary-action border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
-                     <span>Syncing companion profiles...</span>
-                   </div>
-                 ) : filteredCompanions.length === 0 ? (
-                   <div className="text-center py-20">
-                     <Users className="w-12 h-12 text-text-muted mx-auto mb-3" />
-                     <p className="text-sm font-bold text-text-secondary">No matches in loaded companions</p>
-                     <p className="text-[10px] text-text-muted mt-1">Try adjusting your search or filters</p>
-                   </div>
-                   ) : (
-                     <div className="space-y-8">
-                       {(() => {
-                         const categories = companionCategories;
-
-                         return categories.map(cat => (
-                          <div key={cat.category} className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xl" role="img" aria-label={cat.category}>{cat.emoji}</span>
-                                <h3 className="text-lg font-bold text-text-primary tracking-tight">{cat.category}</h3>
-                                <span className="text-[10px] bg-surface-elevated text-text-secondary px-2.5 py-0.5 rounded-full border border-border-token/30">
-                                  {cat.companions.length} {cat.companions.length === 1 ? 'guide' : 'guides'}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory">
-                              {cat.companions.map((comp, idx) => (
-                                <div key={`${comp.id}-${idx}`}>
-                                  <CompanionCard
-                                    companion={comp}
-                                    isFav={favorites.includes(comp.id)}
-                                    onToggleFavorite={toggleFavorite}
-                                    onViewCompanion={handleViewCompanion}
-                                    onShowToast={showToast}
-                                    layout="featured"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  )}
-                 <DiscoveryPageControl source="companions" loaded={companions.length} matches={filteredCompanions.length}
-                   loading={companionsLoading} loadingMore={companionsLoadingMore} hasMore={companionsHasMore}
-                   error={companionsError} onLoadMore={loadMoreCompanions} onRetry={retryCompanions} />
-               </motion.div>
-             )}
-
-            {activeTab === 'partner' && (
+             {activeTab === 'partner' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <PartnerDashboard />
               </motion.div>
@@ -1660,7 +1850,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                             <p className="text-[10px] text-text-secondary flex items-center gap-1"><Clock className="w-3 h-3" /> {event.time}</p>
                             
                             <div className="flex items-center justify-between pt-2">
-                              <span className="text-[9px] text-text-secondary"><span className="text-text-primary font-semibold">{event.spots}</span> spots left</span>
+                              <span className="text-[9px] text-text-secondary">{eventSpotsLabel(event)}</span>
                               {(() => {
                                 const btn = getEventButtonState(event);
                                 return (
@@ -1716,7 +1906,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
           </main>
 
           {/* ==================== RIGHT SIDEBAR (DASHBOARD WIDGETS) ==================== */}
-          <aside className="hidden xl:block col-span-3 p-6 border-l border-border-token/40 space-y-6 bg-background h-max sticky top-[72px]">
+          <aside className="desktop-utility-rail hidden xl:block col-span-3 p-6 border-l border-border-token/40 space-y-6 bg-background h-max sticky top-[72px]">
             
             {/* 1. UPCOMING EVENTS (MEETUP INSPIRED) */}
             <div id="events-section" className="space-y-4">
@@ -1751,7 +1941,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                           <p className="text-[10px] text-text-secondary flex items-center gap-1"><Clock className="w-3 h-3" /> {event.time}</p>
                           
                            <div className="flex items-center justify-between pt-2">
-                             <span className="text-[9px] text-text-secondary"><span className="text-text-primary font-semibold">{event.spots}</span> spots left</span>
+                             <span className="text-[9px] text-text-secondary">{eventSpotsLabel(event)}</span>
                              {(() => {
                                const btn = getEventButtonState(event);
                                return (
@@ -1825,7 +2015,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
       <div className="lg:hidden flex flex-col flex-1 min-h-screen relative bg-background pb-24 text-left">
         
         {/* Render Mobile Active Tab Overrides */}
-        {activeTab === 'dashboard' ? (
+        {activeTab === 'events' ? <div className="p-4 pb-20">{renderEventListing()}</div> : activeTab === 'dashboard' ? (
           <div className="p-4 space-y-6 pb-20">
             <div className="flex items-center justify-between p-3 bg-background border-b border-white/5 sticky top-0 z-20 backdrop-blur-md">
               <button onClick={() => { setActiveTab('explore'); setMobileTab('home'); navigate('/'); }} className="flex items-center gap-1.5 text-xs font-bold text-primary-action">
@@ -2255,7 +2445,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-[8px] text-primary-action font-bold font-mono">{evt.date}</span>
-                        <span className="text-[8px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{evt.spots} Left</span>
+                        <span className="text-[8px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{eventSpotsLabel(evt)}</span>
                       </div>
                     </div>
                   </div>
@@ -2833,212 +3023,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
         )}
 
         {/* Render Mobile Tab Search */}
-        {mobileTab === 'search' && (
-          <div className="p-4 space-y-6 pb-20 select-none">
-            <h2 className="text-xl font-extrabold text-text-primary text-left">Universal Discovery</h2>
-            
-            {/* Compact Search Header with Filters button */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-primary-action absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input 
-                  type="text" 
-                  placeholder="Search companions, activities, and events..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-11 pl-10 pr-9 bg-surface-elevated/60 backdrop-blur-md rounded-xl border border-white/10 text-xs text-text-primary focus:outline-none focus:border-primary-action transition-all"
-                />
-                {searchQuery && (
-                  <button 
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-text-secondary hover:text-text-primary"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-
-              <button
-                onClick={() => setIsFilterDrawerOpen(true)}
-                className="h-11 px-3.5 bg-surface-elevated border border-border-token hover:border-primary-action rounded-xl flex items-center gap-1.5 text-xs font-bold text-text-primary transition-all shrink-0 relative"
-              >
-                <SlidersHorizontal className="w-4 h-4 text-primary-action" />
-                <span>Filters</span>
-                {activeFilterCount > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-primary-action text-background text-[9px] font-extrabold flex items-center justify-center">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* Unified Entity Category Selector Tabs */}
-            <div className="flex gap-1 bg-surface p-1 rounded-xl border border-white/5">
-              {[
-                { id: 'all', label: 'All' },
-                { id: 'companions', label: `Buddies (${filteredCompanions.length})` },
-                { id: 'activities', label: `Activities (${filteredActivities.length})` },
-                { id: 'events', label: `Events (${filteredEvents.length})` }
-              ].map(sub => (
-                <button
-                  key={sub.id}
-                  onClick={() => setDiscoveryTab(sub.id as any)}
-                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${discoveryTab === sub.id ? 'bg-primary-action text-background' : 'text-text-secondary hover:text-text-primary'}`}
-                >
-                  {sub.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Combined Results Container */}
-            <div className="space-y-6 pt-2 select-none">
-              
-              {/* 1. Companions Block */}
-              {(discoveryTab === 'all' || discoveryTab === 'companions') && (
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center px-1">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-                      🤝 Local Companions ({filteredCompanions.length})
-                    </span>
-                    {favorites.length > 0 && (
-                      <button 
-                        onClick={() => { setShowSavedOnly(!showSavedOnly); }} 
-                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full border transition-all ${showSavedOnly ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-transparent border-white/10 text-text-secondary'}`}
-                      >
-                        ❤️ Saved Only
-                      </button>
-                    )}
-                  </div>
-
-                  {filteredCompanions.length === 0 ? (
-                    <div className="py-8 text-center text-text-secondary text-xs bg-surface rounded-2xl border border-white/5">
-                      {companionsLoading ? 'Loading companions…' : 'No matches in loaded companions.'}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                      {filteredCompanions.map((comp, idx) => (
-                        <CompanionCard
-                          key={`${comp.id}-${idx}`}
-                          companion={comp}
-                          isFav={favorites.includes(comp.id)}
-                          onToggleFavorite={toggleFavorite}
-                          onViewCompanion={handleViewCompanion}
-                          onShowToast={showToast}
-                          layout="compact"
-                        />
-                      ))}
-                    </div>
-                  )}
-                  <DiscoveryPageControl source="companions" loaded={companions.length} matches={filteredCompanions.length}
-                    loading={companionsLoading} loadingMore={companionsLoadingMore} hasMore={companionsHasMore}
-                    error={companionsError} onLoadMore={loadMoreCompanions} onRetry={retryCompanions} />
-                </div>
-              )}
-
-              {/* 2. Activities Block */}
-              {(discoveryTab === 'all' || discoveryTab === 'activities') && (
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center px-1">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-                      🥾 Curated Experiences ({filteredActivities.length})
-                    </span>
-                  </div>
-
-                  {filteredActivities.length === 0 ? (
-                    <div className="py-8 text-center text-text-secondary text-xs bg-surface rounded-2xl border border-white/5">
-                      {activitiesLoading ? 'Loading activities…' : 'No matches in loaded activities.'}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3">
-                      {filteredActivities.map((act, actIdx) => (
-                        <div 
-                          key={`${act.id || 'act'}-${actIdx}`}
-                          onClick={() => { setSelectedCategory(act.category || 'All'); showToast(`Filtered by ${act.title}`, 'success'); }}
-                          className="bg-surface border border-white/5 rounded-2xl overflow-hidden flex items-center p-2 gap-3 cursor-pointer hover:border-primary-action/30 active:scale-98 transition-all text-left"
-                        >
-                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-surface-elevated shrink-0">
-                            <SafeImage src={act.imageUrl || act.image} alt={act.title} className="w-full h-full object-cover" fallbackType="thumbnail" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-[8px] bg-primary-action/10 text-primary-action px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
-                              {act.category || 'Activity'}
-                            </span>
-                            <h4 className="text-xs font-bold text-text-primary truncate mt-1 leading-snug">
-                              {act.title}
-                            </h4>
-                            <p className="text-[10px] text-text-secondary mt-0.5 flex items-center gap-1 truncate">
-                              <Clock className="w-3 h-3 text-primary-action" /> {act.duration || 'Flexible'} • {act.location || 'Nepal'}
-                            </p>
-                          </div>
-                          <div className="text-right shrink-0 pr-1">
-                            <span className="text-[9px] font-bold text-primary-action block font-mono">
-                              NPR {act.avgPrice || act.price}
-                            </span>
-                            <span className="text-[8px] text-text-secondary block font-light">average</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <DiscoveryPageControl source="activities" loaded={activities.length} matches={filteredActivities.length}
-                    loading={activitiesLoading} loadingMore={activitiesLoadingMore} hasMore={activitiesHasMore}
-                    error={activitiesError} onLoadMore={loadMoreActivities} onRetry={retryActivities} />
-                </div>
-              )}
-
-              {/* 3. Events Block */}
-              {(discoveryTab === 'all' || discoveryTab === 'events') && (
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center px-1">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-                      📅 Upcoming Events ({filteredEvents.length})
-                    </span>
-                  </div>
-
-                  {filteredEvents.length === 0 ? (
-                    <div className="py-8 text-center text-text-secondary text-xs bg-surface rounded-2xl border border-white/5">
-                      {eventsLoading ? 'Loading events…' : 'No matches in loaded events.'}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3">
-                      {filteredEvents.map((evt, evtIdx) => (
-                        <div 
-                          key={`${evt.id || 'evt'}-${evtIdx}`}
-                          onClick={() => navigate(`/event/${evt.id}`)}
-                          className="bg-surface border border-white/5 rounded-2xl overflow-hidden flex flex-col p-3 gap-3 cursor-pointer hover:border-primary-action/30 active:scale-98 transition-all text-left"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-surface-elevated shrink-0">
-                              <SafeImage src={evt.imageUrl} alt={evt.title} className="w-full h-full object-cover" fallbackType="thumbnail" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex justify-between items-start">
-                                <span className="text-[8px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
-                                  {evt.spots ? `${evt.spots} Spots Left` : 'Public Event'}
-                                </span>
-                                <span className="text-[9px] font-mono text-text-secondary">{evt.date}</span>
-                              </div>
-                              <h4 className="text-xs font-bold text-text-primary truncate mt-1 leading-snug">
-                                {evt.title}
-                              </h4>
-                              <p className="text-[10px] text-text-secondary mt-0.5 flex items-center gap-1 truncate font-light">
-                                <MapPin className="w-3 h-3 text-primary-action" /> {evt.location}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <DiscoveryPageControl source="events" loaded={events.length} matches={filteredEvents.length}
-                    loading={eventsLoading} loadingMore={eventsLoadingMore} hasMore={eventsHasMore}
-                    error={eventsError} onLoadMore={loadMoreEvents} onRetry={retryEvents} />
-                </div>
-              )}
-
-            </div>
-          </div>
-        )}
+        {mobileTab === 'search' && renderDiscoverySearch()}
 
         {/* Render Mobile Tab Notifications */}
         {mobileTab === 'notifications' && (
@@ -3119,8 +3104,8 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     setActiveTab('messages');
                   } else if (item.tab === 'home') {
                     setActiveTab('home');
-                  } else if (item.tab === 'bookings') {
-                    setActiveTab('bookings');
+                  } else if (item.tab === 'events') {
+                    setActiveTab('events');
                   } else {
                     setActiveTab('explore');
                   }
@@ -3128,7 +3113,6 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     navigate(item.path);
                   }
                   if (mobileTab === item.tab) {
-                    // Double tap or active tab tap: smooth scroll to top part
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   } else {
                     setMobileTab(item.tab as any);
@@ -3149,7 +3133,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
       {/* Story View Modal */}
       {showCreateEventModal && <CreateEventModal onClose={() => setShowCreateEventModal(false)} onSaved={id => { void retryEvents(); navigate(`/event/${id}`); }} />}
-      {(activeTab === 'home' || activeTab === 'explore') && <button className="fixed bottom-24 right-4 z-40 bg-primary-action text-background rounded-xl px-4 py-2 shadow-lg" onClick={() => setShowCreateEventModal(true)}>Create Event</button>}
+      {activeTab === 'events' && <button className="fixed bottom-24 right-4 z-40 bg-primary-action text-background rounded-xl px-4 py-2 shadow-lg" onClick={() => setShowCreateEventModal(true)}>Create Event</button>}
       {viewingStory && viewingStory.id && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setViewingStory(null)}>
           <div className="relative w-full max-w-sm aspect-[9/16] bg-surface rounded-3xl overflow-hidden border border-border-token/80" onClick={e => e.stopPropagation()}>

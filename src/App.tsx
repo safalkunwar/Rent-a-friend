@@ -27,10 +27,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<ClientApp initialTab="home" />} />
       <Route path="/explore" element={<ClientApp initialTab="explore" />} />
-      <Route
-        path="/companions"
-        element={<ClientApp initialTab="companions" />}
-      />
+      <Route path="/events" element={<ClientApp initialTab="events" />} />
+      <Route path="/companions" element={<ClientApp initialTab="explore" />} />
       <Route
         path="/bookings"
         element={

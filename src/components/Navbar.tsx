@@ -5,8 +5,8 @@ import { useToast } from './ui/Toast';
 import { saveStoredPreferences } from '../services/preferences';
 
 interface NavbarProps {
-  activeTab: 'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner';
-  setActiveTab: (tab: 'explore' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner') => void;
+  activeTab: 'home' | 'explore' | 'events' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner';
+  setActiveTab: (tab: 'home' | 'explore' | 'events' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner') => void;
   onOpenAuth: (mode: 'login' | 'signup' | 'guide') => void;
   searchQuery?: string;
   setSearchQuery?: (q: string) => void;
@@ -108,17 +108,18 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
                />
             </div>
             
-              <div className="flex items-center space-x-7 text-[15px] font-medium ml-6">
-                <button onClick={() => setActiveTab('explore')} className={`transition-colors ${activeTab === 'explore' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Discover</button>
-                <button onClick={() => setActiveTab('about')} className={`transition-colors ${activeTab === 'about' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Experiences</button>
-                {currentUser && (
-                  <>
-                    <button onClick={() => setActiveTab('bookings')} className={`transition-colors ${activeTab === 'bookings' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Bookings</button>
-                    <button onClick={() => setActiveTab('messages')} className={`transition-colors ${activeTab === 'messages' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Messages</button>
-                    <button onClick={() => setActiveTab('partner')} className={`transition-colors ${activeTab === 'partner' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Partners</button>
-                  </>
-                )}
-              </div>
+               <div className="flex items-center space-x-7 text-[15px] font-medium ml-6">
+                 <button onClick={() => setActiveTab('explore')} className={`transition-colors ${activeTab === 'explore' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Discover</button>
+                 <button onClick={() => setActiveTab('events')} className={`transition-colors ${activeTab === 'events' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Events</button>
+                 <button onClick={() => setActiveTab('about')} className={`transition-colors ${activeTab === 'about' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Experiences</button>
+                 {currentUser && (
+                   <>
+                     <button onClick={() => setActiveTab('bookings')} className={`transition-colors ${activeTab === 'bookings' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Bookings</button>
+                     <button onClick={() => setActiveTab('messages')} className={`transition-colors ${activeTab === 'messages' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Messages</button>
+                     <button onClick={() => setActiveTab('partner')} className={`transition-colors ${activeTab === 'partner' ? 'text-text-primary' : 'text-text-secondary hover:text-primary-action'}`}>Partners</button>
+                   </>
+                 )}
+               </div>
           </div>
 
           <div className="flex items-center space-x-3 md:space-x-4 relative">
@@ -213,6 +214,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenA
         {isMobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-border-token space-y-4">
              <button onClick={() => { setActiveTab('explore'); setIsMobileMenuOpen(false); }} className={`block w-full text-left px-4 py-2 text-sm font-medium ${activeTab === 'explore' ? 'text-primary-action bg-surface-elevated rounded-lg' : 'text-text-secondary'}`}>Discover</button>
+             <button onClick={() => { setActiveTab('events'); setIsMobileMenuOpen(false); }} className={`block w-full text-left px-4 py-2 text-sm font-medium ${activeTab === 'events' ? 'text-primary-action bg-surface-elevated rounded-lg' : 'text-text-secondary'}`}>Events</button>
              {currentUser && (
                <>
                  <button onClick={() => { setActiveTab('bookings'); setIsMobileMenuOpen(false); }} className={`block w-full text-left px-4 py-2 text-sm font-medium ${activeTab === 'bookings' ? 'text-primary-action bg-surface-elevated rounded-lg' : 'text-text-secondary'}`}>Bookings</button>

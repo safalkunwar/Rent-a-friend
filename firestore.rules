@@ -282,16 +282,36 @@ service cloud.firestore {
          request.resource.data.likes == request.resource.data.likesCount &&
          likeDelta('story_likes',id,resource.data.get('likesCount',resource.data.get('likes',0)),request.resource.data.likesCount));
       allow delete: if own(resource.data.userId) || content();
-    }
+}
     match /story_likes/{id} {
       allow read: if true;
       allow create: if own(request.resource.data.userId) && id == request.auth.uid + '_' + request.resource.data.storyId &&
         request.resource.data.keys().hasOnly(['userId','storyId','createdAt']) &&
         getAfter(/databases/$(database)/documents/stories/$(request.resource.data.storyId)).data.likesCount ==
-        get(/databases/$(database)/documents/stories/$(request.resource.data.storyId)).data.get('likesCount',0) + 1;
+        getAfter(/databases/$(database)/documents/stories/$(request.resource.data.storyId)).data.get('likesCount',0) + 1;
       allow delete: if own(resource.data.userId) && id == request.auth.uid + '_' + resource.data.storyId &&
-        getAfter(/databases/$(database)/documents/stories/$(resource.data.storyId)).data.likesCount ==
-        get(/databases/$(database)/documents/stories/$(resource.data.storyId)).data.get('likesCount',0) - 1;
+        getAfter(/databases/$(database)/documents/stories/$(request.resource.data.storyId)).data.likesCount ==
+        getAfter(/databases/$(database)/documents/stories/$(request.resource.data.storyId)).data.get('likesCount',0) - 1;
+    }
+    match /comments/{id} {
+      // Comments on community posts - read by anyone on published posts
+      allow read: if get(/databases/$(database)/documents/community_posts/$(resource.data.postId)).data.status == 'published';
+      // Create comment on published post - atomic counter via pairedComment
+      allow create: if own(request.resource.data.userId) &&
+        request.resource.data.id == id &&
+        request.resource.data.keys().hasOnly(['id','postId','userId','userName','userAvatar','text','createdAt','parentId']) &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500 &&
+        get(/databases/$(database)/documents/community_posts/$(request.resource.data.postId)).data.status == 'published' &&
+        pairedComment(request.resource.data.postId, id, 1);
+      // User can edit own comment
+      allow update: if own(resource.data.userId) &&
+        changedOnly(['text','updatedAt']) &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500;
+      // User can delete own comment, content moderators can delete any
+      allow delete: if own(resource.data.userId) || content();
     }
     match /conversations/{id} {
       allow get: if member() && !exists(/databases/$(database)/documents/conversations/$(id));

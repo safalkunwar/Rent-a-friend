@@ -8,6 +8,7 @@ import { requireUid } from '../../services/identity';
 export function CreateEventModal({ onClose, onSaved }: { onClose: () => void; onSaved: (id: string) => void }) {
   const { currentUser, openAuthModal } = useAppContext();
   const [fields, setFields] = useState({ title: '', description: '', location: '', date: '', time: '', category: 'Social' });
+  const [spots, setSpots] = useState('20');
   const [preview, setPreview] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const draft = useRef<MediaDraft | null>(null), guard = useRef(false);
   React.useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
@@ -19,8 +20,9 @@ export function CreateEventModal({ onClose, onSaved }: { onClose: () => void; on
       if (!draft.current || guard.current) return;
       guard.current = true; setBusy(true); setError('');
       try {
-        eventFields(fields); requireUid(currentUser.id);
-        const saved = await saveAppMedia(draft.current, { ...fields, spots: 0, userCreated: true });
+        const capacityFields = { ...fields, spots };
+        eventFields(capacityFields); requireUid(currentUser.id);
+        const saved = await saveAppMedia(draft.current, { ...capacityFields, userCreated: true });
         requireUid(currentUser.id); onSaved(saved.id); onClose();
       } catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not create event.'); }
       finally { guard.current = false; setBusy(false); }
@@ -31,6 +33,7 @@ export function CreateEventModal({ onClose, onSaved }: { onClose: () => void; on
           <input required disabled={busy} type={key === 'date' || key === 'time' ? key : 'text'} value={value} maxLength={key === 'description' ? 3000 : key === 'location' ? 250 : key === 'title' ? 120 : 60}
             onChange={event => setFields(old => ({ ...old, [key]: event.target.value }))} className="block w-full bg-background border border-border-token rounded-lg p-2" />
         </label>)}
+        <label className="block text-sm">Maximum participants<input type="number" required min={1} max={10000} step={1} value={spots} disabled={busy} onChange={event => setSpots(event.target.value)} className="block w-full bg-background border border-border-token rounded-lg p-2" /></label>
         <label className="block">Event cover<input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={event => {
           const file = event.target.files?.[0]; if (!file) return;
           try { draft.current = createMediaDraft('event', requireUid(currentUser.id), file); setPreview(URL.createObjectURL(file)); setError(''); }

@@ -87,11 +87,11 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
     if (images.length === 0) return null;
 
     if (images.length === 1) {
-      if (isStory) return <StoryLikeSurface key={post.id} className="aspect-[4/3] w-full bg-surface-elevated cursor-pointer" onLike={() => reaction.setLiked(true)} onSingleTap={() => openViewer(0)}>
+      if (isStory) return <StoryLikeSurface key={post.id} className="desktop-single-media aspect-[4/3] w-full bg-surface-elevated cursor-pointer" onLike={() => reaction.setLiked(true)} onSingleTap={() => openViewer(0)}>
         <SafeImage src={storyPost?.mediaPreviewUrl || images[0]} className="w-full h-full object-cover pointer-events-none" alt={caption} />
       </StoryLikeSurface>;
       return (
-        <div className="relative aspect-[4/3] w-full bg-surface-elevated cursor-pointer" onClick={() => openViewer(0)}>
+        <div className="desktop-single-media relative aspect-[4/3] w-full bg-surface-elevated cursor-pointer" onClick={() => openViewer(0)}>
           <SafeImage src={storyPost?.mediaPreviewUrl || images[0]} className="w-full h-full object-cover" alt={caption} />
         </div>
       );
@@ -99,7 +99,7 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
 
     if (images.length === 2) {
       return (
-        <div className="grid grid-cols-2 gap-0.5 w-full">
+        <div className="desktop-media-gallery grid grid-cols-2 gap-0.5 w-full">
           {images.slice(0, 2).map((img, idx) => (
             <div key={idx} className="relative aspect-square bg-surface-elevated cursor-pointer" onClick={() => openViewer(idx)}>
               <SafeImage src={img} className="w-full h-full object-cover" alt={caption} />
@@ -111,7 +111,7 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
 
     if (images.length === 3) {
       return (
-        <div className="grid grid-cols-2 gap-0.5 w-full">
+        <div className="desktop-media-gallery grid grid-cols-2 gap-0.5 w-full">
           <div className="relative aspect-square bg-surface-elevated cursor-pointer" onClick={() => openViewer(0)}>
             <SafeImage src={images[0]} className="w-full h-full object-cover" alt={caption} />
           </div>
@@ -128,7 +128,7 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
     }
 
     return (
-      <div className="grid grid-cols-2 gap-0.5 w-full">
+      <div className="desktop-media-gallery grid grid-cols-2 gap-0.5 w-full">
         {images.slice(0, 4).map((img, idx) => (
           <div key={idx} className="relative aspect-square bg-surface-elevated cursor-pointer" onClick={() => openViewer(idx)}>
             <SafeImage src={img} className="w-full h-full object-cover" alt={caption} />
@@ -144,7 +144,7 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({
   };
 
   return (
-    <article className="bg-surface border border-white/5 rounded-3xl overflow-hidden shadow-xl">
+    <article className="desktop-media-card bg-surface border border-white/5 rounded-3xl overflow-hidden shadow-xl">
       {/* Header */}
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">

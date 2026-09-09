@@ -144,7 +144,7 @@ export async function saveMedia(deps: MediaDependencies, draft: MediaDraft, fiel
           const { startAtMillis, ...eventContent } = validated;
           data = { ...data, ...eventContent, ownerId: draft.uid, moderationStatus: 'ACTIVE', visibilityStatus: 'PUBLIC',
             startAt: Timestamp.fromMillis(startAtMillis), createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-            likesCount: 0, commentsCount: 0 };
+            likesCount: 0, commentsCount: 0, status: 'ACTIVE', participationVersion: 1, participantCount: 0 };
         }
         if (draft.preview?.url) Object.assign(data, { mediaPreviewPath: draft.preview.path, mediaPreviewUrl: draft.preview.url });
         if (current.exists()) tx.update(target,data); else tx.set(target,data);

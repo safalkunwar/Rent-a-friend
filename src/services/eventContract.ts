@@ -1,3 +1,5 @@
+import { MAX_EVENT_PARTICIPANTS } from './eventParticipationCore';
+
 export function eventFields(fields: Record<string, unknown>) {
   const text = (key: string, maximum: number) => {
     const value = typeof fields[key] === 'string' ? (fields[key] as string).trim() : '';
@@ -10,5 +12,7 @@ export function eventFields(fields: Record<string, unknown>) {
   // Product is Nepal-local; never depend on the creator device timezone.
   const start = Date.parse(`${date}T${time}:00+05:45`);
   if (!Number.isFinite(start) || start <= Date.now()) throw new Error('Choose a future event date/time (Nepal time).');
-  return { title, description, location, date, time, category, startAtMillis: start };
+  const spots = typeof fields.spots === 'string' && /^\d+$/.test(fields.spots) ? Number(fields.spots) : fields.spots;
+  if (typeof spots !== 'number' || !Number.isInteger(spots) || spots < 1 || spots > MAX_EVENT_PARTICIPANTS) throw new Error(`Maximum participants must be a whole number from 1 to ${MAX_EVENT_PARTICIPANTS}.`);
+  return { title, description, location, date, time, category, spots, startAtMillis: start };
 }

@@ -27,7 +27,7 @@ beforeEach(async () => { await env.clearFirestore(); await env.clearStorage(); a
 async function content() {
   const a=deps('A'), story=createMediaDraft('story','A',image()), event=createMediaDraft('event','A',image());
   const s=await saveMedia(a,story,{caption:'Persisted caption',userName:'A'});
-  const e=await saveMedia(a,event,{userCreated:true,title:'Walk',description:'An actual event',location:'Pokhara',category:'Outdoor',date:'2099-12-20',time:'10:30',spots:0});
+  const e=await saveMedia(a,event,{userCreated:true,title:'Walk',description:'An actual event',location:'Pokhara',category:'Outdoor',date:'2099-12-20',time:'10:30',spots:20});
   return { a,story,event,s,e };
 }
 test('A uploads two Stories and a user Event; B reads canonical data and owner query yields both in order',async()=>{
