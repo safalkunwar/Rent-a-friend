@@ -373,19 +373,6 @@ service cloud.firestore {
 
     // Community Posts Collection: /community_posts/{postId}
     match /community_posts/{postId} {
-      function pairedCommentDelta() {
-        let id = request.resource.data.get('lastCommentMutationId', '');
-        let path = /databases/$(database)/documents/comments/$(id);
-        let before = resource.data.get('commentsCount', 0);
-        let after = request.resource.data.commentsCount;
-        return isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentsCount','lastCommentMutationId','updatedAt']) &&
-          before is int && after is int && after >= 0 &&
-          ((!exists(path) && existsAfter(path) && getAfter(path).data.userId == request.auth.uid &&
-            getAfter(path).data.postId == postId && after == before + 1) ||
-           (exists(path) && !existsAfter(path) && get(path).data.userId == request.auth.uid &&
-            get(path).data.postId == postId && after == before - 1));
-      }
-      allow update: if pairedCommentDelta();
       // Publicly readable for all published posts, or if author or admin
       allow read: if true;
 
@@ -402,29 +389,23 @@ service cloud.firestore {
       // sane: non-negative numbers only. Aggregate integrity beyond this is
       // maintained transactionally by the client repositories.
       allow update: if isAuthenticated()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'updatedAt'])
         && (!('likesCount' in request.resource.data) || (request.resource.data.likesCount is number && request.resource.data.likesCount >= 0))
         && (!('commentsCount' in request.resource.data) || (request.resource.data.commentsCount is number && request.resource.data.commentsCount >= 0));
     }
 
     // Comments Collection: /comments/{commentId}
     match /comments/{commentId} {
-      function paired(delta) {
-        let post = /databases/$(database)/documents/community_posts/$(delta == 1 ? request.resource.data.postId : resource.data.postId);
-        return getAfter(post).data.lastCommentMutationId == commentId &&
-          getAfter(post).data.commentsCount == get(post).data.get('commentsCount',0) + delta;
-      }
+      // Anyone can read comments
       allow read: if true;
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId &&
-        request.resource.data.id == commentId && request.resource.data.createdAt == request.time &&
-        request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500 &&
-        request.resource.data.keys().hasOnly(['id','postId','userId','userName','userAvatar','text','createdAt','parentId']) &&
-        get(/databases/$(database)/documents/community_posts/$(request.resource.data.postId)).data.status == 'published' && paired(1);
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text']) &&
-        request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500;
-      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId &&
-        (paired(-1) || get(/databases/$(database)/documents/community_posts/$(resource.data.postId)).data.get('commentsCount',0) == 0);
+
+      // Authenticated users can create comments
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+
+      // Authors can update and delete their own comments
+      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+
+      // Admins can create, update, and delete any comment
       allow create, update, delete: if isAdmin();
     }
 
@@ -536,24 +517,7 @@ service cloud.firestore {
 
     // Events Collection: /events/{eventId}
     match /events/{eventId} {
-      function capacityValid(data) {
-        return data.participationVersion == 1 && data.spots is int && data.spots > 0 && data.spots <= 10000 &&
-          data.participantCount is int && data.participantCount >= 0 && data.participantCount <= data.spots;
-      }
-      function participantTransition(joining) {
-        let path = /databases/$(database)/documents/event_participants/$(eventId + '_' + request.auth.uid);
-        let wasJoined = exists(path) && get(path).data.status == 'joined';
-        let after = getAfter(path).data;
-        return sathiMediaMember() && capacityValid(resource.data) && capacityValid(request.resource.data) &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantCount','updatedAt']) && request.resource.data.updatedAt == request.time &&
-          request.resource.data.participantCount == resource.data.participantCount + (joining ? 1 : -1) &&
-          after.userId == request.auth.uid && after.eventId == eventId && after.updatedAt == request.time &&
-          (joining ? (!wasJoined && after.status == 'joined' && resource.data.status == 'ACTIVE' && resource.data.moderationStatus == 'ACTIVE' && resource.data.visibilityStatus == 'PUBLIC' && resource.data.startAt > request.time)
-            : (wasJoined && after.status == 'cancelled'));
-      }
       allow get: if sathiMediaMember() && !exists(/databases/$(database)/documents/events/$(eventId));
-      // Existing members may resolve tombstones for cancellation/history, never public listing.
-      allow get: if sathiMediaMember() && exists(/databases/$(database)/documents/event_participants/$(eventId + '_' + request.auth.uid));
       allow read: if (resource.data.moderationStatus == 'ACTIVE' && resource.data.visibilityStatus == 'PUBLIC') ||
         sathiMediaOwn(resource.data.get('ownerId','')) || isAdmin();
       allow create, update, delete: if isAdmin();
@@ -567,18 +531,11 @@ service cloud.firestore {
         request.resource.data.location is string && request.resource.data.location.size() > 0 && request.resource.data.location.size() <= 250 &&
         request.resource.data.category is string && request.resource.data.category.size() <= 60 &&
         request.resource.data.likesCount == 0 && request.resource.data.commentsCount == 0 &&
-        capacityValid(request.resource.data) && request.resource.data.participantCount == 0 && request.resource.data.status == 'ACTIVE' &&
         sathiMediaReference(request.resource.data.imagePath,request.resource.data.imageUrl,'events',request.auth.uid) &&
         (!request.resource.data.keys().hasAny(['mediaPreviewPath','mediaPreviewUrl']) || sathiMediaReference(request.resource.data.mediaPreviewPath,request.resource.data.mediaPreviewUrl,'events',request.auth.uid)) &&
         request.resource.data.keys().hasOnly(['id','ownerId','title','description','location','category','date','time','spots','imageUrl','imagePath','imageOwnerId',
-          'mediaModerationStatus','mediaVisibilityStatus','mediaReportedCount','imageUpdatedAt','mediaPreviewPath','mediaPreviewUrl','createdAt','updatedAt','startAt','moderationStatus','visibilityStatus','likesCount','commentsCount','status','participantCount','participationVersion']);
-      allow update: if participantTransition(true) || participantTransition(false);
-      allow update: if sathiMediaOwn(resource.data.ownerId) && resource.data.get('status','ACTIVE') != 'DELETED' &&
-        sathiMediaChangedOnly(['status','visibilityStatus','mediaVisibilityStatus','deletedAt','updatedAt','imagePath','imageUrl','mediaPreviewPath','mediaPreviewUrl']) &&
-        request.resource.data.status == 'DELETED' && request.resource.data.visibilityStatus == 'PRIVATE' && request.resource.data.mediaVisibilityStatus == 'PRIVATE' &&
-        request.resource.data.deletedAt == request.time && request.resource.data.updatedAt == request.time &&
-        request.resource.data.imagePath == '' && request.resource.data.imageUrl == '' && request.resource.data.mediaPreviewPath == '' && request.resource.data.mediaPreviewUrl == '';
-      allow update: if sathiMediaOwn(resource.data.ownerId) && resource.data.get('status','ACTIVE') != 'DELETED' && resource.data.moderationStatus == 'ACTIVE' &&
+          'mediaModerationStatus','mediaVisibilityStatus','mediaReportedCount','imageUpdatedAt','mediaPreviewPath','mediaPreviewUrl','createdAt','updatedAt','startAt','moderationStatus','visibilityStatus','likesCount','commentsCount']);
+      allow update: if sathiMediaOwn(resource.data.ownerId) && resource.data.moderationStatus == 'ACTIVE' &&
         sathiMediaChangedOnly(['title','description','location','updatedAt']) &&
         request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 120 &&
         request.resource.data.description is string && request.resource.data.description.size() <= 3000 &&
@@ -586,35 +543,19 @@ service cloud.firestore {
 
       match /participants/{userId} {
         allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-        // Legacy alternate location is not a second participation system.
-        allow write: if isAdmin();
+        allow create: if isAuthenticated() && request.auth.uid == userId;
+        allow update: if isAuthenticated() && request.auth.uid == userId || isAdmin();
+        allow delete: if isAuthenticated() && request.auth.uid == userId || isAdmin();
       }
     }
 
     // Event Participants Collection: /event_participants/{registrationId}
     match /event_participants/{registrationId} {
-      function coupledCount(joining) {
-        let event = /databases/$(database)/documents/events/$(request.resource.data.eventId);
-        let before = get(event).data;
-        let after = getAfter(event).data;
-        return before.participationVersion == 1 && after.participantCount is int && after.participantCount >= 0 && after.participantCount <= before.spots &&
-          after.participantCount == before.participantCount + (joining ? 1 : -1) && after.updatedAt == request.time &&
-          after.diff(before).affectedKeys().hasOnly(['participantCount','updatedAt']) &&
-          (!joining || (before.status == 'ACTIVE' && before.moderationStatus == 'ACTIVE' && before.visibilityStatus == 'PUBLIC' && before.startAt > request.time));
-      }
-      allow get: if sathiMediaMember() && registrationId.matches('.*_' + request.auth.uid);
-      allow read: if sathiMediaOwn(resource.data.userId) || isAdmin() ||
-        sathiMediaOwn(get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.get('ownerId',''));
-      allow create: if sathiMediaOwn(request.resource.data.userId) && registrationId == request.resource.data.eventId + '_' + request.auth.uid &&
-        request.resource.data.id == registrationId && request.resource.data.status == 'joined' && request.resource.data.joinedAt == request.time && request.resource.data.updatedAt == request.time &&
-        request.resource.data.userName is string && request.resource.data.userName.size() <= 120 &&
-        request.resource.data.keys().hasOnly(['id','eventId','userId','userName','status','joinedAt','updatedAt']) && coupledCount(true);
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
       allow create, update, delete: if isAdmin();
-      allow update: if sathiMediaOwn(resource.data.userId) && registrationId == resource.data.eventId + '_' + request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt']) && request.resource.data.updatedAt == request.time &&
-        ((resource.data.status == 'cancelled' && request.resource.data.status == 'joined' && coupledCount(true)) ||
-         (resource.data.status == 'joined' && request.resource.data.status == 'cancelled' &&
-           (coupledCount(false) || get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.get('participationVersion',0) != 1)));
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId || isAdmin();
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId || isAdmin();
     }
 
     // Partners Collection: /partners/{partnerId}

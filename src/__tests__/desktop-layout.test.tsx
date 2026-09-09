@@ -11,14 +11,14 @@ vi.mock('../components/social/FeedSocialCards', () => ({
 }));
 afterEach(cleanup);
 
-it('presentation families retain exact input order and never duplicate records to fill a row', () => {
+it('category rows group profiles once while keeping other content in its original relative order', () => {
   const item = (type: string, id: string) => ({ type, section: 'Coffee', data: { id, name: id, title: id, interests: [], location: 'Nepal', rating: 0 } });
   const items = [{ type: 'category-header', category: 'Coffee' }, item('companion', 'A'), item('companion', 'B'), item('activity', 'Walk'), item('event', 'Meetup'), item('post', 'Post'), item('companion', 'C')];
   const { container } = render(<DiscoveryFeed stories={[]} favorites={[]} feedItems={items as any} visibleCategoryCount={5} sentinelRef={null}
     onToggleFavorite={vi.fn()} onViewCompanion={vi.fn()} onShowToast={vi.fn()} onNavigateExplore={vi.fn()}
     onCreateStory={vi.fn()} onApplyAsCompanion={vi.fn()} onViewStory={vi.fn()} />);
   const feed = container.querySelector('.desktop-feed-grid')!;
-  expect([...feed.querySelectorAll('h3,h4,[data-media]')].map(el => el.textContent)).toEqual(['Coffee', 'A', 'B', 'Walk', 'Meetup', 'Post', 'C']);
+  expect([...feed.querySelectorAll('h3,h4,[data-media]')].map(el => el.textContent)).toEqual(['Coffee', 'A', 'B', 'C', 'Walk', 'Meetup', 'Post']);
   expect(feed.querySelectorAll('.feed-compact-card')).toHaveLength(3);
   expect(feed.querySelectorAll('.feed-standard-item')).toHaveLength(2);
   expect(feed.querySelectorAll('.feed-media-item')).toHaveLength(1);

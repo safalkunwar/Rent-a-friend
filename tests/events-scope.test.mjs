@@ -12,7 +12,7 @@ const stripEvents=text=>{
   return text;
 };
 test('only Event and canonical participation rule branches differ from the last published candidate',async()=>{
-  const previous=normalize(execFileSync('git',['show','a22d863:ops/media-rollout/firestore.rules'],{encoding:'utf8'}));
+  const previous=normalize(await readFile('docs/sathi/rollbacks/comments-repair-2026-09-09/candidate.rules','utf8'));
   assert.equal(stripEvents(normalize(await readFile('ops/media-rollout/firestore.rules','utf8'))),stripEvents(previous));
   assert.equal(normalize(await readFile('ops/media-rollout/storage.rules','utf8')),normalize(execFileSync('git',['show','a22d863:ops/media-rollout/storage.rules'],{encoding:'utf8'})));
 });

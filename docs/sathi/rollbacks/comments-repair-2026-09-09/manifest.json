@@ -1,0 +1,27 @@
+{
+  "release": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/c59206e3-d6d9-4a48-9c8e-dcc7be66d58e",
+    "createTime": "2026-07-12T04:35:43.978011Z",
+    "updateTime": "2026-09-08T00:53:27.774734Z"
+  },
+  "baselineSha256": "d399482f6e2a83f7bb7197a236f57fad912f1f61b69e298f39c57c3e72009f8b",
+  "candidateSha256": "5e1552736ce1357c83a1447161fdc75741fbc5430dd50a0bf3897f230fe95013",
+  "commentIndex": {
+    "queryScope": "COLLECTION",
+    "fields": [
+      {
+        "fieldPath": "postId",
+        "order": "ASCENDING"
+      },
+      {
+        "fieldPath": "createdAt",
+        "order": "DESCENDING"
+      },
+      {
+        "fieldPath": "__name__",
+        "order": "DESCENDING"
+      }
+    ]
+  }
+}

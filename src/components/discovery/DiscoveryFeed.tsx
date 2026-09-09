@@ -8,8 +8,10 @@ import { chunkFeedByHeader } from '../../services/feedStabilizer';
 import { FeedStoryCard, FeedPostCard } from '../social/FeedSocialCards';
 import { groupStories } from '../../services/storyGroups';
 import { useNavigate } from 'react-router-dom';
+import { fillCompanionRows } from './companionRows';
 
 interface DiscoveryFeedProps {
+  companions?: Companion[];
   stories: ExperienceStory[];
   favorites: string[];
   onToggleFavorite: (companionId: string) => void;
@@ -30,6 +32,7 @@ interface DiscoveryFeedProps {
 }
 
 export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
+  companions = [],
   stories,
   favorites,
   onToggleFavorite,
@@ -57,8 +60,8 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
 
   const visibleItems = useMemo(() => {
     const visibleChunks = categoryChunks.slice(0, visibleCategoryCount);
-    return visibleChunks.flatMap(chunk => [chunk.header, ...chunk.items].filter(Boolean) as FeedItem[]);
-  }, [categoryChunks, visibleCategoryCount]);
+    return fillCompanionRows(visibleChunks.flatMap(chunk => [chunk.header, ...chunk.items].filter(Boolean) as FeedItem[]), companions);
+  }, [categoryChunks, visibleCategoryCount, companions]);
 
   const groupedVisibleItems = useMemo(() => {
     type CategoryHeader = { type: 'category-header'; category: string; emoji?: string };
@@ -185,7 +188,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                           <div className="relative h-40 bg-surface-elevated">
                             <SafeImage src={companion.imageUrl || companion.images?.[0]} className="w-full h-full object-cover" alt={companion.name} />
                             <span className="absolute top-3 left-3 bg-primary-action text-background text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
-                              {companion.interests?.[0] || 'COMPANION'}
+                              {item.category || companion.interests?.[0] || 'COMPANION'}
                             </span>
                           </div>
                           <div className="p-3 space-y-1.5 text-left">

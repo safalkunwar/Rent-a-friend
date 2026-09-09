@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-09 — Companion category rows and production comment repair
+- **Task:** Replace oversized single Companion rows with several category matches; fix failing comment posting/loading.
+- **Objective:** Display real matching profiles without duplication and restore the existing comment contract.
+- **Files changed:** ClientApp; DiscoveryFeed; companionRows; desktop-polish.css; companion/layout tests; comment-rules-patch.mjs; repair-comments.mjs; comments-production-gate.test.ts; scoped rollout Firestore rules and scope tests; comments-repair rollback artifacts; this changelog.
+- **Architecture changes:** Desktop rows fill up to three profiles from already-loaded matching interests; preserve media relative order and unique profile IDs. Existing shared comment repository/hook unchanged.
+- **Firebase changes:** Deployed comments-only repair from exact active production baseline, not divergent root rules. Paired comment counter transactions now accept server timestamps and lastCommentMutationId. Required postId ASC/createdAt DESC/document-ID DESC index verified READY. Converted all 15 legacy ISO comment dates to timestamps with update-time preconditions; originals and prior rules retained in docs/sathi/rollbacks/comments-repair-2026-09-09. Pending Event rule changes were NOT deployed.
+- **UI changes:** Multiple genuine category matches per desktop row; lone matches stay compact. Category badges reflect the matched interest. Mobile and Story comments unchanged.
+- **Security implications:** Four emulator gate cases passed, including anonymous/unpaired/cross-user write denials and owner create/edit/delete. Semantic gate confirms all rules outside community_posts/comments unchanged. No Storage, CORS, Functions or unrelated permission changes. Local scoped candidate retains repair to prevent a later Event rollout reverting it.
+- **Performance implications:** Uses existing bounded fetched companion data; no new queries/listeners. Comments retain bounded indexed query.
+- **Tests performed:** 11 focused unit/layout/comment tests; four production-baseline emulator gate cases; three scope checks; TypeScript and Vite/PWA build. Production rules read back exactly; 15/15 dates confirmed timestamps; index READY. Guest browser against production Firebase displayed four existing comments successfully and a three-profile category row.
+- **Known issues:** Signed-in production comment posting not live-tested; posting verified in emulator only. Companion UI is local, not pushed/published. Sparse loaded categories may have fewer than three genuine matches. Existing bundle warning remains.
+- **Next recommended task:** Signed-in browser comment acceptance and user review of local Companion rows before a separately approved app release.
+
 ## 2026-09-08 — Stories likes-only and coordinated media rollout
 - **Task:** Resume production media release; replace Story comments with double-tap likes.
 - **Objective:** Consistent persisted Story likes and confirmation animation without comments; preserve Event comments.

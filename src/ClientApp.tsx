@@ -1227,6 +1227,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             {/* Render dynamically based on Tab */}
             {activeTab === 'home' && (
               <DiscoveryFeed
+                companions={fetchedCompanions}
                 stories={stories}
                 favorites={favorites}
                 onToggleFavorite={toggleFavorite}

@@ -20,6 +20,9 @@ test('production baseline: every unrelated Firestore branch remains byte-identic
   // Event capacity was subsequently approved; events-scope.test.mjs independently
   // proves that only events + canonical memberships changed since that release.
   const allowed=new Set(['/stories/{storyId}','/story_likes/{likeId}','/story_comments/{commentId}','/events/{eventId}','/event_participants/{registrationId}','/event_likes/{likeId}','/event_comments/{commentId}','/notifications/{notificationId}']);
+  // Comments-only repair is independently bounded by comments-production-gate.test.ts.
+  allowed.add('/community_posts/{postId}');
+  allowed.add('/comments/{commentId}');
   for(const [path,source] of previous) if(!allowed.has(path)) assert.equal(current.get(path),source,path);
   for(const path of current.keys()) assert.ok(previous.has(path)||allowed.has(path),`Unexpected new branch ${path}`);
   const original=await read(`${baseline}/firestore.rules`), candidate=await read('ops/media-rollout/firestore.rules');

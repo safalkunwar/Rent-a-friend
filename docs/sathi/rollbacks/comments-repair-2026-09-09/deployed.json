@@ -1,0 +1,18 @@
+{
+  "active": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/c618d018-32bb-419b-8b78-17aac11c5b55",
+    "createTime": "2026-07-12T04:35:43.978011Z",
+    "updateTime": "2026-09-09T13:29:02.458649Z"
+  },
+  "indexResult": {
+    "name": "projects/hamrosathi1/databases/(default)/operations/S1lJdVppTmdBQ0lDDCoDIGFmMjJlNTE1M2I0Mi00NDRiLWU5ODQtMmYwNS1hNTQ5OTlhZCQac2VuaWxlcGlwCQpBEg",
+    "metadata": {
+      "@type": "type.googleapis.com/google.firestore.admin.v1.IndexOperationMetadata",
+      "startTime": "2026-09-09T13:28:58.636162Z",
+      "index": "projects/hamrosathi1/databases/(default)/collectionGroups/comments/indexes/CICAgNiZuIYK",
+      "state": "INITIALIZING"
+    }
+  },
+  "verifiedSha256": "5e1552736ce1357c83a1447161fdc75741fbc5430dd50a0bf3897f230fe95013"
+}

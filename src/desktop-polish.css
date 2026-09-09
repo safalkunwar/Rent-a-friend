@@ -52,8 +52,7 @@
   .feed-compact-card h4 { font-size: 15px; line-height: 1.4; }
   .feed-compact-card p { flex-wrap: wrap; line-height: 1.5; }
   .feed-compact-card button { min-height: 36px; font-size: 12px; padding-inline: 12px; }
-  .feed-compact-card:only-child { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
-  .feed-compact-card:only-child > :first-child { height: 100%; min-height: 220px; aspect-ratio: auto; }
+  .feed-companion-grid:has(> :only-child) { grid-template-columns: minmax(220px, 320px); }
   .feed-standard-card { display: flex; flex-direction: column; overflow: hidden; }
   .feed-standard-card > :first-child { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: 300px; border-radius: 0; }
   .feed-standard-card > :last-child { flex: 1; padding: 16px; gap: 12px; }
