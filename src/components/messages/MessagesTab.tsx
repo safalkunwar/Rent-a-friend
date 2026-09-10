@@ -144,13 +144,10 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
     
     const markAsRead = async () => {
       try {
-        const participantIds = selectedConvo.split('_');
-        await firestore.setDocument(`conversations/${selectedConvo}`, {
-          id: selectedConvo,
-          participantIds: participantIds.length >= 2 ? participantIds : [currentUser.id],
+        await firestore.updateDocument(`conversations/${selectedConvo}`, {
           unreadCount: 0,
           updatedAt: new Date().toISOString()
-        }, true);
+        });
       } catch (err) {
         console.error("[SATHI Messages] Error marking conversation as read:", err);
       }

@@ -2,7 +2,13 @@
 
 This file serves as a high-level briefing for any AI agent resuming work on the SATHI project.
 
+## Continuity update (2026-09-10)
+
+Read [docs/sathi/ANTIGRAVITY_HANDOFF.md](docs/sathi/ANTIGRAVITY_HANDOFF.md) first, then target docs 20–32 and the selected phase in 30. The architecture session changed documentation only; no new implementation phase is complete. Next is Phase 0, read-only production compatibility/security baseline. The dated September 4 status below is historical: strict main Firebase validation, blanket production-hardening, fixed test counts and “no deployed Functions” must not be assumed. Later scoped media/comment releases have their own evidence, while root/ops/production rules differ. Confirm current billing and explicit approval before new Functions deployment. Preserve existing constraint rules and CHANGELOG discipline; do not infer approval for live money or broad security-rule replacement from the design package.
+
 ## Current Status (2026-09-04)
+
+> Phase 0 follow-up (2026-09-10): read docs/sathi/PHASE_00_COMPATIBILITY_REPORT.md. Fresh evidence: billing enabled, seven media Functions active, 66 READY indexes but two missing Event query shapes; production conversation/RBAC/booking-authority bypasses reproduced with synthetic emulator data, and actual v2 cancellation denied. Evidence collection completed, safety gate failed; no production mutation. Next requires approval for scoped containment, not automatic Phase 1. Main261/admin40 tests passed on final runs; detailed initial failures and emulator-project coupling are recorded in the report.
 
 The Firebase backend is production-hardened. The admin panel is a completely standalone application at `/admin` with its own build, routing, Firebase initialization, RBAC, and test suite. The main app has progressed through Home feed overhaul, deep-linkable community posts, a fully rebuilt comment pipeline, KYC/companion-application flow, and a fabricated-engagement purge against the live `hamrosathi1` database. Test counts: **126 in main app** (7 files) + **38 in admin app** (5 files) = **164 total passing**.
 

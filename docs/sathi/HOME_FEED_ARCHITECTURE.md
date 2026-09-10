@@ -1,5 +1,7 @@
 # Home Feed Architecture
 
+> Source update, 2026-09-10: September 9 companion-category rows added a desktop-only selection pass in `src/components/discovery/companionRows.ts` over already-loaded profiles. Thus shared acquisition does not yet mean identical mobile/desktop composition. Target Phase 2 moves row selection into the shared engine; [27_RECOMMENDATION_ARCHITECTURE.md](27_RECOMMENDATION_ARCHITECTURE.md) defines parity and bounded personalization. This is planned, not implemented by the architecture session.
+
 > Current implementation note — 2026-09-06: [PHASE3_HOME_CHECKPOINT.md](PHASE3_HOME_CHECKPOINT.md) supersedes the historical implementation claims below. Home now uses typed identities, global append order with fresh source data, separate responsive sentinels with one reveal state, bounded server revalidation, and shared confirmed reactions. Deployment and physical-device qualification remain unverified.
 
 **Last updated:** 2026-08-25

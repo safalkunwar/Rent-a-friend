@@ -1,0 +1,927 @@
+{
+  "readProbes": {
+    "capturedAt": "2026-09-10T02:52:21.672Z",
+    "readOnly": true,
+    "samples": {
+      "users": {
+        "sampleSize": 3,
+        "moreAvailable": true,
+        "rows": [
+          {
+            "role": {
+              "type": "stringValue",
+              "value": "customer"
+            },
+            "companionStatus": {
+              "type": "missing"
+            },
+            "verificationStatus": {
+              "type": "missing"
+            },
+            "createdAt": {
+              "type": "stringValue"
+            }
+          },
+          {
+            "role": {
+              "type": "stringValue",
+              "value": "customer"
+            },
+            "companionStatus": {
+              "type": "missing"
+            },
+            "verificationStatus": {
+              "type": "missing"
+            },
+            "createdAt": {
+              "type": "stringValue"
+            }
+          },
+          {
+            "role": {
+              "type": "stringValue",
+              "value": "customer"
+            },
+            "companionStatus": {
+              "type": "missing"
+            },
+            "verificationStatus": {
+              "type": "missing"
+            },
+            "createdAt": {
+              "type": "stringValue"
+            }
+          }
+        ]
+      },
+      "companions": {
+        "sampleSize": 3,
+        "moreAvailable": true,
+        "rows": [
+          {
+            "userId": {
+              "type": "stringValue"
+            },
+            "isVerified": {
+              "type": "booleanValue",
+              "value": true
+            },
+            "hourlyRate": {
+              "type": "integerValue"
+            },
+            "interests": {
+              "type": "arrayValue"
+            },
+            "categories": {
+              "type": "missing"
+            }
+          },
+          {
+            "userId": {
+              "type": "stringValue"
+            },
+            "isVerified": {
+              "type": "booleanValue",
+              "value": true
+            },
+            "hourlyRate": {
+              "type": "integerValue"
+            },
+            "interests": {
+              "type": "arrayValue"
+            },
+            "categories": {
+              "type": "missing"
+            }
+          },
+          {
+            "userId": {
+              "type": "stringValue"
+            },
+            "isVerified": {
+              "type": "booleanValue",
+              "value": true
+            },
+            "hourlyRate": {
+              "type": "integerValue"
+            },
+            "interests": {
+              "type": "arrayValue"
+            },
+            "categories": {
+              "type": "missing"
+            }
+          }
+        ]
+      },
+      "bookings": {
+        "sampleSize": 3,
+        "moreAvailable": true,
+        "rows": [
+          {
+            "status": {
+              "type": "stringValue",
+              "value": "completed"
+            },
+            "policyVersion": {
+              "type": "missing"
+            },
+            "companionId": {
+              "type": "stringValue"
+            },
+            "paymentStatus": {
+              "type": "stringValue",
+              "value": "paid"
+            },
+            "createdAt": {
+              "type": "stringValue"
+            }
+          },
+          {
+            "status": {
+              "type": "stringValue",
+              "value": "completed"
+            },
+            "policyVersion": {
+              "type": "missing"
+            },
+            "companionId": {
+              "type": "stringValue"
+            },
+            "paymentStatus": {
+              "type": "stringValue",
+              "value": "paid"
+            },
+            "createdAt": {
+              "type": "stringValue"
+            }
+          },
+          {
+            "status": {
+              "type": "stringValue",
+              "value": "completed"
+            },
+            "policyVersion": {
+              "type": "missing"
+            },
+            "companionId": {
+              "type": "stringValue"
+            },
+            "paymentStatus": {
+              "type": "stringValue",
+              "value": "paid"
+            },
+            "createdAt": {
+              "type": "stringValue"
+            }
+          }
+        ]
+      },
+      "events": {
+        "sampleSize": 3,
+        "moreAvailable": true,
+        "rows": [
+          {
+            "status": {
+              "type": "missing"
+            },
+            "moderationStatus": {
+              "type": "stringValue",
+              "value": "ACTIVE"
+            },
+            "visibilityStatus": {
+              "type": "stringValue",
+              "value": "PUBLIC"
+            },
+            "spots": {
+              "type": "integerValue",
+              "value": "0"
+            },
+            "participantCount": {
+              "type": "missing"
+            },
+            "participationVersion": {
+              "type": "missing"
+            },
+            "date": {
+              "type": "stringValue"
+            }
+          },
+          {
+            "status": {
+              "type": "missing"
+            },
+            "moderationStatus": {
+              "type": "missing"
+            },
+            "visibilityStatus": {
+              "type": "missing"
+            },
+            "spots": {
+              "type": "integerValue",
+              "value": "6"
+            },
+            "participantCount": {
+              "type": "missing"
+            },
+            "participationVersion": {
+              "type": "missing"
+            },
+            "date": {
+              "type": "stringValue"
+            }
+          },
+          {
+            "status": {
+              "type": "missing"
+            },
+            "moderationStatus": {
+              "type": "missing"
+            },
+            "visibilityStatus": {
+              "type": "missing"
+            },
+            "spots": {
+              "type": "integerValue",
+              "value": "5"
+            },
+            "participantCount": {
+              "type": "missing"
+            },
+            "participationVersion": {
+              "type": "missing"
+            },
+            "date": {
+              "type": "stringValue"
+            }
+          }
+        ]
+      },
+      "comments": {
+        "sampleSize": 3,
+        "moreAvailable": true,
+        "rows": [
+          {
+            "createdAt": {
+              "type": "timestampValue"
+            },
+            "postId": {
+              "type": "stringValue"
+            }
+          },
+          {
+            "createdAt": {
+              "type": "timestampValue"
+            },
+            "postId": {
+              "type": "stringValue"
+            }
+          },
+          {
+            "createdAt": {
+              "type": "timestampValue"
+            },
+            "postId": {
+              "type": "stringValue"
+            }
+          }
+        ]
+      },
+      "community_posts": {
+        "sampleSize": 3,
+        "moreAvailable": true,
+        "rows": [
+          {
+            "status": {
+              "type": "stringValue",
+              "value": "published"
+            },
+            "commentsCount": {
+              "type": "integerValue"
+            },
+            "likesCount": {
+              "type": "integerValue"
+            }
+          },
+          {
+            "status": {
+              "type": "stringValue",
+              "value": "published"
+            },
+            "commentsCount": {
+              "type": "integerValue"
+            },
+            "likesCount": {
+              "type": "integerValue"
+            }
+          },
+          {
+            "status": {
+              "type": "stringValue",
+              "value": "published"
+            },
+            "commentsCount": {
+              "type": "integerValue"
+            },
+            "likesCount": {
+              "type": "integerValue"
+            }
+          }
+        ]
+      },
+      "messages": {
+        "sampleSize": 3,
+        "moreAvailable": true,
+        "rows": [
+          {
+            "timestamp": {
+              "type": "stringValue"
+            },
+            "conversationId": {
+              "type": "stringValue"
+            }
+          },
+          {
+            "timestamp": {
+              "type": "stringValue"
+            },
+            "conversationId": {
+              "type": "stringValue"
+            }
+          },
+          {
+            "timestamp": {
+              "type": "stringValue"
+            },
+            "conversationId": {
+              "type": "stringValue"
+            }
+          }
+        ]
+      },
+      "notifications": {
+        "sampleSize": 3,
+        "moreAvailable": true,
+        "rows": [
+          {
+            "type": {
+              "type": "stringValue"
+            },
+            "timestamp": {
+              "type": "stringValue"
+            },
+            "isRead": {
+              "type": "booleanValue"
+            }
+          },
+          {
+            "type": {
+              "type": "stringValue"
+            },
+            "timestamp": {
+              "type": "stringValue"
+            },
+            "isRead": {
+              "type": "booleanValue"
+            }
+          },
+          {
+            "type": {
+              "type": "stringValue"
+            },
+            "timestamp": {
+              "type": "stringValue"
+            },
+            "isRead": {
+              "type": "booleanValue"
+            }
+          }
+        ]
+      },
+      "admins": {
+        "sampleSize": 0,
+        "moreAvailable": false,
+        "rows": []
+      }
+    },
+    "queries": {
+      "publicStories": {
+        "httpStatus": 200,
+        "auth": "NONE",
+        "returnedDocuments": 1,
+        "query": {
+          "from": [
+            {
+              "collectionId": "stories"
+            }
+          ],
+          "select": {
+            "fields": [
+              {
+                "fieldPath": "status"
+              },
+              {
+                "fieldPath": "expiresAt"
+              }
+            ]
+          },
+          "where": {
+            "compositeFilter": {
+              "op": "AND",
+              "filters": [
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "moderationStatus"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "ACTIVE"
+                    }
+                  }
+                },
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "visibilityStatus"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "PUBLIC"
+                    }
+                  }
+                },
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "status"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "active"
+                    }
+                  }
+                },
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "expiresAt"
+                    },
+                    "op": "GREATER_THAN",
+                    "value": {
+                      "timestampValue": "2026-09-10T02:52:30.471Z"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "orderBy": [
+            {
+              "field": {
+                "fieldPath": "expiresAt"
+              },
+              "direction": "DESCENDING"
+            },
+            {
+              "field": {
+                "fieldPath": "__name__"
+              },
+              "direction": "DESCENDING"
+            }
+          ],
+          "limit": 10
+        }
+      },
+      "ownerStoriesEmptyControl": {
+        "httpStatus": 200,
+        "auth": "NONE",
+        "returnedDocuments": 0,
+        "query": {
+          "from": [
+            {
+              "collectionId": "stories"
+            }
+          ],
+          "select": {
+            "fields": [
+              {
+                "fieldPath": "status"
+              }
+            ]
+          },
+          "where": {
+            "compositeFilter": {
+              "op": "AND",
+              "filters": [
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "userId"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "phase0-nonexistent-owner"
+                    }
+                  }
+                },
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "moderationStatus"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "ACTIVE"
+                    }
+                  }
+                },
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "visibilityStatus"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "PUBLIC"
+                    }
+                  }
+                },
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "status"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "active"
+                    }
+                  }
+                },
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "expiresAt"
+                    },
+                    "op": "GREATER_THAN",
+                    "value": {
+                      "timestampValue": "2026-09-10T02:52:30.471Z"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "orderBy": [
+            {
+              "field": {
+                "fieldPath": "expiresAt"
+              },
+              "direction": "ASCENDING"
+            },
+            {
+              "field": {
+                "fieldPath": "__name__"
+              },
+              "direction": "ASCENDING"
+            }
+          ],
+          "limit": 20
+        }
+      },
+      "publicEvents": {
+        "httpStatus": 200,
+        "auth": "NONE",
+        "returnedDocuments": 1,
+        "query": {
+          "from": [
+            {
+              "collectionId": "events"
+            }
+          ],
+          "select": {
+            "fields": [
+              {
+                "fieldPath": "status"
+              },
+              {
+                "fieldPath": "participationVersion"
+              }
+            ]
+          },
+          "where": {
+            "compositeFilter": {
+              "op": "AND",
+              "filters": [
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "moderationStatus"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "ACTIVE"
+                    }
+                  }
+                },
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "visibilityStatus"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "PUBLIC"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "orderBy": [
+            {
+              "field": {
+                "fieldPath": "__name__"
+              },
+              "direction": "ASCENDING"
+            }
+          ],
+          "limit": 10
+        }
+      },
+      "publicComments": {
+        "httpStatus": 200,
+        "auth": "NONE",
+        "returnedDocuments": 1,
+        "query": {
+          "from": [
+            {
+              "collectionId": "comments"
+            }
+          ],
+          "select": {
+            "fields": [
+              {
+                "fieldPath": "createdAt"
+              }
+            ]
+          },
+          "where": {
+            "fieldFilter": {
+              "field": {
+                "fieldPath": "postId"
+              },
+              "op": "EQUAL",
+              "value": {
+                "stringValue": "[REDACTED_PUBLIC_POST_ID]"
+              }
+            }
+          },
+          "orderBy": [
+            {
+              "field": {
+                "fieldPath": "createdAt"
+              },
+              "direction": "DESCENDING"
+            },
+            {
+              "field": {
+                "fieldPath": "__name__"
+              },
+              "direction": "DESCENDING"
+            }
+          ],
+          "limit": 50
+        }
+      }
+    },
+    "errors": [],
+    "website": {
+      "httpStatus": 200,
+      "assets": [
+        "/assets/index-CkZ6Jtrm.js",
+        "/assets/index-B694zuLz.css"
+      ]
+    }
+  },
+  "endChecks": {
+    "capturedAt": "2026-09-10T02:55:01.777Z",
+    "queryChecks": {
+      "ownJoined": {
+        "query": {
+          "from": [
+            {
+              "collectionId": "event_participants"
+            }
+          ],
+          "select": {
+            "fields": [
+              {
+                "fieldPath": "status"
+              }
+            ]
+          },
+          "where": {
+            "compositeFilter": {
+              "op": "AND",
+              "filters": [
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "userId"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "phase0-nonexistent-user"
+                    }
+                  }
+                },
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "status"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "joined"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "orderBy": [
+            {
+              "field": {
+                "fieldPath": "joinedAt"
+              },
+              "direction": "DESCENDING"
+            }
+          ],
+          "limit": 20
+        },
+        "error": "{\"status\":400}"
+      },
+      "organizerRoster": {
+        "query": {
+          "from": [
+            {
+              "collectionId": "event_participants"
+            }
+          ],
+          "select": {
+            "fields": [
+              {
+                "fieldPath": "status"
+              }
+            ]
+          },
+          "where": {
+            "fieldFilter": {
+              "field": {
+                "fieldPath": "eventId"
+              },
+              "op": "EQUAL",
+              "value": {
+                "stringValue": "phase0-nonexistent-event"
+              }
+            }
+          },
+          "orderBy": [
+            {
+              "field": {
+                "fieldPath": "joinedAt"
+              },
+              "direction": "DESCENDING"
+            }
+          ],
+          "limit": 100
+        },
+        "error": "{\"status\":400}"
+      }
+    },
+    "publicAsset": {
+      "asset": "/assets/index-CkZ6Jtrm.js",
+      "httpStatus": 200,
+      "markers": {
+        "participationVersion": true,
+        "lastCommentMutationId": true,
+        "feed-companion-grid": true,
+        "data-story-like-animation": false
+      }
+    },
+    "endReleases": [
+      {
+        "name": "projects/hamrosathi1/releases/cloud.firestore",
+        "rulesetName": "projects/hamrosathi1/rulesets/c618d018-32bb-419b-8b78-17aac11c5b55",
+        "updateTime": "2026-09-09T13:29:02.458649Z"
+      },
+      {
+        "name": "projects/hamrosathi1/releases/firebase.storage/hamrosathi1.firebasestorage.app",
+        "rulesetName": "projects/hamrosathi1/rulesets/339a11d0-4c69-4e82-9f9d-0b2977de671d",
+        "updateTime": "2026-09-08T00:53:26.139320Z"
+      }
+    ]
+  },
+  "indexErrors": {
+    "capturedAt": "2026-09-10T02:55:50.830Z",
+    "queries": [
+      {
+        "name": "ownJoined",
+        "query": {
+          "from": [
+            {
+              "collectionId": "event_participants"
+            }
+          ],
+          "where": {
+            "compositeFilter": {
+              "op": "AND",
+              "filters": [
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "userId"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "phase0-nonexistent-user"
+                    }
+                  }
+                },
+                {
+                  "fieldFilter": {
+                    "field": {
+                      "fieldPath": "status"
+                    },
+                    "op": "EQUAL",
+                    "value": {
+                      "stringValue": "joined"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "orderBy": [
+            {
+              "field": {
+                "fieldPath": "joinedAt"
+              },
+              "direction": "DESCENDING"
+            }
+          ],
+          "limit": 100
+        },
+        "httpStatus": 400,
+        "errors": [
+          {
+            "code": 400,
+            "message": "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/hamrosathi1/firestore/indexes?create_composite=ClZwcm9qZWN0cy9oYW1yb3NhdGhpMS9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvZXZlbnRfcGFydGljaXBhbnRzL2luZGV4ZXMvXxABGgoKBnN0YXR1cxABGgoKBnVzZXJJZBABGgwKCGpvaW5lZEF0EAIaDAoIX19uYW1lX18QAg",
+            "status": "FAILED_PRECONDITION"
+          }
+        ],
+        "returnedDocuments": 0
+      },
+      {
+        "name": "organizerRoster",
+        "query": {
+          "from": [
+            {
+              "collectionId": "event_participants"
+            }
+          ],
+          "where": {
+            "fieldFilter": {
+              "field": {
+                "fieldPath": "eventId"
+              },
+              "op": "EQUAL",
+              "value": {
+                "stringValue": "phase0-nonexistent-event"
+              }
+            }
+          },
+          "orderBy": [
+            {
+              "field": {
+                "fieldPath": "joinedAt"
+              },
+              "direction": "DESCENDING"
+            }
+          ],
+          "limit": 100
+        },
+        "httpStatus": 400,
+        "errors": [
+          {
+            "code": 400,
+            "message": "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/hamrosathi1/firestore/indexes?create_composite=ClZwcm9qZWN0cy9oYW1yb3NhdGhpMS9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvZXZlbnRfcGFydGljaXBhbnRzL2luZGV4ZXMvXxABGgsKB2V2ZW50SWQQARoMCghqb2luZWRBdBACGgwKCF9fbmFtZV9fEAI",
+            "status": "FAILED_PRECONDITION"
+          }
+        ],
+        "returnedDocuments": 0
+      }
+    ]
+  }
+}

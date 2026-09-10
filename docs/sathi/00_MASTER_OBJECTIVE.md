@@ -1,8 +1,8 @@
 # 00 — Master Objective
 
-**Status:** AUTHORITATIVE — highest-level source of truth for the SATHI project.
-**Supersedes:** All informal verbal or ad-hoc decisions. Where other docs conflict with this file, this file wins.
-**Last updated:** 2026-08-24
+**Status:** Foundational product intent; target architecture extended on 2026-09-10.
+**Precedence:** The current owner-requested target decisions and implementation contracts are [20_TARGET_ARCHITECTURE.md](20_TARGET_ARCHITECTURE.md) through [32_DESIGN_TOKENS.md](32_DESIGN_TOKENS.md), entered through [ANTIGRAVITY_HANDOFF.md](ANTIGRAVITY_HANDOFF.md). They supersede conflicting historical target statements below and in 01–16 (including overloaded roles, diamond currency and client financial authority). Actual source and deployment evidence determine what exists today; target documents do not certify deployment. Implementation/release still requires the selected phase's approval.
+**Historical body date:** 2026-08-24
 
 ---
 

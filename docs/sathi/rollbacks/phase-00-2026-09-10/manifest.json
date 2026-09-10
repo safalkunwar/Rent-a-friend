@@ -1,0 +1,1570 @@
+{
+  "capturedAt": "2026-09-10T02:46:11.283Z",
+  "project": "hamrosathi1",
+  "rules": {
+    "firestore": {
+      "release": {
+        "name": "projects/hamrosathi1/releases/cloud.firestore",
+        "rulesetName": "projects/hamrosathi1/rulesets/c618d018-32bb-419b-8b78-17aac11c5b55",
+        "createTime": "2026-07-12T04:35:43.978011Z",
+        "updateTime": "2026-09-09T13:29:02.458649Z"
+      },
+      "sha256": "5e1552736ce1357c83a1447161fdc75741fbc5430dd50a0bf3897f230fe95013"
+    },
+    "storage": {
+      "release": {
+        "name": "projects/hamrosathi1/releases/firebase.storage/hamrosathi1.firebasestorage.app",
+        "rulesetName": "projects/hamrosathi1/rulesets/339a11d0-4c69-4e82-9f9d-0b2977de671d",
+        "createTime": "2026-09-06T17:07:09.778929Z",
+        "updateTime": "2026-09-08T00:53:26.139320Z"
+      },
+      "sha256": "108a621e2a72a8dd198a81c18d184107b67021c291144de55a8d33dd980d72c0"
+    }
+  },
+  "errors": [],
+  "billing": {
+    "billingEnabled": true
+  },
+  "database": {
+    "name": "projects/hamrosathi1/databases/(default)",
+    "locationId": "nam5",
+    "type": "FIRESTORE_NATIVE",
+    "concurrencyMode": "PESSIMISTIC",
+    "pointInTimeRecoveryEnablement": "POINT_IN_TIME_RECOVERY_DISABLED",
+    "deleteProtectionState": "DELETE_PROTECTION_DISABLED"
+  },
+  "appCheck": {},
+  "functions_v1": {},
+  "functions_v2": {
+    "functions": [
+      {
+        "name": "projects/hamrosathi1/locations/us-central1/functions/onEventLike",
+        "state": "ACTIVE",
+        "runtime": "nodejs22",
+        "entryPoint": "onEventLike",
+        "updateTime": "2026-09-07T15:59:15.207329160Z",
+        "eventTrigger": {
+          "eventType": "google.cloud.firestore.document.v1.written",
+          "eventFilters": [
+            {
+              "attribute": "namespace",
+              "value": "(default)"
+            },
+            {
+              "attribute": "document",
+              "value": "event_likes/{interactionId}",
+              "operator": "match-path-pattern"
+            },
+            {
+              "attribute": "database",
+              "value": "(default)"
+            }
+          ]
+        }
+      },
+      {
+        "name": "projects/hamrosathi1/locations/us-central1/functions/cleanupExpiredStories",
+        "state": "ACTIVE",
+        "runtime": "nodejs22",
+        "entryPoint": "cleanupExpiredStories",
+        "updateTime": "2026-09-07T15:56:37.659681059Z",
+        "eventTrigger": null
+      },
+      {
+        "name": "projects/hamrosathi1/locations/us-central1/functions/cleanupMediaOrphans",
+        "state": "ACTIVE",
+        "runtime": "nodejs22",
+        "entryPoint": "cleanupMediaOrphans",
+        "updateTime": "2026-09-07T15:56:44.083176642Z",
+        "eventTrigger": null
+      },
+      {
+        "name": "projects/hamrosathi1/locations/us-central1/functions/onStoryLike",
+        "state": "ACTIVE",
+        "runtime": "nodejs22",
+        "entryPoint": "onStoryLike",
+        "updateTime": "2026-09-07T15:59:12.319710492Z",
+        "eventTrigger": {
+          "eventType": "google.cloud.firestore.document.v1.written",
+          "eventFilters": [
+            {
+              "attribute": "namespace",
+              "value": "(default)"
+            },
+            {
+              "attribute": "document",
+              "value": "story_likes/{interactionId}",
+              "operator": "match-path-pattern"
+            },
+            {
+              "attribute": "database",
+              "value": "(default)"
+            }
+          ]
+        }
+      },
+      {
+        "name": "projects/hamrosathi1/locations/us-central1/functions/onEventComment",
+        "state": "ACTIVE",
+        "runtime": "nodejs22",
+        "entryPoint": "onEventComment",
+        "updateTime": "2026-09-07T15:59:14.723359640Z",
+        "eventTrigger": {
+          "eventType": "google.cloud.firestore.document.v1.written",
+          "eventFilters": [
+            {
+              "attribute": "document",
+              "value": "event_comments/{interactionId}",
+              "operator": "match-path-pattern"
+            },
+            {
+              "attribute": "database",
+              "value": "(default)"
+            },
+            {
+              "attribute": "namespace",
+              "value": "(default)"
+            }
+          ]
+        }
+      },
+      {
+        "name": "projects/hamrosathi1/locations/us-central1/functions/onStoryDeletedMedia",
+        "state": "ACTIVE",
+        "runtime": "nodejs22",
+        "entryPoint": "onStoryDeletedMedia",
+        "updateTime": "2026-09-07T15:59:18.634453158Z",
+        "eventTrigger": {
+          "eventType": "google.cloud.firestore.document.v1.deleted",
+          "eventFilters": [
+            {
+              "attribute": "database",
+              "value": "(default)"
+            },
+            {
+              "attribute": "namespace",
+              "value": "(default)"
+            },
+            {
+              "attribute": "document",
+              "value": "stories/{storyId}",
+              "operator": "match-path-pattern"
+            }
+          ]
+        }
+      },
+      {
+        "name": "projects/hamrosathi1/locations/us-east1/functions/onMediaUploadFinalized",
+        "state": "ACTIVE",
+        "runtime": "nodejs22",
+        "entryPoint": "onMediaUploadFinalized",
+        "updateTime": "2026-09-07T15:59:15.169857119Z",
+        "eventTrigger": {
+          "eventType": "google.cloud.storage.object.v1.finalized",
+          "eventFilters": [
+            {
+              "attribute": "bucket",
+              "value": "hamrosathi1.firebasestorage.app"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "indexes": [
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/guideApplications/indexes/CICAgPi9lIEJ",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "appliedDate",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/story_likes/indexes/CICAgNiryokJ",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "storyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/messages/indexes/CICAgNjp84oJ",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "conversationId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isRead",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/cafes/indexes/CICAgPjChIAK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "cityId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "priceRange",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/bookings/indexes/CICAgNiav4AK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/companion_applications/indexes/CICAgITszIAK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "submittedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/companions/indexes/CICAgJim14AK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "location",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "hourlyRate",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/notifications/indexes/CICAgLjy8IAK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isRead",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/users/indexes/CICAgOjXh4EK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "role",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/messages/indexes/CICAgPi9lIEK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "conversationId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/reviews/indexes/CICAgNiroIEK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/companions/indexes/CICAgJj7z4EK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isVerified",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rating",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/community_posts/indexes/CICAgLiT6IEK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/reviews/indexes/CICAgNjpgYIK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rating",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/notifications/indexes/CICAgPj-pYIK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/payments/indexes/CICAgLjRyYIK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/companions/indexes/CICAgJjF9oIK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "languages",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "rating",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/conversations/indexes/CICAgLiIkYMK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "participantIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/companions/indexes/CICAgJiUpoMK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "location",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rating",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/booking_locks/indexes/CICAgPiftYMK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/hotels/indexes/CICAgPig2YMK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "amenities",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "rating",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/activities/indexes/CICAgNi47oMK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "location",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "price",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/verification_requests/indexes/CICAgNjamYQK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/support_tickets/indexes/CICAgJiH8YUK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/comments/indexes/CICAgNiZuIYK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "postId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/likes/indexes/CICAgJil0IYK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "postId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/bookings/indexes/CICAgJjUgIcK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/reports/indexes/CICAgJjmnIgK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/restaurants/indexes/CICAgLjyuogK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "cityId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "cuisine",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rating",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/events/indexes/CICAgNja0ogK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "location",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/sosAlerts/indexes/CICAgPjC9ogK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/reviews/indexes/CICAgJiHgokK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/comments/indexes/CICAgNiryokK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "postId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/cafes/indexes/CICAgJjFvYoK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "cityId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rating",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/event_participants/indexes/CICAgNjp84oK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eventId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/suspiciousActivity/indexes/CICAgNi4o4sK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/bookings/indexes/CICAgJiUzYsK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/support_tickets/indexes/CICAgLiI64sK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "assignedTo",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/companion_applications/indexes/CICAgJiHu40K",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/stories/indexes/CICAgPi9ipAK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "moderationStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "visibilityStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "expiresAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/reviews/indexes/CICAgOi3kJAK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "bookingId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/analytics/indexes/CICAgNirtJAK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eventType",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/activities/indexes/CICAgJiH2JAK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/bookings/indexes/CICAgJjmiJEK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/payments/indexes/CICAgLjyrJEK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "bookingId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/community_posts/indexes/CICAgNjaxJEK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/event_participants/indexes/CICAgPjC4pEK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eventId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "joinedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/community_posts/indexes/CICAgLiIjZIK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/activities/indexes/CICAgJiUsZIK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "price",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/guideApplications/indexes/CICAgPigw5IK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "kycStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "appliedDate",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/analytics/indexes/CICAgNi4-ZIK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "eventType",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/hotels/indexes/CICAgJjFqZMK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "cityId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "priceRange",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/companions/indexes/CICAgPj-05MK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/reviews/indexes/CICAgNjp5ZMK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "activityId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rating",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/messages/indexes/CICAgJiH7ZQK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/verification_requests/indexes/CICAgNja_ZUK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/events/indexes/CICAgJiHlpgK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/stories/indexes/CICAgNir3pgK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "moderationStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "visibilityStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "expiresAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/hotels/indexes/CICAgNjajpkK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "cityId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rating",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/events/indexes/CICAgPjCqZkK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "moderationStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "visibilityStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/story_comments/indexes/CICAgLjywZkK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "storyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/event_comments/indexes/CICAgJjm-pkK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eventId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/restaurants/indexes/CICAgJiU25oK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "cityId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "priceRange",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/messages/indexes/CICAgLiI_5oK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "senderId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/events/indexes/CICAgNjpr5sK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/reports/indexes/CICAgJjFx5sK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "reportedEntityType",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    }
+  ],
+  "sourceCommit": "5ecc69615cfbf122071ab42928325cfd86d060f2",
+  "captureMode": "READ_ONLY; no production mutation; credentials and personal record contents excluded"
+}

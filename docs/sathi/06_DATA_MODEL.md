@@ -1,5 +1,7 @@
 # 06 — Data Model
 
+> Historical schema snapshot. The new target field/path/ownership/index/migration contract is [31_DATA_CONTRACTS.md](31_DATA_CONTRACTS.md); [20_TARGET_ARCHITECTURE.md](20_TARGET_ARCHITECTURE.md) distinguishes source and deployed state. Do not create duplicate collections or adopt ISO timestamps for new authority fields from this older snapshot. Existing data remains under explicit version adapters.
+
 **Last updated:** 2026-08-24
 Firestore project: `hamrosathi1`. Currency: NPR. All timestamps ISO strings or Firestore timestamps as already established per collection.
 

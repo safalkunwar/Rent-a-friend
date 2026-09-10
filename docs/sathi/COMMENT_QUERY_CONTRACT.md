@@ -1,5 +1,7 @@
 # Canonical comment contract — local checkpoint, 2026-09-06
 
+> Release update, 2026-09-09: the comments-only production repair was deployed from the captured active baseline; 15 legacy ISO dates were converted with preconditions and the DESC index verified READY. Rollback/evidence: [comments repair artifacts](rollbacks/comments-repair-2026-09-09/) and [CHANGELOG](CHANGELOG.md). Guest read was verified; signed-in posting was emulator-tested, not live-browser verified. The older “nothing deployed/no migration” statements below describe the September 6 checkpoint only.
+
 ## Decision
 
 Temporary scripted records do not define the production schema. New comments use **Firestore server Timestamp values**, not client-clock ISO strings. No legacy parser, dual-format sorting or migration was added. This is a staged breaking data-contract change; nothing was deployed or deleted.

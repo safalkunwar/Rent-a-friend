@@ -1,5 +1,7 @@
 # Canonical booking policy — P0-E
 
+> Version boundary, 2026-09-10: this file describes existing v2 behavior, not a paid service guarantee. Target v3 service/payment/review/safety states and transitions are in [22_AGENCY_GUIDE_ARCHITECTURE.md](22_AGENCY_GUIDE_ARCHITECTURE.md), with financial contracts in [24_WALLET_LEDGER_ARCHITECTURE.md](24_WALLET_LEDGER_ARCHITECTURE.md). Preserve this v2 adapter until Phase 5's reviewed migration; do not relabel existing confirmed bookings as paid.
+
 Policy source: src/services/bookingPolicy.json; client helpers consume it and a regression check requires the Firestore transition block to match. No component defines an alternate policy. Status names preserve the actual application: pending, confirmed, active, completed, cancelled. Draft is unsaved form state, not a reservation. Decline maps to cancelled.
 
 | From -> to | Actor | Lock | Payment |

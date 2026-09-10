@@ -1,0 +1,15 @@
+{
+  "scope": "messaging-favorites-only",
+  "status": "LOCAL_CANDIDATE_NOT_DEPLOYED",
+  "baselinePath": "docs/sathi/rollbacks/phase-00-2026-09-10/firestore.rules",
+  "baselineHash": "5e1552736ce1357c83a1447161fdc75741fbc5430dd50a0bf3897f230fe95013",
+  "candidatePath": "ops/containment/candidate.firestore.rules",
+  "candidateHash": "28709c31cf043c9394dfea4f81be58aea217d455537c8b072bff3411f9040497",
+  "changedBranches": [
+    "users/{uid}/favorites",
+    "conversations (including typing)",
+    "messages (membership guards only)"
+  ],
+  "preservedDraftPath": "ops/containment/staff-payments.DRAFT.firestore.rules",
+  "preservedDraftHash": "ad799e86e03de52a0570edf98f01cf72d0bce08fb09c307b70cc21a7c81f1bbd"
+}
