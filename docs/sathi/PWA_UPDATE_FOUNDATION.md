@@ -26,3 +26,5 @@ The prior configuration used automatic update activation with no UI state. That 
 ## What this does not prove
 
 An already open browser tab was observed using an older cached HTML shell and bundle while the fresh public endpoint served the new build. No user action was taken in that tab. This demonstrates why the update prompt is needed, but it does not prove that an installed client has received a second worker, shown the banner, deferred it, and later activated it. That two-version flow remains the required manual acceptance.
+
+A localhost two-version attempt on 2026-09-12 verified the initial guest page loads without a prompt. The only available in-app browser cannot expose service-worker state, and no Chrome or Edge automation browser is available on this host. The temporary second build and preview server were removed/restored without changing source or production. This is an environment limitation, not evidence that the banner failed.

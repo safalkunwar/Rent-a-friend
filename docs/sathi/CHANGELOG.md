@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-12 — Local PWA lifecycle acceptance limitation
+- **Task:** Attempt the outstanding two-version PWA update acceptance without using production accounts, Firebase policy, payment flows or a public deployment.
+- **Objective:** Confirm a local current worker can become waiting after a harmless second build and expose the existing defer/refresh UI.
+- **Files changed:** PWA update foundation, this changelog. The temporary application-text change and generated build output were restored before this entry.
+- **Architecture changes:** None.
+- **Firebase changes:** None. The localhost guest page performed no user action; Firestore/Storage rules, Functions, indexes, Auth, documents, Event policy, booking, payment, staff and App Check behavior were untouched.
+- **UI changes:** None retained.
+- **Security implications:** The test used a disposable localhost origin. No production account action, data mutation, permission change, payment action or remote deployment occurred.
+- **Performance implications:** None.
+- **Tests performed:** Built the current production app, loaded it at `127.0.0.1:4173` as a guest, reloaded once to establish the initial worker context, then built a temporary content-only next version. The available in-app browser did not expose service-worker registration state or show a waiting-worker banner; separate Chrome and Edge automation sessions are unavailable on this host. The original source/build was regenerated and the preview process was stopped.
+- **Known issues:** No full two-version lifecycle verdict is possible in this host's browser environment. Installed-PWA/browser, physical-device and Capacitor acceptance remain open.
+- **Next recommended task:** Use a disposable Chrome/Edge profile or physical device to install the published site, then test a harmless second release through waiting worker → banner → defer → refresh. Keep permissions and payments out of that test.
+
 ## 2026-09-12 — PWA publication integrity readback
 - **Task:** Verify that the committed user-controlled PWA update build is actually delivered by the public Vercel site without exercising a signed-in user's data or changing Firebase scope.
 - **Objective:** Distinguish fresh public asset delivery from the still-unperformed installed-PWA two-version acceptance.
