@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-12 — Messaging Gate C no-op diagnosis
+- **Task:** Diagnose the scoped Firestore rules deployment no-op without retrying the deployment.
+- **Objective:** Separate configuration/IAM causes from the Firebase CLI execution path while preserving the no-mutation stop condition.
+- **Files changed:** Read-only Rules IAM diagnostic; release gate; handoff; this changelog.
+- **Architecture changes:** None.
+- **Firebase changes:** None. Local CLI v13.35.1 resolves `hamrosathi1` and the isolated candidate config. Read-only `testIamPermissions` confirms `firebaserules.releases.get/update` and `rulesets.get/create` are granted. No ruleset/release creation, data access, or deployment retry occurred.
+- **UI changes:** None.
+- **Security implications:** IAM is not the observed blocker. The candidate remains inactive; root rules and unrelated targets remain excluded.
+- **Performance implications:** None.
+- **Tests performed:** IAM diagnostic syntax check and approved read-only permission check passed.
+- **Known issues:** Firebase CLI deploy no-op cause remains unknown because no current deployment log was produced. Active production rules remain baseline.
+- **Next recommended task:** Obtain new explicit approval for one diagnostic-capable, still Firestore-rules-only deployment attempt, then perform exact readback before any Vercel publication.
+
 ## 2026-09-12 — Messaging Gate C stopped: production readback unchanged
 - **Task:** Execute the approved scoped messaging Firestore rules rollout only after a fresh drift preflight.
 - **Objective:** Deploy the reviewed messaging/favorites candidate, verify it by active-source readback, then publish the immutable application commit only if rules were active.

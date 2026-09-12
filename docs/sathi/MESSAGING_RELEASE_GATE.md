@@ -84,6 +84,10 @@ The exact command above was invoked after a passing preflight. It did not produc
 
 Treat this as a failed/no-op deployment, not success. Do not retry automatically. Before a new explicitly approved attempt, inspect Firebase CLI deployment diagnostics/authentication and verify the isolated config is honored; then rerun Gate B and readback. Do not publish the app until readback succeeds.
 
+### 2026-09-12 read-only diagnosis
+
+The local Firebase CLI is v13.35.1 and resolves `hamrosathi1` from `.firebaserc`; the isolated config resolves the intended candidate path. No current deployment log was produced. The signed-in account's read-only IAM capability check returned **true** for `firebaserules.releases.get`, `firebaserules.releases.update`, `firebaserules.rulesets.get`, and `firebaserules.rulesets.create`. IAM authorization is therefore not the observed blocker. A future attempt needs explicit approval to use a diagnostic-capable deployment path, followed by the mandatory exact readback; it must still exclude all other Firebase targets.
+
 Immediately read back the active release and compare its source to `candidate.firestore.rules`. Save that post-deploy release name/hash next to the Gate B rollback. Publish the exact reviewed application commit only after this readback succeeds, then confirm Vercel serves that commit/build rather than a stale PWA asset. Do not run root `firebase.json`, `firestore.indexes.json`, Functions, Storage, `firebase deploy` without `--only`, or any booking/staff draft.
 
 Rollback is **not automatic**. A rollback would restore the Gate B source and reopen the known messaging/favorites authorization bypasses. It requires a fresh read of the then-active source, an explicit decision, and a new release record.
