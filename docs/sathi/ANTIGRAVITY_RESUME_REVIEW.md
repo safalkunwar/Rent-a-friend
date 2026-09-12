@@ -1,8 +1,10 @@
 # Antigravity review and scoped continuation — 2026-09-10
 
-## Outcome
+> **Current status, 2026-09-12:** The scoped messaging/favorites release described by this review is now active and passed dedicated A/B/C production SDK acceptance. See [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md). The remainder preserves the local-review evidence from 2026-09-10; it does not authorize staff, booking/payment or root-rule work.
 
-Antigravity's unread-reset change is correct on inspection and now covered by actual component tests. Local messaging verification is complete; **production rollout remains gated**. Booking and staff/payment drafts are not approved or qualified. This session changed tests/documentation only, preserved Antigravity's writer and all unrelated drafts, and made no production requests, writes, deployments or commits.
+## Historical review outcome
+
+At the 2026-09-10 review, Antigravity's unread-reset change was correct on inspection and covered by actual component tests. Local messaging verification was complete while production rollout remained gated. Booking and staff/payment drafts were not approved or qualified. That session changed tests/documentation only, preserved Antigravity's writer and all unrelated drafts, and made no production requests, writes, deployments or commits.
 
 ## What was actually changed by Antigravity
 

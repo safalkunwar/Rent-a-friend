@@ -6,7 +6,7 @@ Snapshot: **2026-09-10T15:47:04.801Z**. Capture finished2026-09-10T15:47:24.067Z
 
 **No orphan-message migration is indicated by the current metadata.** All306 messages reference existing parents with valid two-member lists. All36 conversation documents have stored id equal to their Firestore document ID. There are zero missing references, duplicate member-pair groups, malformed memberships or ambiguous target suggestions.
 
-The metadata-reconciliation gate passes for these measured properties. This is **not production deployment approval or signed-in UI acceptance**. Existing production security vulnerabilities and app entry-path compatibility remain separate release concerns.
+The metadata-reconciliation gate passed for these measured properties. It was not, by itself, production deployment approval or signed-in UI acceptance. The resulting scoped messaging release later passed dedicated-account production SDK acceptance; see [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md). Existing staff, booking/payment and other Phase 0 concerns remain separate.
 
 | Measurement | Fresh complete snapshot |
 | --- | --- |
@@ -50,11 +50,11 @@ We cannot determine from those aggregates alone whether the difference arose fro
 
 Stored membership was historically client-mutable under production rules. The current structural consistency proves exact-reference compatibility, not rightful ownership of every historical message. No sender/content or independent ownership audit was authorized or performed.
 
-## Safest next step
+## Historical next step and completed follow-up
 
-Follow-up local review: [MESSAGING_ENTRY_PATH_REVIEW.md](MESSAGING_ENTRY_PATH_REVIEW.md) reproduces companion-entry misselection and duplicate-pair creation. It proposes a messaging-only existing-thread resolver; no application behavior has been changed yet.
+Follow-up local review: [MESSAGING_ENTRY_PATH_REVIEW.md](MESSAGING_ENTRY_PATH_REVIEW.md) reproduced companion-entry misselection and duplicate-pair creation. Its messaging-only existing-thread resolver was implemented, released and live-qualified as documented in [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md).
 
 1. **Do not migrate or delete history.** The stated orphan/ID-mismatch justification is absent in this snapshot.
-2. Review and test the existing-thread resolution paths for opaque pairs: inbox selection, open-by-companion and booking-triggered createConversation. Any implementation should preserve existing thread IDs and avoid duplicate pair creation; request separate approval before changes.
-3. Before a separately authorized scoped rules release, refresh active rules/index state and rollback, rerun exact artifact/authorization tests, and define live two-user acceptance. Admin-authenticated metadata reads do not test end-user rules.
-4. Keep booking/staff/payment drafts isolated. No deployment or next product phase follows automatically.
+2. Existing-thread resolution was implemented and deployed without rewriting conversation IDs or history; only synthetic/local coverage and dedicated generated-account production acceptance are claimed for opaque-thread behavior.
+3. The scoped rules release used a fresh baseline rollback and exact active-source readback. Admin-authenticated metadata reads remain distinct from end-user authorization tests.
+4. Keep booking/staff/payment drafts isolated. No further product phase follows automatically.

@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-12 — Documentation status reconciliation
+- **Task:** Audit the Markdown documentation set after the scoped messaging containment release and reconcile current operational status without rewriting historical evidence.
+- **Objective:** Make the active release, open Phase 0 branches and authority hierarchy discoverable so future work does not repeat a completed rollout or treat design/audit documents as deployment approval.
+- **Files changed:** Documentation-status index; AGENTS continuity summary; current messaging readiness/review/correction/metadata/entry-path documents; Phase 0 report; implementation roadmap; this changelog.
+- **Architecture changes:** None.
+- **Firebase changes:** None. This documentation change records the already verified `cloud.firestore` messaging/favorites release only; it creates no ruleset, data, index, Storage, Function, Hosting or Auth mutation.
+- **UI changes:** None.
+- **Security implications:** Keeps P0-01's exact release evidence distinct from unresolved staff, booking/payment, Event, App Check and recovery risks. Historical reports remain evidence, not permission for broad deployment.
+- **Performance implications:** None.
+- **Tests performed:** Markdown cross-reference/status review, targeted stale-status search, and prior release evidence review. No application, emulator or production test was rerun because no executable behavior changed.
+- **Known issues:** Legacy `docs/` and `docs/firebase/` references remain historical and may contain superseded claims; the new index labels their authority rather than mass-editing dated reports. Untracked drafts remain outside the committed authoritative set.
+- **Next recommended task:** Select one independently approved P0 containment branch (staff authority or booking/lock compatibility) and run a fresh scoped compatibility gate. Do not repeat the messaging rollout or deploy root Firebase configuration.
+
 ## 2026-09-12 — Scoped messaging containment release and live acceptance
 - **Task:** Complete the explicitly approved messaging/favorites Firestore containment release and dedicated-account production acceptance.
 - **Objective:** Activate only the reviewed candidate rules, confirm exact active-source readback, publish the immutable resolver application commit, and prove core two-user persistence with outsider denials without touching real customer records.

@@ -1,8 +1,8 @@
 # Messaging release readiness — corrected 2026-09-10
 
-## Current verdict: reference/identity metadata gate PASSED; deployment not authorized
+## Current verdict: reference/identity metadata gate PASSED; scoped release deployed
 
-**Fresh approved snapshot2026-09-10T15:47:04.801Z:** all306 messages reference existing parents, all36 stored conversation IDs match their document IDs, and zero missing/ambiguous references or duplicate member pairs were found. There are6 canonical and30 opaque parents. See [MESSAGING_METADATA_RESULT.md](MESSAGING_METADATA_RESULT.md) and the aggregate-only capture for current evidence. No production repair was performed. Do not migrate/delete history on the basis of the earlier orphan report. Existing-thread entry-path compatibility, fresh live rules/index qualification and separate deployment authorization remain.
+**Fresh approved snapshot2026-09-10T15:47:04.801Z:** all306 messages reference existing parents, all36 stored conversation IDs match their document IDs, and zero missing/ambiguous references or duplicate member pairs were found. There are6 canonical and30 opaque parents. See [MESSAGING_METADATA_RESULT.md](MESSAGING_METADATA_RESULT.md) and the aggregate-only capture for current evidence. No production repair was performed. The resulting existing-thread compatibility fix and messaging/favorites candidate were subsequently deployed and live-qualified; see [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md). Do not migrate/delete history on the basis of the earlier orphan report.
 
 ## Superseded capture review — historical evidence and corrections
 
@@ -72,9 +72,9 @@ Antigravity's manifest records66 composite indexes as READY but does not save th
 - markMessagesAsRead: definition exists but source search found no src/admin caller. Its missing-index claim is a future activation concern, not demonstrated failure of the current unread-reset UI. Do not remove it or deploy an index automatically.
 - Emulator rules checks do not substitute for production query/index qualification. Keep any future probes read-only and projected; do not retrieve message text.
 
-## Blockers and recommended actions
+## Historical blockers and actions — superseded or separately tracked
 
-### M-01: orphan-reference ownership is unresolved
+### M-01: orphan-reference ownership — superseded by the complete metadata snapshot
 
 Evidence: saved306 messages/35 absent references. Candidate uses existing-parent membership. Root cause is an identity/reference mismatch; its complete production provenance is unverified.
 
@@ -84,7 +84,7 @@ Dependency: full projected id/member metadata and an explicit ownership/source-o
 
 Creating canonical parents alone does not reconnect messages whose conversationId still points elsewhere. Any eventual repair must explicitly address references and concurrency. Do not replace missing-parent checks with permissive prefix rules.
 
-### M-02: stored identity and entry-path compatibility are unresolved
+### M-02: stored identity and entry-path compatibility — resolved by the scoped release
 
 Evidence: adapter permits stored-id override; sorted-pair entry paths differ from inbox selection;30 opaque IDs are reported, not proven invisible.
 
@@ -92,18 +92,17 @@ Next: project stored id along with participantIds; count missing/mismatch and du
 
 Dependency: fresh metadata and entry-path tests. Risk: duplicate threads, wrong-target updates and broken links. Verify actual adapter plus inbox selection, open-by-companion, send and unread reset with missing/mismatched stored IDs.
 
-### M-03: evidence reproducibility/privacy must be restored
+### M-03: evidence reproducibility/privacy — historical process correction
 
 Original capture saved forbidden samples and omitted stored id. Full inputs/script are not available. Current aggregates cannot yield trustworthy unique/ambiguous mapping counts.
 
 Next: use the tested offline classifier and bounded capture specification in MESSAGING_RECONCILIATION_DRY_RUN.md. Do not report zero unknowns or complete mappings from samples. No production repair is authorized.
 
-## Safest next order
+## Historical next order and current direction
 
-1. Review this corrected report and the aggregate-only dry-run contract.
-2. Authorize/perform a bounded projected read to supply complete metadata in memory; classify exact, uniquely suggested, ambiguous and unmatched references. Stop at caps and label partial scans.
-3. Present actual aggregate results and a proposed ownership-preserving repair/app integration plan. A unique suggestion is not repair authorization.
-4. Only after separate approval: implement scoped repairs with backup/preconditions and tests, refetch rules/index state, then request deployment authorization.
-5. Keep booking/staff/payment drafts separate and untouched.
+1. The corrected report and aggregate-only metadata capture were reviewed; the complete snapshot required no repair.
+2. Existing-thread resolver implementation, fresh rollback, candidate readback and dedicated-account production acceptance are complete; see [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md).
+3. Do not create a migration or repeat the rollout from historical orphan claims.
+4. Keep booking/staff/payment drafts separate and untouched until their own approved compatibility gate.
 
 Historical local verification remains48 rules checks,270 main tests, TypeScript and Vite/PWA build. This documentation/privacy/dry-run preparation does not constitute a new production acceptance test.

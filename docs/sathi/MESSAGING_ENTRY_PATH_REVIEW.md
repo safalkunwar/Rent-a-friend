@@ -2,7 +2,7 @@
 
 ## Verdict
 
-**Implemented locally; release still requires separate approval.** Production reference metadata does not justify migration. The fix preserves existing conversation document IDs and does not change Firestore/Storage rules, indexes, production data, or deployment state.
+**Implemented and released through the scoped messaging gate.** Production reference metadata does not justify migration. The fix preserves existing conversation document IDs; the candidate-only Firestore rules release changed messaging/favorites authorization but did not alter Storage, indexes, migrations or production conversation history. See [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md).
 
 ## Verified behavior
 
@@ -49,7 +49,7 @@ This proposal is messaging integration only. It does not authorize a new convers
 
 Desired-behavior regressions cover opaque/reversed/canonical IDs, delayed/error/incomplete lookup, duplicate-pair ambiguity, authenticated UID validation, account/peer changes during lookup, manual selection after deep link, genuinely new parent creation before send, and unchanged historical membership/timestamps. The canonical positive control and all nine unread-writer tests remain.
 
-Run exact candidate emulator checks for any new query shape and existing positive/negative authorization; candidate security policy must not be weakened. Run main TypeScript/tests/build. After separately approved rollout, verify two-user entry/send/refresh persistence. No production acceptance is claimed from mocked tests.
+The exact candidate emulator checks, main TypeScript/tests/build and the separately approved two-user generated-account production acceptance have passed. No real-customer opaque-thread probe is claimed; mocked/local tests remain the evidence for that legacy shape.
 
 ## Checks run in this review
 
@@ -57,6 +57,6 @@ Run exact candidate emulator checks for any new query shape and existing positiv
 
 `FIRESTORE_EMULATOR_HOST=127.0.0.1:8087 node --test tests/messaging-favorites-containment.test.mjs` — **49/49 passed**, including the new bounded member-query, cursor and cross-user-denial case.
 
-`node node_modules/typescript/bin/tsc --noEmit`, `node node_modules/vite/bin/vite.js build`, and `git diff --check` passed. The Vite build retains the project's existing bundle-size warning. This is local/emulator evidence only; no production acceptance is claimed.
+`node node_modules/typescript/bin/tsc --noEmit`, `node node_modules/vite/bin/vite.js build`, and `git diff --check` passed. The Vite build retains the project's existing bundle-size warning. Subsequent live acceptance is recorded separately in [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md); this review itself remains local/emulator evidence.
 
-Next owner decision: review this local change, then separately authorize a release gate and two-user production acceptance if desired.
+Next owner decision: do not repeat this release. Choose a separate Phase 0 containment branch and establish its own compatibility gate.

@@ -1,6 +1,6 @@
 # Messaging/favorites containment correction — 2026-09-10
 
-Status: **local candidate and existing-thread integration verified; Gate B rules preflight passed; deployment remains separately gated.** The resolver now reuses existing opaque/reversed parents by stored membership and the unread-reset writer changes only its allowed fields. Production records/active rules/indexes/Storage/CORS/Functions remain untouched. See [MESSAGING_RELEASE_GATE.md](MESSAGING_RELEASE_GATE.md) for the authoritative next Gate C/D requirements; the booking draft remains separate and unsafe.
+Status: **the reviewed messaging/favorites candidate is active; Gate C/D passed on 2026-09-12.** The resolver reuses existing opaque/reversed parents by stored membership and the unread-reset writer changes only its allowed fields. Production records were not migrated; Storage, indexes, Functions and root Firebase configuration remain untouched. See [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md) for exact release/readback/acceptance evidence; the booking draft remains separate and unsafe.
 
 ## Exact artifacts
 
@@ -28,7 +28,7 @@ Two shared helpers and one create validator are used only within messaging. The 
 
 The scope test removes only the nested favorites block and the contiguous conversation/message domain and compares everything else exactly (newline normalization only, no whitespace collapsing). Manual unified diff inspection confirms message edits are membership guards only. **Users outside nested favorites, profile photo, Community posts, comments/likes, Events, bookings/locks, companions, notifications, KYC/private documents, referrals/rewards, payments/admin assignments and all unrelated helpers are unchanged.** Existing unsafe permissions in those branches remain unsafe; byte parity is not an endorsement.
 
-## Compatibility policy and release blockers
+## Compatibility policy and historical release blockers
 
 1. **Legacy unread-reset writer — fixed.** `src/components/messages/MessagesTab.tsx` now updates only `unreadCount` and `updatedAt` on the existing conversation. It no longer splits the conversation ID or rewrites `participantIds`/`id`. Rules remain `affectedKeys().hasOnly(['lastMessage','unreadCount','updatedAt'])`; the application-side fix prevents the old buggy payload from being sent.
 2. **Historical ownership inventory needed before deployment.** Stored list members retain access for opaque IDs and delimiter-containing UIDs. Existing groups are not rewritten into pairs. Missing membership on an unambiguous two-part ID retains direct access, but does not magically appear in an array-contains inbox. Null/map/empty membership, ambiguous missing-member IDs and orphan messages are denied rather than guessed. No production inventory establishes how many such records exist. Review ownership using bounded metadata-only inspection; any backfill/repair needs a separately approved plan. Do not recreate orphan parents or migrate/delete history blindly.
@@ -51,15 +51,15 @@ Candidate query checks initially failed because general membership/type predicat
 
 The preserved staff suite previously ran **11 passed / 9 failed**, with expected-denial writes succeeding because every role fixture retains a finance assignment. It loads the correct frozen hash; failures are behavioral, not artifact setup errors. The prior independent review separately reproduced self-assignment escalation; that policy was not repaired or rerun in this continuation.
 
-Current continuation: main TypeScript and Vite/PWA build pass, with the existing large-bundle warning. Main unit coverage is301/301, including existing-thread and unread-writer integration cases; git diff --check passes. Gate B's 2026-09-11 read-only production preflight captured a fresh rollback and confirmed active source still matches the baseline. No standalone admin suite, rules/app deployment, live two-user test, production index verification or physical-device QA is claimed. Firestore emulator query authorization does not establish production composite-index readiness.
+At the local continuation, main TypeScript and Vite/PWA build passed with the existing large-bundle warning. Main unit coverage was301/301, including existing-thread and unread-writer integration cases; git diff --check passed. Gate B's 2026-09-11 read-only production preflight captured a fresh rollback and confirmed active source matched the baseline. The later scoped rules/app release and live two-user SDK acceptance are recorded in [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md). No standalone admin suite, physical-device QA or installed-PWA cache acceptance is claimed. Firestore emulator query authorization does not establish production composite-index readiness.
 
-## Performance, rollback and safest next order
+## Performance, rollback and historical release order
 
 Parent membership now gates message/typing operations with exists/get; this adds rule-dependent reads where split-ID access previously short-circuited. The same parent is reused within operations, but access-call limits, batching and live read cost should be qualified before release. No new application query, listener, index definition or Function was introduced.
 
-1. Isolate the approved messaging release into an immutable commit, excluding reconciliation and booking drafts.
-2. After separately approved Gate C authority, rerun the read-only preflight, compare against the fresh rollback, then deploy only the candidate rules with the dedicated release config and read back the active ruleset.
-3. Publish only that immutable app commit, then perform the approved Gate D two-user persistence and outsider-denial acceptance.
-4. Do not deploy root rules or the frozen combined draft; booking/staff containment is a separate phase.
+1. The approved messaging release was isolated into immutable commits, excluding reconciliation and booking drafts.
+2. Gate C used a fresh rollback, candidate-only deploy and exact active-source readback.
+3. The resolver application was pushed and Gate D generated-account persistence/outsider-denial acceptance passed.
+4. Do not deploy root rules or the frozen combined draft; booking/staff containment remains a separate phase.
 
 No production rollback is needed now. The captured rules remain intact. A future rollback must target the freshly verified pre-release rules, and explicitly acknowledge that reverting reopens the old authorization bypasses; do not automatically roll back security policy or overwrite newer unrelated releases.

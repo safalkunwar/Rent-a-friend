@@ -1,6 +1,8 @@
 # Phase 0 — production compatibility and security baseline
 
-2026-09-10. Source: `5ecc69615cfbf122071ab42928325cfd86d060f2`. Result: **evidence collection complete; production safety gate NOT PASSED**. Stop for owner review and a narrowly authorized containment phase. No application code, production data, rules, indexes, Functions, billing, CORS or App Check settings changed. Added only audit documents, rollback evidence and an emulator diagnostic test. Prior uncommitted architecture documents were preserved.
+2026-09-10. Source: `5ecc69615cfbf122071ab42928325cfd86d060f2`. Historical result: **evidence collection complete; production safety gate NOT PASSED**. The report then stopped for owner review and a narrowly authorized containment phase. At this report's capture, no application code, production data, rules, indexes, Functions, billing, CORS or App Check settings changed. Added only audit documents, rollback evidence and an emulator diagnostic test. Prior uncommitted architecture documents were preserved.
+
+> **Status update, 2026-09-12:** P0-01 messaging/favorites containment was subsequently released through a candidate-only Firestore rules deployment and passed dedicated A/B/C production SDK acceptance. Exact evidence is in [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md). This does not pass Phase 0 as a whole or resolve P0-02 through P0-05.
 
 ## 1. Evidence and limits
 
@@ -89,14 +91,14 @@ Public website returns HTTP200 with `/assets/index-CkZ6Jtrm.js` and `/assets/ind
 
 Passing KNOWN_RISK tests means the vulnerability was reproduced, NOT that the application passed a security requirement. The owner must approve implementation/deployment scope separately.
 
-### P0-01 — Conversation takeover, deletion and private message disclosure
+### P0-01 — Conversation takeover, deletion and private message disclosure — contained 2026-09-12
 
 - **Evidence/files:** Captured production conversations rules, line311 unrestricted authenticated write; messages read authorization trusts mutable participantIds. Diagnostic stranger C replaces A_B participants with C, reads synthetic private message and can delete A_B. Nested favorites also accepts stranger writes (line201).
 - **Root cause:** Overlapping allow-write bypass overrides narrower branches; mutable membership feeds downstream authorization.
 - **Fix:** Remove bypasses, require immutable canonical participants/ownership, restrict own favorite writes, preserve legitimate existing IDs/history. Audit existing membership integrity separately before trusting all historical pairs.
 - **Dependencies:** Fresh baseline/rollback and compatibility inventory for conversation writers; no new wallet or capability system required for containment.
 - **Regression risk:** Existing pair-creation, read receipts, typing and favorites flows; historical IDs may use both path and stored participants.
-- **Verify:** Turn exploit expectations into DENIED against a dedicated candidate; participant create/send/read/receipt/favorite tests still pass. Authorized two-user production negative check only after approved deployment. Never test takeover on real users.
+- **Verify:** Dedicated candidate regressions and a generated-account A/B/C production acceptance passed: shared parent/history and unread-only update remain allowed; outsider direct read, membership query and message write are denied. See [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md). No takeover is probed against real users.
 
 ### P0-02 — “Read-only” staff can mutate protected records
 
@@ -202,8 +204,8 @@ node --import tsx --test tests/architecture-baseline.test.mjs
 
 ## 7. Safest next task and stop condition
 
-**Recommend a separately approved P0 messaging/favorites containment patch first**, using the exact current production baseline, followed by branch-scoped staff/approval/booking/payment authority containment. Booking cancellation compatibility is urgent alongside booking invariants. Event-only release/index/data qualification follows those core protections; do not jump to new product Phase 1 while these bypasses remain.
+**P0-01 is complete as a narrowly scoped release.** Next, choose one separately approved branch-scoped containment task: P0-02 staff authority or the coordinated P0-03/P0-04 booking/payment/lock compatibility work. Booking cancellation compatibility is urgent alongside booking invariants. Event-only release/index/data qualification follows those core protections; do not jump to new product Phase 1 while these bypasses remain.
 
-For each patch: refetch active hashes, preserve rollback, enumerate intended branches/helpers, add desired DENIED regressions and legitimate positive cases, compare unrelated semantics, review migration/client compatibility, obtain deployment approval, read back exact rules and run authorized synthetic positive/negative acceptance. No proposed fix in this report has been implemented or deployed. Previous broad rollback would reopen demonstrated vulnerabilities; rollback after containment requires its own risk review.
+For each remaining patch: refetch active hashes, preserve rollback, enumerate intended branches/helpers, add desired DENIED regressions and legitimate positive cases, compare unrelated semantics, review migration/client compatibility, obtain deployment approval, read back exact rules and run authorized synthetic positive/negative acceptance. At the report capture no proposed fix had been deployed; P0-01 is the later exception described above. Previous broad rollback would reopen demonstrated vulnerabilities; rollback after containment requires its own risk review.
 
 Phase 0 stops here for owner review. Fresh negative production writes, Auth claims inventory, restore drill, exact app-commit attestation, media upload/UI refresh, App Check tokens and physical devices remain NOT RUN. Do not silently roll into implementation or treat this report as a release approval.

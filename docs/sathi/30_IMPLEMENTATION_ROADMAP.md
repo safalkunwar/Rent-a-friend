@@ -2,6 +2,8 @@
 
 Target plan v1, 2026-09-10. Architecture/design only: **none of these new phases is implemented or approved for production by this document**. Existing completed repairs remain existing work, not completion of a new phase. Owner approval selects one bounded phase; implementation does not authorize deployment or money activation.
 
+> **Status update, 2026-09-12:** The Phase 0 evidence baseline is complete and its P0-01 messaging/favorites containment follow-up is active with dedicated-account production acceptance. See [DOCUMENTATION_STATUS.md](DOCUMENTATION_STATUS.md) and [MESSAGING_RELEASE_RESULT.md](MESSAGING_RELEASE_RESULT.md). P0-02 onward and every numbered target phase below remain unimplemented unless a later release record says otherwise.
+
 ## Priority and dependency order
 
 P0: reconcile production security/version drift, prevent authority bypass and data loss, protect private evidence, make financial commands fail closed. P1: identity/eligibility, accepted messaging, tenant isolation, tested booking/payment contracts and staffed operational readiness. P2: expanded monetization and ranking after prerequisites. P3: optional AI and visual polish after deterministic/device acceptance. Cash redemption and deeper referral rewards are conditional compliance gates, not mandatory launch shortcuts.

@@ -2,23 +2,23 @@
 
 This file serves as a high-level briefing for any AI agent resuming work on the SATHI project.
 
-## Continuity update (2026-09-10)
+## Continuity update (2026-09-12)
 
-Read [docs/sathi/ANTIGRAVITY_HANDOFF.md](docs/sathi/ANTIGRAVITY_HANDOFF.md) first, then target docs 20–32 and the selected phase in 30. The architecture session changed documentation only; no new implementation phase is complete. Next is Phase 0, read-only production compatibility/security baseline. The dated September 4 status below is historical: strict main Firebase validation, blanket production-hardening, fixed test counts and “no deployed Functions” must not be assumed. Later scoped media/comment releases have their own evidence, while root/ops/production rules differ. Confirm current billing and explicit approval before new Functions deployment. Preserve existing constraint rules and CHANGELOG discipline; do not infer approval for live money or broad security-rule replacement from the design package.
+Read [docs/sathi/DOCUMENTATION_STATUS.md](docs/sathi/DOCUMENTATION_STATUS.md) and [docs/sathi/ANTIGRAVITY_HANDOFF.md](docs/sathi/ANTIGRAVITY_HANDOFF.md) first, then target docs 20–32 and the selected phase in 30. The scoped P0-01 messaging/favorites containment release is active with dedicated-account SDK acceptance; no broader product phase is complete. Next is a separately approved P0 branch, not a repeat messaging rollout. The dated September 4 status below is historical: strict main Firebase validation, blanket production-hardening, fixed test counts and “no deployed Functions” must not be assumed. Root/ops/production rules differ. Confirm current billing and explicit approval before any new Functions deployment. Preserve existing constraint rules and CHANGELOG discipline; do not infer approval for live money or broad security-rule replacement from the design package.
 
-## Current Status (2026-09-04)
+## Historical Status (2026-09-04 — superseded)
 
-> Phase 0 follow-up (2026-09-10): read docs/sathi/PHASE_00_COMPATIBILITY_REPORT.md. Fresh evidence: billing enabled, seven media Functions active, 66 READY indexes but two missing Event query shapes; production conversation/RBAC/booking-authority bypasses reproduced with synthetic emulator data, and actual v2 cancellation denied. Evidence collection completed, safety gate failed; no production mutation. Next requires approval for scoped containment, not automatic Phase 1. Main261/admin40 tests passed on final runs; detailed initial failures and emulator-project coupling are recorded in the report.
+> Phase 0 status (2026-09-12): P0-01 messaging/favorites containment was deployed as a candidate-only Firestore rules release and passed dedicated A/B/C SDK acceptance; see docs/sathi/MESSAGING_RELEASE_RESULT.md. Staff authority, booking/payment/lock compatibility, Event indexes, App Check, PITR/restore and device/PWA acceptance remain open. Read the documentation-status index before using the dated September 10 report below.
 
-The Firebase backend is production-hardened. The admin panel is a completely standalone application at `/admin` with its own build, routing, Firebase initialization, RBAC, and test suite. The main app has progressed through Home feed overhaul, deep-linkable community posts, a fully rebuilt comment pipeline, KYC/companion-application flow, and a fabricated-engagement purge against the live `hamrosathi1` database. Test counts: **126 in main app** (7 files) + **38 in admin app** (5 files) = **164 total passing**.
+This September 4 snapshot described the backend as production-hardened. That conclusion is superseded by the later Phase 0 evidence: only P0-01 has since received a scoped containment release, while multiple production risks remain open. The admin and application descriptions and test counts below are historical reference, not current production certification.
 
 ### Critical Implementation Details
 
 1.  **Firebase Initialization:** `src/firebase.ts` enforces strict validation of `VITE_FIREBASE_*` environment variables. `admin/src/firebase.ts` does the same for the admin app and additionally throws if `projectId !== 'hamrosathi1'` (prevents accidental cross-project data access).
 2.  **Security Model:** RBAC system. Rules in `firestore.rules`. Access governed by custom claims (`admin`, `role: 'companion'`, `role: 'customer'`). Counter fields on `community_posts` (likesCount/commentsCount) require non-negative numbers; like-doc IDs are `${uid}_${postId}` (idempotent). Honest limitation: without Cloud Functions (Blaze paused), rule-level delta-correctness cannot be enforced — counters are maintained transactionally in repository code.
 3.  **Performance:** Composite indexes in `firestore.indexes.json`. Home discovery uses cursor-paginated one-shot queries (`getDocs` with document-ID cursors, 10–15 doc pages) instead of live listeners. Real-time listeners are reserved for messaging/notifications/bookings.
-4.  **Cloud Functions:** Implemented in `functions/src/index.ts` — `onUserCreate`, `onUserDelete`, `setUserRole`, `onBookingCreate`, `onBookingUpdate`, `onMessageCreate`, `onReviewCreate`.
-    - **PAUSED:** Deployment blocked because the Firebase project is **not** on the Blaze plan. Do not attempt to deploy functions until the user confirms the upgrade.
+4.  **Cloud Functions (historical local exports):** `functions/src/index.ts` contains `onUserCreate`, `onUserDelete`, `setUserRole`, `onBookingCreate`, `onBookingUpdate`, `onMessageCreate`, `onReviewCreate`.
+    - Later Phase 0 evidence observed seven scoped media Functions active and billing enabled. Do not deploy these legacy exports in bulk; every new Functions deploy still requires explicit user authority and a reviewed runtime/configuration gate.
 5.  **Admin Application:** Standalone Vite + React app in `/admin`:
     - Own `package.json`, `vite.config.ts`, `vitest.config.ts`, `tsconfig.json`
     - **11 RBAC roles** defined in `admin/src/services/admin.ts`
@@ -32,7 +32,7 @@ The Firebase backend is production-hardened. The admin panel is a completely sta
 8.  **Comment Pipeline (2026-08-25):** Shared `usePostComments(postId)` hook + `CommentsPanel` + `CommentComposer` (auto-growing textarea, optimistic pending, double-submit guard). One realtime listener per OPENED post only.
 9.  **Engagement Integrity (2026-08-25):** All fabricated likes/comments removed from `seed.ts`. `scripts/purge-fake-engagement.mjs` deleted **1,350 fake post-likes** and **838 fake story-likes** from production `hamrosathi1`; real user interactions preserved.
 
-### Live Documentation Set (2026-08-24)
+### Historical Documentation Set (2026-08-24)
 
 The authoritative project spec lives in `/docs/sathi/` (19 files, plus `CHANGELOG.md`):
 - `00_MASTER_OBJECTIVE.md`, `01_PRODUCT_VISION.md`, `02_CORE_FEATURES.md`, `03_USER_FLOWS.md`
@@ -44,12 +44,11 @@ The authoritative project spec lives in `/docs/sathi/` (19 files, plus `CHANGELO
 - `FIREBASE_DATA_ARCHITECTURE.md`, `HOME_FEED_ARCHITECTURE.md`
 - `CHANGELOG.md` — session-by-session log (mandatory format defined at top of file)
 
-### Ongoing Tasks & Priorities
+### Current Priorities
 
-- **Blaze Plan Upgrade:** Deferred. Paused until the user confirms billing is enabled.
-- **User Experience Improvements:** Booking creation as a single Firestore transaction with idempotency keys (next recommended task from `docs/sathi/CHANGELOG.md`).
-- **Testing:** Expand Vitest coverage in both apps.
-- **Known honesty limits:** Visual QA on physical devices not performed in CI; multi-device live concurrency testing is manual; counter delta-correctness on `community_posts` cannot be rule-enforced without Functions.
+- **P0 containment:** Select either staff authority or booking/payment/lock compatibility for a new separately approved gate; P0-01 messaging/favorites is already released.
+- **New Functions:** Billing was observed enabled, but no new Functions deployment is authorized without explicit user approval and a scoped runtime/configuration review.
+- **Testing/operations:** App Check, PITR/restore, installed-PWA/device acceptance and production concurrency remain open; use the documentation-status index for scope.
 
 ### Documentation Reference
 
