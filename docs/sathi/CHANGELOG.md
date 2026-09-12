@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-12 — Event query index release and user-controlled PWA update foundation
+- **Task:** Close the two known Event participant query-planning gaps and provide a safe, visible installed-PWA update path while deferring permissions, staff authority, bookings and payments.
+- **Objective:** Make the exact existing Event attendee service queries index-ready in `hamrosathi1`, then ensure a web/PWA client can decide when to activate a waiting application update instead of being reloaded automatically.
+- **Files changed:** Candidate-only Event index definition, API/preflight/deploy/readback tools, static contract test, Event release gate/result and retained release evidence; PWA update prompt/component test; Vite PWA registration settings; App integration; documentation status/handoff and this changelog.
+- **Architecture changes:** Event data access is unchanged; only Firestore query planning was completed. The generated service worker is registered by one non-blocking application component and keeps an existing client in control until the user selects **Refresh SATHI**.
+- **Firebase changes:** Index-only in `hamrosathi1`: one exact `READY` composite exists for `userId/status/joinedAt DESC` and one for `eventId/joinedAt DESC` on `event_participants`. Final readback created no new index because both were already ready. Firestore/Storage rules, Functions, Hosting, Auth, documents, Event policy, bookings and payments were untouched.
+- **UI changes:** A small, dismissible update banner appears only when a new service worker is installed and waiting. Choosing **Refresh SATHI** sends `SKIP_WAITING` and reloads after controller change; ordinary web loading remains available if registration fails.
+- **Security implications:** No permission or payment behavior changed. Event zero-row probes use generated non-matching values and do not retrieve attendee records. The PWA work does not cache private Firebase data, alter App Check, authentication, or replay writes.
+- **Performance implications:** The two existing bounded Event reads no longer depend on missing composites. PWA registration performs one worker update check; no listener, Firestore fetch, or Firebase cache was added. The existing production bundle-size warning remains.
+- **Tests performed:** Event contract test 2/2 passed; opt-in preflight/readback found exact `READY` indexes; both read-only production query probes returned HTTP 200. PWA banner test passed (1/1); TypeScript passed; Vite production/PWA build passed and emitted `sw.js`, Workbox runtime and manifest; generated worker inspection confirmed `SKIP_WAITING`; `git diff --check` passed.
+- **Known issues:** Event joining/creation/removal, roster privacy, legacy Event records and capacity rules are not qualified. Installed-PWA/browser, physical-device and Capacitor update acceptance are not run. P0 staff, booking/payment, App Check, PITR/restore and legacy deployment inputs remain open by owner direction.
+- **Next recommended task:** Without changing permissions or payments, perform a two-browser or installed-PWA acceptance of the update prompt after the application build is published; then keep the remaining policy work deferred until separately approved.
+
 ## 2026-09-12 — Documentation status reconciliation
 - **Task:** Audit the Markdown documentation set after the scoped messaging containment release and reconcile current operational status without rewriting historical evidence.
 - **Objective:** Make the active release, open Phase 0 branches and authority hierarchy discoverable so future work does not repeat a completed rollout or treat design/audit documents as deployment approval.

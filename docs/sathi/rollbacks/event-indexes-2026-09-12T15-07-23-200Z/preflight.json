@@ -1,0 +1,153 @@
+{
+  "mode": "READ_ONLY_EVENT_INDEX_PREFLIGHT",
+  "project": "hamrosathi1",
+  "capturedAt": "2026-09-12T15:07:23.202Z",
+  "candidate": {
+    "path": "ops/event-indexes/event-participants.indexes.json",
+    "sha256": "0949fa6493f199ec45c9a89ae774f9b42a6e34190cb5c9d3642e86e3baddfdbe"
+  },
+  "activeEventParticipantIndexes": [
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/event_participants/indexes/CICAgPjCvYQK",
+      "state": "READY",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eventId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "joinedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/event_participants/indexes/CICAgNjp84oK",
+      "state": "READY",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eventId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/event_participants/indexes/CICAgPjC4pEK",
+      "state": "READY",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eventId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "joinedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "name": "projects/hamrosathi1/databases/(default)/collectionGroups/event_participants/indexes/CICAgPifq5IK",
+      "state": "READY",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "joinedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "candidateState": [
+    {
+      "definition": {
+        "collectionGroup": "event_participants",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "userId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "joinedAt",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      "matches": [
+        {
+          "name": "projects/hamrosathi1/databases/(default)/collectionGroups/event_participants/indexes/CICAgPifq5IK",
+          "state": "READY"
+        }
+      ]
+    },
+    {
+      "definition": {
+        "collectionGroup": "event_participants",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "eventId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "joinedAt",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      "matches": [
+        {
+          "name": "projects/hamrosathi1/databases/(default)/collectionGroups/event_participants/indexes/CICAgPjCvYQK",
+          "state": "READY"
+        }
+      ]
+    }
+  ],
+  "untouched": [
+    "Firestore rules",
+    "Storage",
+    "Functions",
+    "Hosting",
+    "Auth",
+    "Firestore documents"
+  ]
+}

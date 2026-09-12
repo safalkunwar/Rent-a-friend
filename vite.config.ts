@@ -10,14 +10,16 @@ export default defineConfig(() => {
       react(), 
       tailwindcss(),
       VitePWA({
-        registerType: 'autoUpdate',
-        injectRegister: 'inline',
+        // Registration is intentionally owned by PWAUpdatePrompt so an
+        // installed client can decide when to refresh an active session.
+        registerType: 'prompt',
+        injectRegister: false,
         workbox: {
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MiB to accommodate compiled single-page bundle
           globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
           cleanupOutdatedCaches: true,
-          clientsClaim: true,
-          skipWaiting: true,
+          clientsClaim: false,
+          skipWaiting: false,
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,

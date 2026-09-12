@@ -23,8 +23,10 @@ This index separates current operational evidence from historical audits and tar
 | P0-02 staff authority | Open | No branch-scoped containment release |
 | P0-03/P0-04 booking/payment/lock authority | Open | Untracked booking draft is unsafe and not qualified |
 | P0-05 legacy deployment inputs | Open | Root rules and legacy Functions remain unsuitable for blanket deployment |
-| P1 Event indexes/contracts | Open | Two Event query shapes remain unindexed in the Phase 0 capture |
-| App Check, PITR/restore and device/PWA QA | Open | No production-certification claim |
+| P1 Event participant query indexes | Completed index-only release | Both exact service query shapes have one `READY` composite and passed zero-row production probes; Event policy/contracts remain open |
+| Event participation contracts/policy | Open | Roster privacy, creation, joining/removal and capacity behavior are excluded rules/data-contract work |
+| PWA update foundation | Local application change verified | The worker now waits for user refresh; installed-PWA, device and Capacitor acceptance remains open |
+| App Check and PITR/restore | Open | No production-certification claim |
 
 ## How to read the remaining Markdown
 
@@ -35,4 +37,4 @@ This index separates current operational evidence from historical audits and tar
 
 ## Safe next action
 
-Do not repeat the messaging rollout or deploy root Firebase configuration. Choose one separately approved P0 branch—staff authority or booking/lock compatibility—then run a new read-only compatibility gate with fresh hashes, a branch-limited candidate, emulator regressions, rollback, exact readback and dedicated-fixture acceptance.
+Do not repeat the messaging rollout or deploy root Firebase configuration. The Event query index gap is closed, but Event policy is not. With permission and payment work deferred, the next safe task is browser/device acceptance of the already-built user-controlled PWA update flow; it requires no Firebase policy change.

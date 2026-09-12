@@ -9,6 +9,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { NotificationProvider } from './components/notifications/NotificationProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { PaymentVerifyPage } from './pages/PaymentVerifyPage';
 import { EsewaVerifyPage } from './pages/EsewaVerifyPage';
 import { EsewaFailurePage } from './pages/EsewaFailurePage';
@@ -96,6 +97,7 @@ export default function App() {
           <ToastProvider>
             <NotificationProvider>
               <PWAInstallPrompt />
+              <PWAUpdatePrompt />
               <AppRoutes />
             </NotificationProvider>
           </ToastProvider>
