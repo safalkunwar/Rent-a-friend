@@ -11,6 +11,8 @@ const permissions = [
   'firebaserules.releases.update',
   'firebaserules.rulesets.get',
   'firebaserules.rulesets.create',
+  'datastore.entities.get',
+  'datastore.entities.delete',
 ];
 const require = createRequire(import.meta.url);
 const auth = require('firebase-tools/lib/auth.js');

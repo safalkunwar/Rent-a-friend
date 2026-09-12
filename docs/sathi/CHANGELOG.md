@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-12 — Scoped messaging containment release and live acceptance
+- **Task:** Complete the explicitly approved messaging/favorites Firestore containment release and dedicated-account production acceptance.
+- **Objective:** Activate only the reviewed candidate rules, confirm exact active-source readback, publish the immutable resolver application commit, and prove core two-user persistence with outsider denials without touching real customer records.
+- **Files changed:** Candidate-only Rules API deployment/readback, generated-fixture smoke and cleanup-verification tools, IAM diagnostic, two dated rollback/result directories, messaging release gate/result/handoff and this changelog.
+- **Architecture changes:** None beyond the already reviewed shared existing-thread resolver and unread writer. The release retains bounded server membership lookup and snapshot-ID authority.
+- **Firebase changes:** `cloud.firestore` only. Baseline SHA-256 `5e1552736ce1357c83a1447161fdc75741fbc5430dd50a0bf3897f230fe95013` was archived and replaced by candidate SHA-256 `28709c31cf043c9394dfea4f81be58aea217d455537c8b072bff3411f9040497`; active ruleset is `f4e99332-71c9-46ef-93fe-39843148d35f` at `2026-09-12T14:27:06.774400Z`. Storage, indexes, Functions, Hosting configuration, Auth configuration, migrations and persistent application data were untouched; exact generated acceptance fixtures were cleaned up.
+- **UI changes:** None beyond releasing the previously committed resolver through the existing GitHub/Vercel integration. Public HTTP asset inspection returned 200 and contains the resolver literal; installed-PWA cache behavior was not accepted.
+- **Security implications:** A/B shared access passed and C direct read, membership query and message write were denied. The candidate deployment is narrow; root rules were not deployed. Rollback is manual because restoring baseline would reopen the reviewed containment weaknesses.
+- **Performance implications:** No new index or listener. Live acceptance verified the bounded `participantIds` plus document-ID ordered/cursor query; existing five-page/500-document fail-closed lookup bound remains.
+- **Tests performed:** Exact Rules API pre/post readback passed; focused messaging suite 78 tests passed; prior immutable evidence remains 301 main assertions, 49 isolated emulator checks, TypeScript and Vite/PWA production build. Dedicated A/B/C production SDK flow passed: first-send parent/message, B inbox/history, unread-only update, fresh-auth persistence, outsider denials and independent zero-residue Firestore fixture scan.
+- **Known issues:** No interactive multi-browser UI test, no production probe of a real opaque legacy conversation, and no installed-PWA/device acceptance. Broader Phase 0 staff, booking/payment, Event-index, App Check and backup/PITR risks remain outside this release.
+- **Next recommended task:** Stop broad implementation. Resolve the next independently approved Phase 0 containment issue with its own compatibility gate; first consider PWA update/device acceptance for this already released resolver.
+
 ## 2026-09-12 — Messaging Gate C no-op diagnosis
 - **Task:** Diagnose the scoped Firestore rules deployment no-op without retrying the deployment.
 - **Objective:** Separate configuration/IAM causes from the Firebase CLI execution path while preserving the no-mutation stop condition.
