@@ -25,7 +25,7 @@ This index separates current operational evidence from historical audits and tar
 | P0-05 legacy deployment inputs | Open | Root rules and legacy Functions remain unsuitable for blanket deployment |
 | P1 Event participant query indexes | Completed index-only release | Both exact service query shapes have one `READY` composite and passed zero-row production probes; Event policy/contracts remain open |
 | Event participation contracts/policy | Open | Roster privacy, creation, joining/removal and capacity behavior are excluded rules/data-contract work |
-| PWA update foundation | Local application change verified | The worker now waits for user refresh; installed-PWA, device and Capacitor acceptance remains open |
+| PWA update foundation | Published asset integrity verified | Fresh public HTML, JavaScript, worker and manifest match the verified build; installed-PWA, device and Capacitor acceptance remains open |
 | App Check and PITR/restore | Open | No production-certification claim |
 
 ## How to read the remaining Markdown

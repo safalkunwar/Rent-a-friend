@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-12 — PWA publication integrity readback
+- **Task:** Verify that the committed user-controlled PWA update build is actually delivered by the public Vercel site without exercising a signed-in user's data or changing Firebase scope.
+- **Objective:** Distinguish fresh public asset delivery from the still-unperformed installed-PWA two-version acceptance.
+- **Files changed:** PWA update foundation, documentation status, this changelog.
+- **Architecture changes:** None.
+- **Firebase changes:** None. No Firestore/Storage rules, Functions, indexes, Auth, documents, Event policy, booking, payment, staff or App Check behavior changed.
+- **UI changes:** None in this readback; the committed update prompt remains the only UI change.
+- **Security implications:** Read-only public HTTP checks only. The signed-in browser tab was inspected but no user action, data read, submission, permission action or account change was performed.
+- **Performance implications:** None.
+- **Tests performed:** Fresh public homepage returned HTTP 200 and references `assets/index--d_budZS.js`; its ETag exactly matches the local production bundle MD5. Public `sw.js` returned HTTP 200 and its ETag exactly matches the local worker MD5. Public `manifest.webmanifest` returned HTTP 200. An older cached browser shell was observed separately, without interaction.
+- **Known issues:** This is not a two-version installed-PWA acceptance. The banner's defer/refresh lifecycle, device behavior and Capacitor behavior remain unverified in a real browser/device session. Existing security, permission and payment work remains deferred by owner direction.
+- **Next recommended task:** With a disposable browser profile or test device, deliberately release a harmless second version and verify the full waiting-worker → banner → defer → refresh sequence; do not combine it with Firebase policy or payment changes.
+
 ## 2026-09-12 — Event query index release and user-controlled PWA update foundation
 - **Task:** Close the two known Event participant query-planning gaps and provide a safe, visible installed-PWA update path while deferring permissions, staff authority, bookings and payments.
 - **Objective:** Make the exact existing Event attendee service queries index-ready in `hamrosathi1`, then ensure a web/PWA client can decide when to activate a waiting application update instead of being reloaded automatically.
