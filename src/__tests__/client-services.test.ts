@@ -103,7 +103,7 @@ describe('messaging service', () => {
     expect(updateDocument).toHaveBeenCalledTimes(1);
   });
 
-  it('createConversation creates idempotent conversation', async () => {
+  it('createConversation fails closed when Firebase is unavailable', async () => {
     vi.doMock('../firebase', () => ({ db: null, auth: { currentUser: { uid: 'u1', isAnonymous: false } } }));
     const setDocument = vi.fn();
     vi.doMock('../services/firestore', () => ({
@@ -112,17 +112,8 @@ describe('messaging service', () => {
       },
     }));
     const { messagingService } = await import('../services/messaging');
-    const convoId = await messagingService.createConversation(['u2', 'u1']);
-    expect(convoId).toBe('u1_u2');
-    expect(setDocument).toHaveBeenCalledWith(
-      'conversations/u1_u2',
-      expect.objectContaining({
-        id: 'u1_u2',
-        participantIds: ['u1', 'u2'],
-        unreadCount: 0,
-      }),
-      true
-    );
+    await expect(messagingService.createConversation(['u2', 'u1'])).rejects.toThrow('Firebase is not configured');
+    expect(setDocument).not.toHaveBeenCalled();
   });
 });
 

@@ -1,0 +1,35 @@
+{
+  "capturedAt": "2026-09-10T14:46:41.490Z",
+  "project": "hamrosathi1",
+  "conversations": {
+    "total": 36,
+    "partial": false,
+    "shapes": {
+      "standardPair": 5,
+      "opaqueId": 30,
+      "underscoreUid": 0,
+      "reversedMemberOrder": 1,
+      "missingStoredId": null,
+      "missingNullMapEmptyMembership": 0,
+      "ambiguousIdDerived": 0,
+      "duplicateMembership": 0
+    }
+  },
+  "messages": {
+    "total": 306,
+    "partial": false,
+    "distinctConversationIds": 35,
+    "missingParents": 35
+  },
+  "evidenceLimitations": [
+    "Aggregate counts retained from Antigravity's capture, not independently recollected.",
+    "Stored id was not projected; missingStoredId is unknown, not zero.",
+    "Full projected records and original scan script are unavailable; unique reconciliation mappings cannot be reconstructed from aggregates."
+  ],
+  "privacyCorrection": {
+    "identifierSamplesRemoved": true,
+    "sampleRecordsRemoved": 10,
+    "rawIdentifiersRetained": false,
+    "originalSamplesBackedUp": false
+  }
+}

@@ -3,6 +3,7 @@ import { Search, Send, Image as ImageIcon, Info, MessageSquare, LogIn, Wifi, Use
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { messagingService } from '../../services/messaging';
+import { conversationPeer, type ResolvedConversation } from '../../services/conversationResolution';
 import { useCompanions } from '../../hooks/useFirestoreData';
 import { firestore } from '../../services/firestore';
 import { SafeImage } from '../ui/SafeImage';
@@ -20,7 +21,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
   onBrowseCompanions,
   onBrowseActivities
 }) => {
-  const { currentUser, getConversationId, bookings } = useAppContext();
+  const { currentUser, bookings } = useAppContext();
   const { showToast } = useToast();
   const { companions: fetchedCompanions } = useCompanions();
   const [selectedConvo, setSelectedConvo] = useState<string | null>(null);
@@ -30,6 +31,17 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
   const [localMessages, setLocalMessages] = useState<Record<string, any[]>>({});
   const [travelerProfiles, setTravelerProfiles] = useState<Record<string, { name: string; avatar: string }>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [entry, setEntry] = useState<(ResolvedConversation & { ownerUid: string }) | null>(null);
+  const selectionVersion = useRef(0);
+  const sending = useRef(false);
+  const activeUid = useRef(currentUser?.id);
+  activeUid.current = currentUser?.id;
+  const toastRef = useRef(showToast);
+  toastRef.current = showToast;
+  const selectConversation = (id: string | null) => {
+    selectionVersion.current++;
+    setSelectedConvo(id);
+  };
 
   // Auto-scroll to the bottom when messages load or change
   const scrollToBottom = () => {
@@ -73,7 +85,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
 
   // Subscribe to messages of the SELECTED conversation only (Minimal Reads Optimization)
   useEffect(() => {
-    if (!currentUser || !selectedConvo) return;
+    if (!currentUser || !selectedConvo || (!localConversations[selectedConvo] && !entry?.exists)) return;
 
     const msgUnsub = firestore.subscribe<any>(
       'messages',
@@ -89,7 +101,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
     return () => {
       msgUnsub();
     };
-  }, [currentUser, selectedConvo]);
+  }, [currentUser?.id, selectedConvo, !!localConversations[selectedConvo ?? ''], entry?.exists]);
 
   // Fetch traveler/customer profiles that are not in fetchedCompanions
   useEffect(() => {
@@ -98,7 +110,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
       const convoList = Object.values(localConversations);
       const missingIds = convoList
         .map(convo => convo.participantIds?.find((id: string) => id !== currentUser.id))
-        .filter((id): id is string => !!id && !fetchedCompanions.some(c => c.id === id) && !travelerProfiles[id]);
+        .filter((id): id is string => !!id && !fetchedCompanions.some(c => c.id === id || c.userId === id) && !travelerProfiles[id]);
 
       if (missingIds.length === 0) return;
 
@@ -155,15 +167,24 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
     markAsRead();
   }, [currentUser, selectedConvo, localConversations]);
 
-  // Automatically select conversation if initialCompanionId is provided
+  // Resolve independently of cached inbox snapshots. Viewing never creates a parent.
   useEffect(() => {
-    if (initialCompanionId && currentUser) {
-      const convoId = getConversationId(initialCompanionId);
-      if (convoId) {
-        setSelectedConvo(convoId);
-      }
-    }
-  }, [initialCompanionId, currentUser, getConversationId]);
+    let cancelled = false;
+    const version = ++selectionVersion.current;
+    const uid = currentUser?.id;
+    setEntry(null);
+    if (!initialCompanionId || !uid) return;
+    setSelectedConvo(null);
+    messagingService.resolveConversationForPeer(initialCompanionId).then(resolved => {
+      if (cancelled || version !== selectionVersion.current || activeUid.current !== uid) return;
+      setEntry({ ...resolved, ownerUid: uid });
+      setSelectedConvo(resolved.id);
+    }).catch(error => {
+      if (cancelled || version !== selectionVersion.current || activeUid.current !== uid) return;
+      toastRef.current(error instanceof Error ? error.message : 'Could not open this conversation. Please try again.', 'error');
+    });
+    return () => { cancelled = true; };
+  }, [initialCompanionId, currentUser?.id]);
 
   const conversations = useMemo(() => {
     const list = Object.entries(localConversations).map(([id, convo]) => ({
@@ -171,17 +192,14 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
       ...convo
     }));
 
-    // If initial companion deep link is present, but no conversation exists yet, prepend a virtual one
-    if (initialCompanionId && currentUser) {
-      const convoId = getConversationId(initialCompanionId);
-      const exists = list.some(c => c.id === convoId);
-      if (!exists) {
+    // Only a completed server lookup may supply a virtual conversation.
+    if (entry && entry.ownerUid === currentUser?.id) {
+      if (!list.some(c => c.id === entry.id)) {
         list.push({
-          id: convoId,
-          participantIds: [currentUser.id, initialCompanionId],
+          ...entry,
           unreadCount: 0,
-          lastMessage: {
-            text: 'Start your conversation',
+          lastMessage: entry.lastMessage ?? {
+            text: entry.exists ? 'Tap to chat' : 'Start your conversation',
             timestamp: new Date().toISOString()
           }
         });
@@ -193,13 +211,13 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
       const bTime = b.lastMessage?.timestamp ? new Date(b.lastMessage.timestamp).getTime() : 0;
       return bTime - aTime;
     });
-  }, [localConversations, initialCompanionId, currentUser, getConversationId]);
+  }, [localConversations, entry, currentUser?.id]);
 
   const filteredConversations = useMemo(() => {
     return conversations.filter(convo => {
       if (!searchQuery.trim()) return true;
       const cId = convo.participantIds.find((id: string) => id !== currentUser?.id) || '';
-      const profile = fetchedCompanions.find(c => c.id === cId) || travelerProfiles[cId];
+      const profile = fetchedCompanions.find(c => c.id === cId || c.userId === cId) || travelerProfiles[cId];
       const partnerName = profile?.name || (cId.includes('customer') ? `Traveler (${cId.split('-').pop()})` : "SATHI User");
       return partnerName.toLowerCase().includes(searchQuery.toLowerCase()) || 
              convo.lastMessage?.text?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -213,14 +231,21 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
 
   const handleSend = async (customText?: string) => {
     const textToSend = (customText || inputText).trim();
-    if (!textToSend || !currentUser || !selectedConvo) return;
+    if (!textToSend || !currentUser || !selectedConvo || sending.current) return;
 
-    const otherId = selectedConvo.split('_').find(id => id !== currentUser.id) || '';
+    const selected = conversations.find(c => c.id === selectedConvo);
+    const otherId = conversationPeer(selected?.participantIds, currentUser.id);
+    if (!otherId) {
+      showToast('Cannot verify conversation membership. Reopen this conversation.', 'error');
+      return;
+    }
+    const companionUidForBooking = (b: (typeof bookings)[number]) => b.companionUid
+      || fetchedCompanions.find(c => c.id === b.companionId)?.userId || b.companionId;
 
     // Business Rule: Restrict pre-booking inquiries to max 2 messages before booking confirmation/request
     const hasConfirmedBooking = bookings?.some(b => 
-      ((b.userId === currentUser.id && b.companionId === otherId) || 
-       (b.userId === otherId && b.companionId === currentUser.id)) && 
+      ((b.userId === currentUser.id && companionUidForBooking(b) === otherId) ||
+       (b.userId === otherId && companionUidForBooking(b) === currentUser.id)) &&
       (b.status === 'pending' || b.status === 'confirmed' || b.status === 'active' || b.status === 'completed')
     );
 
@@ -232,14 +257,27 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
       }
     }
 
-    if (!customText) {
-      setInputText('');
-    }
-
+    sending.current = true;
+    const uid = currentUser.id;
+    const version = selectionVersion.current;
+    let targetId = selectedConvo;
     const msgId = `msg-${Date.now()}`;
+    try {
+      if (!localConversations[targetId] && entry?.id === targetId && !entry.exists) {
+        targetId = await messagingService.createConversation([uid, otherId], uid);
+        if (activeUid.current !== uid) return;
+        // A thread may have appeared since entry lookup; preserve its actual ID.
+        if (version === selectionVersion.current) {
+          setEntry({ id: targetId, participantIds: [uid, otherId], exists: true, ownerUid: uid });
+          setSelectedConvo(targetId);
+        }
+      }
+      if (activeUid.current !== uid) return;
+      if (!customText && version === selectionVersion.current) setInputText('');
+
     const optimisticMsg = {
       id: msgId,
-      conversationId: selectedConvo,
+      conversationId: targetId,
       senderId: currentUser.id,
       text: textToSend,
       timestamp: new Date().toISOString(),
@@ -249,45 +287,45 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
 
     // Optimistic state update - show message instantly in conversation
     setLocalMessages(prev => {
-      const existing = prev[selectedConvo] || [];
+      const existing = prev[targetId] || [];
       // Replace failed message if retrying, or append
       const filtered = existing.filter(m => m.id !== msgId);
       return {
         ...prev,
-        [selectedConvo]: [...filtered, optimisticMsg]
+        [targetId]: [...filtered, optimisticMsg]
       };
     });
 
-    try {
-      await messagingService.sendMessage(selectedConvo, currentUser.id, textToSend);
+      await messagingService.sendMessage(targetId, uid, textToSend);
+      if (activeUid.current !== uid) return;
 
       // Update optimistic status to sent
       setLocalMessages(prev => {
-        const list = prev[selectedConvo] || [];
+        const list = prev[targetId] || [];
         return {
           ...prev,
-          [selectedConvo]: list.map(m => m.id === msgId ? { ...m, status: 'sent' } : m)
+          [targetId]: list.map(m => m.id === msgId ? { ...m, status: 'sent' } : m)
         };
       });
     } catch (err) {
+      if (activeUid.current !== uid) return;
       console.error("[SATHI Messages] Send message error:", err);
-      showToast('Failed to send message. Click retry on the message.', 'error');
+      showToast('Failed to send message. Please try again.', 'error');
       // Mark optimistic message as failed
       setLocalMessages(prev => {
-        const list = prev[selectedConvo] || [];
+        const list = prev[targetId] || [];
         return {
           ...prev,
-          [selectedConvo]: list.map(m => m.id === msgId ? { ...m, status: 'failed' } : m)
+          [targetId]: list.map(m => m.id === msgId ? { ...m, status: 'failed' } : m)
         };
       });
-    }
+    } finally { sending.current = false; }
   };
 
   const currentChat = conversations.find(c => c.id === selectedConvo);
-  const companionId = currentChat?.participantIds.find((id: string) => id !== currentUser?.id) || 
-    (selectedConvo ? selectedConvo.split('_').find(id => id !== currentUser?.id) : undefined);
+  const companionId = conversationPeer(currentChat?.participantIds, currentUser?.id ?? '');
   const companion = useMemo(() => {
-    const rawComp = fetchedCompanions.find(c => c.id === companionId);
+    const rawComp = fetchedCompanions.find(c => c.id === companionId || c.userId === companionId);
     if (rawComp) return rawComp;
     if (companionId && travelerProfiles[companionId]) {
       return {
@@ -375,7 +413,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
           ) : (
             filteredConversations.map((convo) => {
               const cId = convo.participantIds.find((id: string) => id !== currentUser?.id) || '';
-              const profile = fetchedCompanions.find(c => c.id === cId) || travelerProfiles[cId];
+              const profile = fetchedCompanions.find(c => c.id === cId || c.userId === cId) || travelerProfiles[cId];
               const comp = {
                 name: profile?.name || (cId.includes('customer') ? `Traveler (${cId.split('-').pop()})` : "SATHI User"),
                 imageUrl: (profile as any)?.imageUrl || (profile as any)?.avatar || "",
@@ -385,7 +423,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
               return (
                 <div
                   key={convo.id}
-                  onClick={() => setSelectedConvo(convo.id)}
+                  onClick={() => selectConversation(convo.id)}
                   className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-surface-elevated transition-colors border-b border-border-token/30 ${selectedConvo === convo.id ? 'bg-surface-elevated' : ''}`}
                 >
                   <div className="relative shrink-0">
@@ -424,7 +462,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
           {/* Header */}
           <div className="h-16 border-b border-border-token flex items-center justify-between px-6 bg-surface shrink-0">
             <div className="flex items-center gap-3">
-              <button onClick={() => setSelectedConvo(null)} className="md:hidden text-text-secondary hover:text-text-primary mr-2 text-xl font-bold">
+              <button onClick={() => selectConversation(null)} className="md:hidden text-text-secondary hover:text-text-primary mr-2 text-xl font-bold">
                 ←
               </button>
               {companion ? (

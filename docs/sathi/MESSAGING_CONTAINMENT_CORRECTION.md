@@ -1,6 +1,6 @@
 # Messaging/favorites containment correction — 2026-09-10
 
-Status: **local candidate corrected and emulator-qualified; deployment blocked pending compatibility review.** Owner approved correcting the messaging-only candidate while preserving the staff/payments draft. No application/admin code, production records, active rules, indexes, Storage, CORS, Functions or deployment configuration changed. No production queries were made in this correction session.
+Status: **local candidate and existing-thread integration verified; Gate B rules preflight passed; deployment remains separately gated.** The resolver now reuses existing opaque/reversed parents by stored membership and the unread-reset writer changes only its allowed fields. Production records/active rules/indexes/Storage/CORS/Functions remain untouched. See [MESSAGING_RELEASE_GATE.md](MESSAGING_RELEASE_GATE.md) for the authoritative next Gate C/D requirements; the booking draft remains separate and unsafe.
 
 ## Exact artifacts
 
@@ -45,21 +45,21 @@ $env:FIRESTORE_EMULATOR_HOST='127.0.0.1:8085'
 node --import tsx --test --test-concurrency=1 tests/messaging-favorites-containment.test.mjs
 ```
 
-**46/46 passed.** Coverage includes absent-target creation and malformed data denials, exact artifact/hash/scope gates, create-if-absent transaction and canonical UI merge payloads, actual inbox/history/read-receipt query shapes, immutable membership, takeover/delete/recreate sequence, cross-user/guest denials, message send/read/receipt, typing owner isolation, real users.favorites array and legacy nested favorites, delimiter IDs, opaque history, missing/malformed membership, orphan behavior, and a map-valued document-ID query bypass attempt.
+Antigravity reported **46/46 passed**. Independent continuation now verifies **49/49 candidate checks**, restoring inherited admin-delete coverage, adding missing-stored-id preservation, and covering the exact bounded member lookup/cursor plus cross-user denial. The local existing-thread component/service suite is included in the **301/301** main assertions. Coverage includes absent-target creation and malformed data denials, exact artifact/hash/scope gates, create-if-absent transaction and canonical UI merge payloads, actual inbox/history/read-receipt query shapes, immutable membership, takeover/delete/recreate sequence, cross-user/guest denials, message send/read/receipt, typing owner isolation, real users.favorites array and legacy nested favorites, delimiter IDs, opaque history, missing/malformed membership, orphan behavior, and a map-valued document-ID query bypass attempt.
 
 Candidate query checks initially failed because general membership/type predicates were not provable from the inbox query. Corrected list-specific `hasAny` predicate passes both valid inbox and malformed-map denial tests; assertions were not weakened. An initial combined diagnostic run without `--import tsx` failed one booking module import; rerunning with the required loader passed all 12 without changing the diagnostic suite.
 
-The preserved staff suite freshly ran **11 passed / 9 failed**, with expected-denial writes succeeding because every role fixture retains a finance assignment. It now loads the correct frozen hash; failures are behavioral, not artifact setup errors. The prior independent review separately reproduced self-assignment escalation; that policy was not repaired in this scope.
+The preserved staff suite previously ran **11 passed / 9 failed**, with expected-denial writes succeeding because every role fixture retains a finance assignment. It loads the correct frozen hash; failures are behavioral, not artifact setup errors. The prior independent review separately reproduced self-assignment escalation; that policy was not repaired or rerun in this continuation.
 
-Node syntax checks for generator/patch/test and `git diff --check` passed. No fresh main/admin unit suite, build, live two-user test, production index verification or physical-device QA claimed; application code is unchanged. Firestore emulator query authorization does not establish production composite-index readiness. Earlier full-app counts are historical only.
+Current continuation: main TypeScript and Vite/PWA build pass, with the existing large-bundle warning. Main unit coverage is301/301, including existing-thread and unread-writer integration cases; git diff --check passes. Gate B's 2026-09-11 read-only production preflight captured a fresh rollback and confirmed active source still matches the baseline. No standalone admin suite, rules/app deployment, live two-user test, production index verification or physical-device QA is claimed. Firestore emulator query authorization does not establish production composite-index readiness.
 
 ## Performance, rollback and safest next order
 
 Parent membership now gates message/typing operations with exists/get; this adds rule-dependent reads where split-ID access previously short-circuited. The same parent is reused within operations, but access-call limits, batching and live read cost should be qualified before release. No new application query, listener, index definition or Function was introduced.
 
-1. Review this candidate and approve the minimal unread-writer integration change plus read-only historical shape inventory.
-2. Resolve affected legacy shapes explicitly; verify writer fixtures and actual signed-in UI without expanding staff/payment scope.
-3. Before a separately approved release, fetch active rules again, compare against the captured hash, preserve a fresh rollback, rebase only this scope if needed, and rerun exact-artifact tests/index checks.
-4. Only after explicit deployment authorization, release the scoped artifact and perform two-user live persistence and negative authorization checks. Do not deploy root rules or the frozen combined draft.
+1. Isolate the approved messaging release into an immutable commit, excluding reconciliation and booking drafts.
+2. After separately approved Gate C authority, rerun the read-only preflight, compare against the fresh rollback, then deploy only the candidate rules with the dedicated release config and read back the active ruleset.
+3. Publish only that immutable app commit, then perform the approved Gate D two-user persistence and outsider-denial acceptance.
+4. Do not deploy root rules or the frozen combined draft; booking/staff containment is a separate phase.
 
 No production rollback is needed now. The captured rules remain intact. A future rollback must target the freshly verified pre-release rules, and explicitly acknowledge that reverting reopens the old authorization bypasses; do not automatically roll back security policy or overwrite newer unrelated releases.

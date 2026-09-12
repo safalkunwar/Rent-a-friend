@@ -1,0 +1,3 @@
+# Captured production rules are immutable rollback evidence. Preserve their
+# original bytes and do not treat historical trailing whitespace as a diff error.
+docs/sathi/rollbacks/**/firestore.rules whitespace=-trailing-space

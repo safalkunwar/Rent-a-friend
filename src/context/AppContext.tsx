@@ -222,7 +222,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       type: 'booking', isRead: false, timestamp: new Date().toISOString(),
     };
     const effects = await Promise.allSettled([
-      messagingService.createConversation([booking.userId, booking.companionId]),
+      (async () => {
+        const peerUid = booking.companionUid || await messagingService.resolvePeerUid(booking.companionId);
+        return messagingService.createConversation([booking.userId, peerUid], booking.userId);
+      })(),
       firestore.setDocument(`notifications/${notification.id}`, { ...notification }),
     ]);
     if (effects.some(result => result.status === 'rejected')) {

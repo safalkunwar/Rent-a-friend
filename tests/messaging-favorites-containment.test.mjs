@@ -6,12 +6,14 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, getDoc, deleteDoc, writeBatch, setLogLevel, collection, query, where, getDocs, runTransaction, orderBy, limit, documentId } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, deleteDoc, writeBatch, setLogLevel, collection, query, where, getDocs, runTransaction, orderBy, limit, documentId, startAfter } from 'firebase/firestore';
 import { patchMessagingFavoritesRules } from '../ops/containment/messaging-favorites-patch.mjs';
 
-if (process.env.FIRESTORE_EMULATOR_HOST !== '127.0.0.1:8085') {
-  throw new Error('Loopback Firestore emulator required; no live fallback. Expected FIRESTORE_EMULATOR_HOST=127.0.0.1:8085');
+const emulatorHost = process.env.FIRESTORE_EMULATOR_HOST;
+if (!['127.0.0.1:8085', '127.0.0.1:8087'].includes(emulatorHost)) {
+  throw new Error('Loopback Firestore emulator required; no live fallback. Use 127.0.0.1:8085 or isolated review port 8087.');
 }
+const emulatorPort = Number(emulatorHost.split(':')[1]);
 
 const baselinePath = 'docs/sathi/rollbacks/phase-00-2026-09-10/firestore.rules';
 const candidatePath = 'ops/containment/candidate.firestore.rules';
@@ -48,8 +50,8 @@ before(async () => {
 
   setLogLevel('silent');
   env = await initializeTestEnvironment({
-    projectId: 'demo-sathi-containment-review',
-    firestore: { host: '127.0.0.1', port: 8085, rules: diskCandidate },
+    projectId: 'demo-sathi-messaging-writer-review',
+    firestore: { host: '127.0.0.1', port: emulatorPort, rules: diskCandidate },
   });
 });
 
@@ -93,6 +95,20 @@ beforeEach(async () => {
 });
 
 // --- SCOPE ITEM 9: UNRELATED BYTE PARITY ---
+
+test('RESOLUTION: bounded own-membership document-ID query and cursor are allowed; other-user scan denied', async () => {
+  await env.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'conversations/opaque-thread'), { id: 'opaque-thread', participantIds: ['A', 'C'] });
+  });
+  const first = await assertSucceeds(getDocs(query(collection(db('A'), 'conversations'),
+    where('participantIds', 'array-contains', 'A'), orderBy(documentId()), limit(100))));
+  assert.deepEqual(first.docs.map(d => d.id), ['A_B', 'opaque-thread']);
+  const second = await assertSucceeds(getDocs(query(collection(db('A'), 'conversations'),
+    where('participantIds', 'array-contains', 'A'), orderBy(documentId()), startAfter('A_B'), limit(100))));
+  assert.deepEqual(second.docs.map(d => d.id), ['opaque-thread']);
+  await assertFails(getDocs(query(collection(db('C'), 'conversations'),
+    where('participantIds', 'array-contains', 'A'), orderBy(documentId()), limit(100))));
+});
 
 test('PARITY: only nested favorites and messaging domain change; unrelated bytes identical', () => {
   const strip = (source) => {
@@ -138,6 +154,22 @@ test('CONTAINMENT: stranger C cannot delete conversation A_B', async () => {
 
 test('CONTAINMENT: participant A cannot delete conversation A_B (admin only)', async () => {
   await assertFails(deleteDoc(doc(db('A'), 'conversations/A_B')));
+});
+
+test('COMPATIBILITY: inherited admin conversation deletion remains allowed', async () => {
+  await assertSucceeds(deleteDoc(doc(adminDb(), 'conversations/A_B')));
+});
+
+test('UNREAD_RESET_FIX: legacy parent without stored id preserves its absent field', async () => {
+  await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), 'conversations/A_C'), {
+    participantIds: ['A', 'C'], unreadCount: 2, createdAt: '2020-01-01T00:00:00.000Z',
+  }));
+  const ref = doc(db('A'), 'conversations/A_C');
+  await assertSucceeds(updateDoc(ref, { unreadCount: 0, updatedAt: '2026-09-10T06:00:00.000Z' }));
+  const data = (await getDoc(ref)).data();
+  assert.equal('id' in data, false);
+  assert.deepEqual(data.participantIds, ['A', 'C']);
+  assert.equal(data.createdAt, '2020-01-01T00:00:00.000Z');
 });
 
 test('CONTAINMENT: stranger C cannot create conversation hijacking ID A_B', async () => {

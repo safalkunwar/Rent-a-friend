@@ -1,0 +1,70 @@
+{
+  "project": "hamrosathi1",
+  "capturedAt": "2026-09-10T15:47:24.067Z",
+  "snapshotReadTime": "2026-09-10T15:47:04.801Z",
+  "captureMode": "PROJECTED_READ_ONLY_NO_RAW_OUTPUT",
+  "limits": {
+    "pageSize": 100,
+    "conversations": 1000,
+    "messages": 1000
+  },
+  "requests": {
+    "conversations": 1,
+    "messages": 4
+  },
+  "projections": {
+    "conversations": [
+      "id",
+      "participantIds"
+    ],
+    "messages": [
+      "conversationId"
+    ]
+  },
+  "analysis": {
+    "mode": "OFFLINE_DRY_RUN_NO_WRITES",
+    "productionRepairAuthorized": false,
+    "candidateMatchesProveOwnership": false,
+    "scan": {
+      "conversationsComplete": true,
+      "messagesComplete": true,
+      "partial": false
+    },
+    "missingParentConclusion": "ABSENT_FROM_COMPLETE_CAPTURE",
+    "candidateUniquenessProvisional": false,
+    "conversations": {
+      "total": 36,
+      "validPairs": 36,
+      "invalidMembership": 0,
+      "storedIdMissing": 0,
+      "storedIdMalformed": 0,
+      "storedIdMatches": 36,
+      "storedIdMismatch": 0,
+      "canonicalId": 6,
+      "reversedId": 0,
+      "opaqueId": 30,
+      "underscoreMemberPairs": 0,
+      "duplicatePairGroups": 0,
+      "duplicatePairDocuments": 0
+    },
+    "messages": {
+      "total": 306,
+      "exactValidParent": 306,
+      "exactInvalidMembership": 0,
+      "missingFromScan": 0,
+      "uniqueCandidateOnly": 0,
+      "ambiguousCandidates": 0,
+      "unmatched": 0,
+      "invalidReference": 0,
+      "distinctReferences": 35,
+      "distinctMissingFromScan": 0,
+      "exactReferenceAliasConflicts": 0,
+      "distinctUniqueCandidateReferences": 0,
+      "distinctAmbiguousReferences": 0,
+      "distinctUnmatchedReferences": 0,
+      "distinctSuggestedTargets": 0
+    }
+  },
+  "readerSha256": "7a2d2d1bb4ecaedc5db77eff1038f933a2d15d8ee9fcf26cefab047504c83244",
+  "classifierSha256": "c54e385e3deee0b739777c9697e5370996a486fc30c504801475d5b9f535fd3b"
+}

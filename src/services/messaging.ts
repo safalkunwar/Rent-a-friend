@@ -1,7 +1,8 @@
 import { firestore } from './firestore';
 import { db } from '../firebase';
-import { runTransaction, doc } from 'firebase/firestore';
+import { runTransaction, doc, getDocFromServer } from 'firebase/firestore';
 import { requireUid } from './identity';
+import { matchesParticipants, resolveConversation, validateParticipants } from './conversationResolution';
 
 const TYPING_TIMEOUT_MS = 3000;
 
@@ -66,6 +67,28 @@ class TypingManager {
 export const messagingService = {
   typingManager: new TypingManager(),
 
+  resolveConversation,
+
+  // Entry points historically pass either a public companion document ID or an Auth UID.
+  // Never infer an Auth UID by splitting a document ID.
+  async resolvePeerUid(peerId: string): Promise<string> {
+    const uid = requireUid();
+    validateParticipants([uid, peerId], uid);
+    if (!db) throw new Error('Messaging is unavailable: Firebase is not configured.');
+    const profile = await getDocFromServer(doc(db, 'companions', peerId));
+    requireUid(uid);
+    if (!profile.exists()) return peerId;
+    const members = validateParticipants([uid, profile.data().userId], uid);
+    return members.find(id => id !== uid)!;
+  },
+
+  async resolveConversationForPeer(peerId: string) {
+    const uid = requireUid();
+    const peerUid = await messagingService.resolvePeerUid(peerId);
+    requireUid(uid);
+    return resolveConversation([uid, peerUid]);
+  },
+
   async sendMessage(conversationId: string, senderId: string, text: string): Promise<string> {
     requireUid(senderId);
     const messageId = `msg-${Date.now()}`;
@@ -95,6 +118,7 @@ export const messagingService = {
     }
 
     await runTransaction(db, async (tx) => {
+      requireUid(senderId);
       const messageRef = doc(db, 'messages', messageId);
       const convoRef = doc(db, 'conversations', conversationId);
 
@@ -153,31 +177,37 @@ export const messagingService = {
     });
   },
 
-  async createConversation(participantIds: string[]): Promise<string> {
-    const uid = requireUid();
-    if (participantIds.length !== 2 || new Set(participantIds).size !== 2 || !participantIds.includes(uid)) {
-      throw new Error('A conversation requires the authenticated user and one other participant.');
-    }
-    const convoId = participantIds.sort().join('_');
+  async createConversation(participantIds: string[], expectedUid?: string): Promise<string> {
+    const uid = requireUid(expectedUid);
+    const members = validateParticipants(participantIds, uid);
+    const resolved = await resolveConversation(members);
+    requireUid(uid);
+    if (!db) throw new Error('Messaging is unavailable: Firebase is not configured.');
+    const convoId = resolved.id;
     const timestamp = new Date().toISOString();
 
     const initial = {
       id: convoId,
-      participantIds,
+      participantIds: members,
       unreadCount: 0,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
-    if (!db) {
-      await firestore.setDocument(`conversations/${convoId}`, initial, true);
-    } else {
-      await runTransaction(db, async transaction => {
+    await runTransaction(db, async transaction => {
+        requireUid(uid);
         const ref = doc(db, 'conversations', convoId);
         const existing = await transaction.get(ref);
-        if (!existing.exists()) transaction.set(ref, initial);
+        requireUid(uid);
+        if (existing.exists()) {
+          if (!matchesParticipants(existing.data().participantIds, members)) {
+            throw new Error('Conversation membership changed or the document ID is already in use.');
+          }
+        } else {
+          if (resolved.exists) throw new Error('The conversation was removed. Reopen messaging and try again.');
+          transaction.set(ref, initial);
+        }
         // Existing conversations retain timestamps, membership and unread state.
-      });
-    }
+    });
 
     return convoId;
   },
