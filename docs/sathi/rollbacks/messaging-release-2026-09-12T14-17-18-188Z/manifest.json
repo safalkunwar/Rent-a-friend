@@ -1,0 +1,14 @@
+{
+  "mode": "READ_ONLY_PREFLIGHT_NO_DEPLOY",
+  "project": "hamrosathi1",
+  "capturedAt": "2026-09-12T14:17:18.193Z",
+  "release": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/c618d018-32bb-419b-8b78-17aac11c5b55",
+    "updateTime": "2026-09-09T13:29:02.458649Z"
+  },
+  "activeHash": "5e1552736ce1357c83a1447161fdc75741fbc5430dd50a0bf3897f230fe95013",
+  "candidatePath": "ops/containment/candidate.firestore.rules",
+  "candidateHash": "28709c31cf043c9394dfea4f81be58aea217d455537c8b072bff3411f9040497",
+  "deploymentConfig": "ops/containment/firebase.messaging-release.json"
+}

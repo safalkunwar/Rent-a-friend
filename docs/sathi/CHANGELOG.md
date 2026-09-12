@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-12 — Messaging Gate C stopped: production readback unchanged
+- **Task:** Execute the approved scoped messaging Firestore rules rollout only after a fresh drift preflight.
+- **Objective:** Deploy the reviewed messaging/favorites candidate, verify it by active-source readback, then publish the immutable application commit only if rules were active.
+- **Files changed:** Fresh `rollbacks/messaging-release-2026-09-12T14-17-18-188Z` and `messaging-release-2026-09-12T14-17-20-307Z` preflight sources/manifests; readback verifier; release gate; handoff; this changelog. The two same-minute preflights independently captured the same baseline.
+- **Architecture changes:** None.
+- **Firebase changes:** None. Gate B read-only preflight passed with active baseline SHA-256 `5e1552736ce1357c83a1447161fdc75741fbc5430dd50a0bf3897f230fe95013`. The scoped `--only firestore:rules` command returned without a Firebase success record. Mandatory readback found that same baseline, not candidate SHA-256 `28709c31cf043c9394dfea4f81be58aea217d455537c8b072bff3411f9040497`; no release occurred.
+- **UI changes:** None. Immutable application commit `5f1cb723bbaf5983fe476e930e8ca822d7639f9e` was not pushed or published.
+- **Security implications:** Deployment is considered failed/no-op. No automatic retry, rollback, root-rules deploy, Storage/index/Functions action, migration, or test-account activity was performed.
+- **Performance implications:** None.
+- **Tests performed:** Fresh read-only preflight passed. Readback intentionally failed with the active/candidate hash mismatch, proving rollout was not active. Earlier local 301 main and 49 emulator checks remain historical/local evidence.
+- **Known issues:** Firebase CLI deployment failure/no-op cause is not yet diagnosed. Production containment remains inactive; separate Phase 0 risks stay unresolved.
+- **Next recommended task:** With new explicit authority, diagnose the Firebase CLI no-op using non-mutating diagnostics, then rerun the complete Gate B/C readback sequence. Do not publish the app before an exact candidate readback passes.
+
 ## 2026-09-11 — Messaging Gate B production rules preflight
 - **Task:** Run the explicitly approved read-only production preflight for the prepared messaging release gate.
 - **Objective:** Verify the reviewed containment candidate still rebases exactly on active `hamrosathi1` Firestore rules and save a current rollback source before considering a deployment.

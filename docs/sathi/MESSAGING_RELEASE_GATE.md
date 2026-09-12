@@ -2,7 +2,7 @@
 
 ## Status
 
-**Gate B passed; no deployment has occurred.** At `2026-09-11T02:38:02.453Z`, the read-only preflight reread `hamrosathi1` active Firestore source and confirmed the expected baseline hash. Its fresh rollback is [messaging-release-2026-09-11T02-38-02-451Z](rollbacks/messaging-release-2026-09-11T02-38-02-451Z/manifest.json). This gate covers the local existing-thread compatibility fix and the reviewed messaging/favorites containment candidate. It does not approve root `firestore.rules`, Storage, indexes, Functions, bookings, staff/payment drafts, migrations, data repair, or an automatic Vercel release.
+**Gate C stopped with no production rules change.** Gate B passed twice on 2026-09-12, saving `rollbacks/messaging-release-2026-09-12T14-17-18-188Z` and `rollbacks/messaging-release-2026-09-12T14-17-20-307Z`; both archive the same verified baseline. The scoped deploy command returned without a Firebase success record; mandatory readback confirmed that active `hamrosathi1` Firestore rules still equal the baseline, not the candidate. Therefore no rules release or application publish occurred. This gate covers the local existing-thread compatibility fix and the reviewed messaging/favorites containment candidate. It does not approve root `firestore.rules`, Storage, indexes, Functions, bookings, staff/payment drafts, migrations, data repair, or an automatic Vercel release.
 
 ## Release unit
 
@@ -77,6 +77,12 @@ Only after the second explicit deployment approval and a passing Gate B:
 ```powershell
 node node_modules/firebase-tools/lib/bin/firebase.js deploy --project hamrosathi1 --config ops/containment/firebase.messaging-release.json --only firestore:rules
 ```
+
+### 2026-09-12 stop record
+
+The exact command above was invoked after a passing preflight. It did not produce a successful Firebase release record. `ops/containment/messaging-release-readback.mjs --approved-read-only` then read active rules and stopped: active SHA-256 remained `5e1552736ce1357c83a1447161fdc75741fbc5430dd50a0bf3897f230fe95013`, while the candidate is `28709c31cf043c9394dfea4f81be58aea217d455537c8b072bff3411f9040497`.
+
+Treat this as a failed/no-op deployment, not success. Do not retry automatically. Before a new explicitly approved attempt, inspect Firebase CLI deployment diagnostics/authentication and verify the isolated config is honored; then rerun Gate B and readback. Do not publish the app until readback succeeds.
 
 Immediately read back the active release and compare its source to `candidate.firestore.rules`. Save that post-deploy release name/hash next to the Gate B rollback. Publish the exact reviewed application commit only after this readback succeeds, then confirm Vercel serves that commit/build rather than a stale PWA asset. Do not run root `firebase.json`, `firestore.indexes.json`, Functions, Storage, `firebase deploy` without `--only`, or any booking/staff draft.
 
