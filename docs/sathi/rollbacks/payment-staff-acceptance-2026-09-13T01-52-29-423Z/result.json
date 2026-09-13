@@ -1,0 +1,128 @@
+{
+  "result": "LIVE_SDK_ACCEPTANCE_PASS",
+  "project": "hamrosathi1",
+  "verifiedAt": "2026-09-13T01:52:29.420Z",
+  "candidateHash": "764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402",
+  "checks": [
+    {
+      "name": "owner payment read from server",
+      "result": "PASS"
+    },
+    {
+      "name": "cross-user payment read denied",
+      "result": "PASS"
+    },
+    {
+      "name": "finance existing payment read retained",
+      "result": "PASS"
+    },
+    {
+      "name": "root existing payment read retained",
+      "result": "PASS"
+    },
+    {
+      "name": "owner payment create denied",
+      "result": "PASS"
+    },
+    {
+      "name": "owner payment update denied",
+      "result": "PASS"
+    },
+    {
+      "name": "owner payment delete denied",
+      "result": "PASS"
+    },
+    {
+      "name": "stranger payment create denied",
+      "result": "PASS"
+    },
+    {
+      "name": "stranger payment update denied",
+      "result": "PASS"
+    },
+    {
+      "name": "stranger payment delete denied",
+      "result": "PASS"
+    },
+    {
+      "name": "finance payment create denied",
+      "result": "PASS"
+    },
+    {
+      "name": "finance payment update denied",
+      "result": "PASS"
+    },
+    {
+      "name": "finance payment delete denied",
+      "result": "PASS"
+    },
+    {
+      "name": "root payment create denied",
+      "result": "PASS"
+    },
+    {
+      "name": "root payment update denied",
+      "result": "PASS"
+    },
+    {
+      "name": "root payment delete denied",
+      "result": "PASS"
+    },
+    {
+      "name": "payment fixture unchanged after denials",
+      "result": "PASS"
+    },
+    {
+      "name": "root creates valid staff assignment",
+      "result": "PASS"
+    },
+    {
+      "name": "assigned user reads own role",
+      "result": "PASS"
+    },
+    {
+      "name": "root queries exact disposable staff assignment",
+      "result": "PASS"
+    },
+    {
+      "name": "document-only staff cannot self-promote",
+      "result": "PASS"
+    },
+    {
+      "name": "finance cannot self-assign root",
+      "result": "PASS"
+    },
+    {
+      "name": "ordinary customer cannot assign staff",
+      "result": "PASS"
+    },
+    {
+      "name": "root updates typed staff assignment",
+      "result": "PASS"
+    },
+    {
+      "name": "updated assignment persists on server",
+      "result": "PASS"
+    },
+    {
+      "name": "root deletes disposable staff assignment",
+      "result": "PASS"
+    },
+    {
+      "name": "assignment deletion persists on server",
+      "result": "PASS"
+    },
+    {
+      "name": "active rules remain exact after acceptance",
+      "result": "PASS"
+    }
+  ],
+  "cleanup": {
+    "passed": true,
+    "accountsPlanned": 4,
+    "paymentPathsChecked": 5,
+    "assignmentPathsChecked": 4,
+    "errors": []
+  },
+  "scope": "GENERATED_ACCOUNTS_AND_ZERO_VALUE_NPR_FIXTURES_ONLY; NO_REAL_PAYMENT"
+}

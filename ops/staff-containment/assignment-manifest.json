@@ -1,0 +1,12 @@
+{
+  "baselinePath": "docs/sathi/rollbacks/staff-authority-read-2026-09-13T01-13-27-091Z/firestore.rules",
+  "baselineHash": "28709c31cf043c9394dfea4f81be58aea217d455537c8b072bff3411f9040497",
+  "candidateHash": "31dc83e00906b02ceb31c3db72a86d9d174e4e02add6ae5f28ea46fc9804dc67",
+  "changedBranches": [
+    "admins"
+  ],
+  "changedHelpers": [
+    "sathiAssignmentRoot"
+  ],
+  "status": "LOCAL_CANDIDATE_NOT_DEPLOYED"
+}

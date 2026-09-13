@@ -260,8 +260,8 @@ export class AdminRepository {
     });
   }
 
-  async updatePaymentStatus(paymentId: string, status: string) {
-    await firestore.updateDocument(`payments/${paymentId}`, { status, updatedAt: new Date().toISOString() });
+  async updatePaymentStatus(_paymentId: string, _status: string): Promise<never> {
+    throw new Error('Payment status requires verified provider evidence. Manual payment updates are unavailable.');
   }
 
   async listMessages(limitCount = 100) {

@@ -1,0 +1,29 @@
+{
+  "project": "hamrosathi1",
+  "capturedAt": "2026-09-13T01:51:14.026Z",
+  "before": {
+    "release": {
+      "name": "projects/hamrosathi1/releases/cloud.firestore",
+      "rulesetName": "projects/hamrosathi1/rulesets/f4e99332-71c9-46ef-93fe-39843148d35f",
+      "createTime": "2026-07-12T04:35:43.978011Z",
+      "updateTime": "2026-09-12T14:27:06.774400Z"
+    },
+    "hash": "28709c31cf043c9394dfea4f81be58aea217d455537c8b072bff3411f9040497"
+  },
+  "candidate": {
+    "path": "ops/payment-containment/combined-candidate.firestore.rules",
+    "hash": "764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402"
+  },
+  "semanticDiff": {
+    "branches": [
+      "payments",
+      "admins"
+    ],
+    "helpers": [
+      "sathiAssignmentRoot"
+    ],
+    "unrelatedSource": "BYTE_IDENTICAL"
+  },
+  "assignmentsAtGate": 0,
+  "recoveryOperatorVerified": true
+}

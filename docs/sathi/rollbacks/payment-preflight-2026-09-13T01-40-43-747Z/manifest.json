@@ -1,0 +1,35 @@
+{
+  "mode": "READ_ONLY_PAYMENT_CONTAINMENT_GATE",
+  "project": "hamrosathi1",
+  "capturedAt": "2026-09-13T01:40:43.750Z",
+  "release": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/f4e99332-71c9-46ef-93fe-39843148d35f",
+    "updateTime": "2026-09-12T14:27:06.774400Z"
+  },
+  "baselineHash": "28709c31cf043c9394dfea4f81be58aea217d455537c8b072bff3411f9040497",
+  "candidateHash": "764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402",
+  "semanticDiff": {
+    "changedBranches": [
+      "payments",
+      "admins"
+    ],
+    "changedHelpers": [
+      "sathiAssignmentRoot"
+    ],
+    "reads": "PAYMENTS_UNCHANGED; ADMINS_ROOT_LIST_ADDED; OWN_LOOKUP_PRESERVED",
+    "paymentWrites": "DENY_ALL_CLIENT_CREATES_UPDATES_DELETES",
+    "assignmentWrites": "EXPLICIT_TRUSTED_ROOT_ONLY; VALIDATED_PAYLOAD",
+    "unrelatedSource": "BYTE_IDENTICAL"
+  },
+  "deployment": "NOT_PERFORMED",
+  "untouched": [
+    "Firestore documents",
+    "Auth",
+    "Storage",
+    "indexes",
+    "Functions",
+    "Hosting",
+    "CORS"
+  ]
+}

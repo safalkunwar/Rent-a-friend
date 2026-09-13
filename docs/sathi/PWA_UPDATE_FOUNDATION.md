@@ -17,7 +17,7 @@ The prior configuration used automatic update activation with no UI state. That 
 
 ## Verification
 
-- `src/__tests__/pwa-update-prompt.test.tsx` verifies the update banner exposes refresh and defer actions.
+- `src/__tests__/pwa-update-prompt.test.tsx` now has eight passing cases (2026-09-13): banner callbacks; no development registration; first-install suppression; waiting-update deferral without activation; updatefound/installed detection; explicit SKIP_WAITING plus one-shot controllerchange subscription; registration failure; and delayed registration after unmount. These use a mocked service-worker container, not a real browser worker. The controllerchange callback's actual page reload is not executed by the harness.
 - TypeScript completed with no errors.
 - The production build generated `dist/sw.js`, `dist/workbox-dcdb27f2.js`, and `dist/manifest.webmanifest`. The emitted worker contains the `SKIP_WAITING` message listener used by **Refresh SATHI**.
 - Production delivery integrity was checked after the `8537802` GitHub/Vercel publication: fresh `https://hamrosathi.vercel.app/` HTML references `assets/index--d_budZS.js`; its public ETag (`9f80dcf2c70120bf45bf88af4006d115`) equals the local build's MD5. Public `sw.js` is HTTP 200 and its ETag (`38a065335bd7c9d4dd6d881b03cd18af`) equals the local worker's MD5; `manifest.webmanifest` is HTTP 200.
