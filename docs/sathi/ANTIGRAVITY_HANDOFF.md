@@ -18,6 +18,15 @@ Follow-through completed in this session: combined candidate `764eb7a3...` passe
 
 Current executed application checks: main 309/309 across 36 files; admin 41/41 across 7 files; main/admin/Functions typechecks and main/admin builds passed. PWA harness expanded to eight tests without changing application UI; physical installed-PWA acceptance remains unverified. Existing large-bundle warnings remain. Earlier blanket permission/payment deferral below is historical, not a reason to abandon the newly resumed containment work. No live money or new Functions activation is implied.
 
+## Latest containment — 2026-09-13 evening
+
+Owner-resumed scoped containment continued from active source `764eb7a3...`:
+
+- **Booking lock containment** (`ops/booking-containment/`): scopes `booking_locks/{lockId}` writes from `isAdmin()` to `isBookingAdmin()` with field validation (`companionId`, `date` format, `status=='pending'`, `updatedAt` type) and valid-transition enforcement (`pending→confirmed/cancelled`, `confirmed→active/cancelled`, `active→completed/cancelled`). Static contract 6/6. NOT deployed.
+- **Staff RBAC containment** (`ops/staff-rbac-containment/`): narrows `analytics/{analyticId}` read from `isAdmin()` to `isResourceAdmin(['super_admin', 'platform_admin'])`; adds the `isResourceAdmin(requiredRoles)` helper that checks only `adminRole` claims and rejects anonymous tokens. 65 remaining `isAdmin()` sites unchanged. Static contract 8/8. NOT deployed.
+
+Both candidates start from active hash `764eb7a3...` and do NOT reference the unsafe archived booking draft. Emulator verification requires Java 21+ (current environment has Java 17).
+
 ## Objective and stack
 
 Preserve and evolve SATHI into a Nepal-wide local/social companion platform, launching commercially in Pokhara. Keep React 19, TypeScript, Vite, Firebase Auth/Firestore/Storage, the existing standalone admin app, PWA and Capacitor. Keep Firebase project `hamrosathi1`, existing Auth UIDs, records and working routes. No stack rewrite, new database, microservices or fabricated engagement.

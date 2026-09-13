@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-13 — Staff RBAC containment: analytics resource-scoped read
+- **Task:** Produce a scoped staff-RBAC containment candidate from the active deployed source `764eb7a3...` that narrows the broad `isAdmin()` read path on `analytics/{analyticId}` to `isResourceAdmin(['super_admin', 'platform_admin'])`.
+- **Objective:** Begin the remaining legacy staff classification/resource-level RBAC work without modifying application code, production rules, or the unsafe archived booking draft.
+- **Files changed:** `ops/staff-rbac-containment/{candidate,patch,generate}.mjs`, `manifest.json` (new); `tests/staff-rbac-containment.test.mjs` (new); `docs/sathi/STAFF_RBAC_CONTAINMENT_GATE.md` (new); this changelog.
+- **Architecture changes:** No application architecture changes. Candidate replaces the `analytics` branch and adds one helper (`isResourceAdmin`); all 749+ other lines are byte-identical to the active source.
+- **Firebase changes:** Local candidate only (hash `9f8d3b0e...`). ZERO production mutations, deployments, or rule changes.
+- **UI changes:** None.
+- **Security implications:** Analytics read no longer accepts legacy `token.admin`, `token.role`, `users/{uid}.role`, or `exists(admins/{uid})` bypass paths. Only `super_admin` and `platform_admin` claims via `adminRole` can read analytics. 65 remaining `isAdmin()` calls across other branches are unchanged.
+- **Performance implications:** None.
+- **Tests performed:** 8/8 static contract tests pass (candidate hash, composition, reversibility, drift rejection, byte-identical outside scope, analytics uses isResourceAdmin, helper is non-anonymous, isAdmin() count unchanged); 22/22 total contract tests (payment + operator + booking-lock + staff-rbac); main 309/309, admin 41/41, TypeScript `--noEmit` passed. Emulator suite requires Java 21+.
+- **Known issues:** Not emulator-verified (Java 17 environment). This is only the analytics branch; six legacy generic admin records, audit logs, suspicious activity, reports, and 65 other `isAdmin()` sites remain unchanged.
+- **Next recommended task:** Install Java 21+ and run the staff-RBAC emulator containment suite; then continue narrowing other resource branches with explicit role mappings per `ROLE_PERMISSIONS` in `admin/src/services/admin.ts`.
+
 ## 2026-09-13 — Booking lock containment candidate (local, undeployed)
 - **Task:** Produce a locally-validated booking-lock containment candidate derived from the active deployed source `764eb7a3...`, with full static contract tests, and stop before any deployment or emulator gate.
 - **Objective:** Close the unscoped `isAdmin()` write bypass on `booking_locks/{lockId}` — where any authenticated user could create or update locks — without touching application code, production rules, or the unsafe archived booking draft.

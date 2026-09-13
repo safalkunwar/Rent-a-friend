@@ -1,0 +1,15 @@
+{
+  "mode": "LOCAL_STAFF_RBAC_CONTAINMENT_CANDIDATE",
+  "project": "hamrosathi1",
+  "baselinePath": "docs/sathi/rollbacks/payment-staff-release-2026-09-13T01-51-14-023Z/firestore.rules",
+  "baselineHash": "764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402",
+  "candidateHash": "9f8d3b0eb782143d8481c82da0ef8bb55cb1dbee61fb2bb2465f16bfb4a72b64",
+  "changedBranches": [
+    "analytics"
+  ],
+  "changedHelpers": [
+    "isResourceAdmin"
+  ],
+  "deployment": "NOT_PERFORMED",
+  "scopeNote": "Starts from active deployed source 764eb7a3... Only analytics read and isResourceAdmin helper change; all other source bytes preserved."
+}
