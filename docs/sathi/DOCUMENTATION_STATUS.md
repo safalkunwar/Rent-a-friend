@@ -20,7 +20,7 @@ This index separates current operational evidence from historical audits and tar
 | --- | --- | --- |
 | P0-01 messaging/favorites containment | Deployed to Firestore `cloud.firestore` on 2026-09-12 | Active source hash/readback and dedicated A/B/C SDK acceptance passed; no real-user conversation probe |
 | Existing-thread resolver app code | Pushed through the existing GitHub/Vercel integration | Public asset contains the resolver; installed-PWA cache acceptance is not complete |
-| P0-02 staff authority | Open | No branch-scoped containment release |
+| P0-02 staff authority | Blocked on owner role classification | Complete aggregate inventory found six generic legacy admins but no claims/typed assignments; see [STAFF_AUTHORITY_INVENTORY_RESULT.md](STAFF_AUTHORITY_INVENTORY_RESULT.md) |
 | P0-03/P0-04 booking/payment/lock authority | Open | Untracked booking draft is unsafe and not qualified |
 | P0-05 legacy deployment inputs | Open | Root rules and legacy Functions remain unsuitable for blanket deployment |
 | P1 Event participant query indexes | Completed index-only release | Both exact service query shapes have one `READY` composite and passed zero-row production probes; Event policy/contracts remain open |

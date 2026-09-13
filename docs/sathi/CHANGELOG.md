@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-13 — P0-02 staff authority inventory gate
+- **Task:** Establish a bounded production compatibility baseline for the staff authority containment branch before selecting a replacement for the legacy broad `isAdmin()` rule.
+- **Objective:** Determine whether Auth claims, `admins/{uid}` records, or legacy user fields can safely support a role-scoped migration without inventing staff privileges or locking existing operations out.
+- **Files changed:** Aggregate-only read gate and contract test; staff inventory gate/result; saved active-rule rollback and aggregate inventory; documentation status and this changelog.
+- **Architecture changes:** None. The new utility is an opt-in production reader only; it cannot become an authority source or deploy a policy.
+- **Firebase changes:** None. Read-only result: 109 Auth accounts, zero custom staff claims, zero `admins` assignment documents, and six legacy `users.role == admin` records. Active Firestore rules SHA-256 is `28709c31cf043c9394dfea4f81be58aea217d455537c8b072bff3411f9040497`, matching the messaging containment release. No documents, claims, rules, Storage, Functions, indexes, Hosting, bookings or payments changed.
+- **UI changes:** None.
+- **Security implications:** Confirms that the current generic admin marker cannot be safely converted to scoped authority automatically. The previous staff/payment draft remains blocked because its document-based finance authority could be self-assigned under legacy broad rules.
+- **Performance implications:** One bounded (1,000-record maximum per source) aggregate-only read of Auth, `admins`, and `users` authority fields. No listener, query, or application runtime behavior changed.
+- **Tests performed:** `node --check ops/staff-containment/read-authority-inventory.mjs`; `node --test tests/staff-authority-inventory-contract.test.mjs` (1/1 passed); approved production aggregate inventory completed without reaching a cap; `git diff --check` passed before recording.
+- **Known issues:** The owner must classify the six generic legacy admins or authorize a temporary read-only freeze before any role/claim/rules migration. P0-03/P0-04 booking/payment/lock containment remains separate and the inherited draft remains unsafe/unqualified.
+- **Next recommended task:** Obtain a private UID-to-role mapping (with two independent super-admin recovery accounts) or an explicit freeze decision; then build and emulator-test a claims-first P0-02 candidate from this exact rollback source before requesting a separate production deployment gate.
+
 ## 2026-09-12 — Local PWA lifecycle acceptance limitation
 - **Task:** Attempt the outstanding two-version PWA update acceptance without using production accounts, Firebase policy, payment flows or a public deployment.
 - **Objective:** Confirm a local current worker can become waiting after a harmless second build and expose the existing defer/refresh UI.

@@ -1,0 +1,59 @@
+{
+  "mode": "READ_ONLY_STAFF_AUTHORITY_INVENTORY",
+  "project": "hamrosathi1",
+  "capturedAt": "2026-09-13T01:13:27.105Z",
+  "activeRules": {
+    "release": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/f4e99332-71c9-46ef-93fe-39843148d35f",
+    "updateTime": "2026-09-12T14:27:06.774400Z",
+    "sha256": "28709c31cf043c9394dfea4f81be58aea217d455537c8b072bff3411f9040497"
+  },
+  "boundedScan": {
+    "perSourceLimit": 1000,
+    "auth": {
+      "records": 109,
+      "complete": true
+    },
+    "admins": {
+      "records": 0,
+      "complete": true
+    },
+    "users": {
+      "records": 102,
+      "complete": true
+    }
+  },
+  "aggregateOnly": {
+    "claimRoles": {},
+    "adminDocumentRoles": {},
+    "userDocumentRoles": {
+      "role=admin": 6
+    },
+    "sourceOverlap": {
+      "claimsOnly": 0,
+      "adminsOnly": 0,
+      "usersOnly": 6,
+      "claimsAndAdmins": 0,
+      "claimsAndUsers": 0,
+      "adminsAndUsers": 0,
+      "allThree": 0
+    },
+    "anomalies": {
+      "malformedClaimPayload": 0,
+      "unrecognizedClaimAdminRole": 0,
+      "unrecognizedAdminDocumentRole": 0,
+      "unrecognizedUserDocumentAdminRole": 0,
+      "adminDocumentUidMismatch": 0
+    }
+  },
+  "noDataMutation": [
+    "Firestore documents",
+    "Firestore release",
+    "Storage",
+    "Functions",
+    "Auth accounts",
+    "Hosting",
+    "payments",
+    "bookings"
+  ]
+}
