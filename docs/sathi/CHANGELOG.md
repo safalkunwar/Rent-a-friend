@@ -1,5 +1,18 @@
 # SATHI Documentation Changelog
 
+## 2026-09-13 — Booking lock containment candidate (local, undeployed)
+- **Task:** Produce a locally-validated booking-lock containment candidate derived from the active deployed source `764eb7a3...`, with full static contract tests, and stop before any deployment or emulator gate.
+- **Objective:** Close the unscoped `isAdmin()` write bypass on `booking_locks/{lockId}` — where any authenticated user could create or update locks — without touching application code, production rules, or the unsafe archived booking draft.
+- **Files changed:** `ops/booking-containment/{candidate.firestore.rules,manifest.json,patch.mjs,generate.mjs}` (new); `tests/booking-lock-containment.test.mjs` (new); `docs/sathi/BOOKING_LOCK_CONTAINMENT_GATE.md` (new); corrected rollback `docs/sathi/rollbacks/payment-staff-release-2026-09-13T01-51-14-023Z/firestore.rules` (was incorrectly saved with the pre-deployment hash `28709c31...`; restored to the correct post-deploy hash `764eb7a3...`); this changelog.
+- **Architecture changes:** None to application. Candidate replaces only the `booking_locks/{lockId}` branch; all other 749+ lines are byte-identical to the active source.
+- **Firebase changes:** ZERO production mutations or deployments. The candidate is a local-only artifact (hash `3976a456...`) composed from the active source (`764eb7a3...`). The archived unsafe booking draft (`ops/containment/candidate-booking.firestore.rules`) was not read, modified, or executed.
+- **UI changes:** None.
+- **Security implications:** Lock writes are scoped to `isBookingAdmin()` instead of `isAdmin()`. Create requires field validation and `status == 'pending'`; update is restricted to `['status','updatedAt']` with valid transition enforcement (`pending→confirmed/cancelled`, `confirmed→active/cancelled`, `active→completed/cancelled`). Read remains `isAuthenticated()` for legitimate availability checks via `bookings.ts`.
+- **Performance implications:** No new indexes, queries, or listeners.
+- **Tests performed:** 14/14 static contract tests pass (3 payment-contract + 5 operator-bootstrap + 6 booking-lock). Main Vitest 309/309, admin Vitest 41/41, TypeScript `--noEmit` pass. Emulator suite skipped — Java 17 detected; Firestore emulator requires Java 21+.
+- **Known issues:** Not emulator-verified (requires Java 21+). The rollback `firestore.rules` in `payment-staff-release-2026-09-13T01-51-14-023Z/` was saved with the wrong hash during the prior release; this session corrected it to `764eb7a3...` to match the verified post-deploy state.
+- **Next recommended task:** Install Java 21+ and run the booking-lock emulator containment suite; if it passes, request separate deployment authorization for the `booking_locks` branch only. Do not deploy root rules or advance to another phase without explicit approval.
+
 ## 2026-09-13 — Approved combined payment/staff rules deployment and live acceptance
 - **Task:** Deploy the exact two-branch candidate explicitly approved by the owner and verify it with production SDK authorization checks.
 - **Objective:** Activate payment-document write denial and claims-root-only staff assignment management without changing unrelated production rules or real financial data.

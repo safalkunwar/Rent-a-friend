@@ -259,8 +259,25 @@ service cloud.firestore {
     // Booking Locks Collection: /booking_locks/{lockId}
     match /booking_locks/{lockId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && !exists(/databases/$(database)/documents/booking_locks/$(lockId));
-      allow update, delete: if isAdmin();
+      allow create: if isBookingAdmin() &&
+        !exists(/databases/$(database)/documents/booking_locks/$(lockId)) &&
+        request.resource.data.keys().hasAll(['bookingId','companionId','date','status','updatedAt']) &&
+        request.resource.data.keys().hasOnly(['bookingId','companionId','date','status','updatedAt']) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.companionId is string &&
+        request.resource.data.companionId.size() > 0 &&
+        request.resource.data.date is string &&
+        request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+        request.resource.data.updatedAt is string;
+      allow update: if isBookingAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+        request.resource.data.updatedAt is string &&
+        (
+          (resource.data.status == 'pending' && request.resource.data.status in ['confirmed', 'cancelled']) ||
+          (resource.data.status == 'confirmed' && request.resource.data.status in ['active', 'cancelled']) ||
+          (resource.data.status == 'active' && request.resource.data.status in ['completed', 'cancelled'])
+        );
+      allow delete: if isBookingAdmin();
     }
 
     // Reviews Collection: /reviews/{reviewId}

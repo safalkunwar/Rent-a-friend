@@ -1,0 +1,13 @@
+{
+  "mode": "LOCAL_BOOKING_LOCK_CONTAINMENT_CANDIDATE",
+  "project": "hamrosathi1",
+  "baselinePath": "docs/sathi/rollbacks/payment-staff-release-2026-09-13T01-51-14-023Z/firestore.rules",
+  "baselineHash": "764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402",
+  "candidateHash": "3976a456593afb7a2630f015a7dd8c69a150b843c7a4cd115d1d5004ea3ed6ee",
+  "changedBranches": [
+    "booking_locks"
+  ],
+  "changedHelpers": [],
+  "deployment": "NOT_PERFORMED",
+  "scopeNote": "Starts from active deployed source 764eb7a3... Does not use the unsafe archived booking draft."
+}
