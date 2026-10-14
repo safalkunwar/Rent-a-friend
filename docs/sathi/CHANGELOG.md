@@ -1,3 +1,12 @@
+# 2026-10-14 — Keep Coins UI within approved identity and commerce boundaries
+- **Task:** Resume the remaining roadmap work and close an unsafe/incomplete integration found in the newest Coins UI commit.
+- **Objective:** Keep the local wallet candidate aligned with the decision register: no unapproved identity collection, payment, payout, or spend workflow.
+- **Files changed:** `src/components/wallet/CoinWalletPanel.tsx`, removed `src/components/wallet/ProfileCompletionDialog.tsx`, `src/__tests__/coin-wallet-panel.test.tsx`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, this decision register, and this changelog.
+- **Implementation:** Removed the profile dialog that collected and saved date of birth and ID details. Add/Exchange now show unavailable states without invoking unimplemented Functions endpoints. Server-confirmed wallet reads and the gated welcome-grant claim request remain.
+- **Validation:** Focused Coins panel suite passed 4/4; `npm run lint` (`tsc --noEmit`) passed; `npm run build` passed. Vite reports the existing >500 kB JavaScript chunk warning. `git diff --check` passed.
+- **Remaining limits:** No approved grant amount, budget, funding evidence, policy pointer, finance/counsel reference or Phase 1–3 qualification exists. Feature flags remain off. No Functions deployment or production data change.
+- **Next action:** Complete the remaining decision-register and phase checklist entries with authorized owner/approver evidence; continue independent local contract/documentation tasks while gates remain blocked.
+
 ## 2026-10-14 — Complete 100-Coin welcome grant, spending UI, and profile completion flow
 - **Task:** Implement the complete Coins experience per the Phase 8 decision register: 100-Coin welcome grant per eligible account, usable balance display, in-app spending (profile unlock), and profile completion when users attempt to Add/Exchange Coins.
 - **Objective:** Deliver the complete local Coins candidate while keeping all financial activation gates (funding, finance/counsel approval, Blaze, deployment authorization) intact and off by default.

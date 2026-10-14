@@ -113,6 +113,11 @@ describe('CoinWalletPanel', () => {
     expect(screen.getByText('Funded reward sources are not active.')).toBeTruthy();
     expect(screen.getByText('Profile unlock pricing and spending are not active.')).toBeTruthy();
     expect(screen.getByText('Cash redemption is turned off.')).toBeTruthy();
+    expect(screen.getAllByText('Unavailable')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Add Coins' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Exchange' })).toBeNull();
+    expect(screen.queryByLabelText('Date of Birth')).toBeNull();
+    expect(screen.queryByLabelText(/ID Document/)).toBeNull();
   });
 
   it('checks the welcome grant and refreshes from the owner wallet endpoint after a grant', async () => {
