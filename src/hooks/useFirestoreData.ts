@@ -100,25 +100,25 @@ const usePaginatedCollection = <T extends { id: string }>(
   return { items, loading, loadingMore, hasMore, loadMore, refresh, retry, error };
 };
 
-export const useCompanions = () => {
-  const { items, ...state } = usePaginatedCollection<Companion>('companions', 15, EMPTY_QUERY);
+export const useCompanions = (pageSize = 15) => {
+  const { items, ...state } = usePaginatedCollection<Companion>('companions', pageSize, EMPTY_QUERY);
   return { companions: items, ...state };
 };
 export const useStories = useVisibleStories;
-export const useActivities = () => {
-  const { items, ...state } = usePaginatedCollection<Activity>('activities', 10, EMPTY_QUERY);
+export const useActivities = (pageSize = 10) => {
+  const { items, ...state } = usePaginatedCollection<Activity>('activities', pageSize, EMPTY_QUERY);
   return { activities: items, ...state };
 };
-export const useEvents = () => {
-  const { items, ...state } = usePaginatedCollection<Event>('events', 10, PUBLIC_EVENTS_QUERY);
+export const useEvents = (pageSize = 10) => {
+  const { items, ...state } = usePaginatedCollection<Event>('events', pageSize, PUBLIC_EVENTS_QUERY);
   const events = useMemo(() => items.map(event => ({ ...event, imageUrl: visibleEventImage(event), image: visibleEventImage(event) })), [items]);
   return { events, ...state };
 };
-export const usePartners = () => {
-  const { items, ...state } = usePaginatedCollection<Partner>('partners', 10, EMPTY_QUERY);
+export const usePartners = (pageSize = 10) => {
+  const { items, ...state } = usePaginatedCollection<Partner>('partners', pageSize, EMPTY_QUERY);
   return { partners: items, ...state };
 };
-export const useCommunityPosts = () => {
-  const { items, ...state } = usePaginatedCollection<CommunityPost>('community_posts', 10, POSTS_QUERY);
+export const useCommunityPosts = (pageSize = 10) => {
+  const { items, ...state } = usePaginatedCollection<CommunityPost>('community_posts', pageSize, POSTS_QUERY);
   return { posts: items, ...state };
 };

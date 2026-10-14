@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { readFile as readAsync } from 'node:fs/promises';
 import { hash, patchStaffRbac, ACTIVE_SOURCE, ACTIVE_HASH, helperOld, helperNew, analyticsOld, analyticsNew } from '../ops/staff-rbac-containment/patch.mjs';
 
-const CANDIDATE_HASH = '9f8d3b0eb782143d8481c82da0ef8bb55cb1dbee61fb2bb2465f16bfb4a72b64';
+const CANDIDATE_HASH = 'e50ec15688584e69e8ffd94918cea23b34802cf76c5f14b79b41bc4a39ff97db';
 
 describe('Staff RBAC containment — static contract', () => {
   test('candidate hash matches manifest', async () => {
@@ -34,7 +34,7 @@ describe('Staff RBAC containment — static contract', () => {
 
   test('patch requires baseline and rejects drift', async () => {
     const source = (await readAsync(ACTIVE_SOURCE, 'utf8')).replace('isContentAdmin', 'isContentadmins');
-    assert.throws(() => patchStaffRbac(source), /Helper anchor not found/);
+    assert.throws(() => patchStaffRbac(source), /baseline drift/);
   });
 
   test('unchanged bytes outside analytics branch and isResourceAdmin helper', async () => {
@@ -65,7 +65,7 @@ describe('Staff RBAC containment — static contract', () => {
     const analyticsEnd = candidate.indexOf('// Admins Collection:', analyticsStart);
     const analyticsSection = candidate.slice(analyticsStart, analyticsEnd);
 
-    assert.match(analyticsSection, /isResourceAdmin\(\['super_admin', 'platform_admin'\]\)/);
+    assert.match(analyticsSection, /isResourceAdmin\(\['super_admin', 'platform_admin', 'analytics_admin'\]\)/);
     assert.doesNotMatch(analyticsSection, /allow read: if isAdmin\(\);/);
   });
 
@@ -75,7 +75,7 @@ describe('Staff RBAC containment — static contract', () => {
     const helperEnd = candidate.indexOf('// Helper function to check if the requested data is valid', helperStart);
     const helperSection = candidate.slice(helperStart, helperEnd);
 
-    assert.match(helperSection, /!isAnonymous\(\)/);
+    assert.match(helperSection, /get\('sign_in_provider', ''\) != 'anonymous'/);
     assert.match(helperSection, /request\.auth\.token\.get\('adminRole', ''\) in requiredRoles/);
   });
 

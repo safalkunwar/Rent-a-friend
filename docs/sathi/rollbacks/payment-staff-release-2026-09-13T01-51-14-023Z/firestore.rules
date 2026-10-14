@@ -378,9 +378,10 @@ service cloud.firestore {
     // Payments Collection: /payments/{paymentId}
     match /payments/{paymentId} {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      // Payment truth must originate from a verified backend receipt.
-      // This also denies browser administrators; staff approval is not provider proof.
-      allow create, update, delete: if false;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow create, update, delete: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
     }
 
     // Community Posts Collection: /community_posts/{postId}
@@ -648,22 +649,9 @@ service cloud.firestore {
     }
 
     // Admins Collection: /admins/{adminId}
-    // Staff assignment management requires explicit trusted root claims.
-    // A legacy profile role or an editable assignment is never root authority.
-    function sathiAssignmentRoot() {
-      return request.auth != null &&
-        request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous' &&
-        request.auth.token.get('adminRole', '') == 'super_admin';
-    }
     match /admins/{adminId} {
-      allow read: if (isAuthenticated() && request.auth.uid == adminId) || sathiAssignmentRoot();
-      allow create, update: if sathiAssignmentRoot() &&
-        request.resource.data.keys().hasAll(['uid', 'role', 'updatedAt']) &&
-        request.resource.data.keys().hasOnly(['uid', 'role', 'updatedAt']) &&
-        request.resource.data.uid == adminId &&
-        request.resource.data.role in ['super_admin','platform_admin','safety_admin','moderation_admin','support_agent','booking_admin','finance_admin','kyc_reviewer','content_admin','analytics_admin','read_only_admin'] &&
-        request.resource.data.updatedAt is string;
-      allow delete: if sathiAssignmentRoot();
+      allow read: if isAuthenticated() && request.auth.uid == adminId;
+      allow write: if isAdmin();
     }
 
     // Audit Logs Collection: /auditLogs/{logId}

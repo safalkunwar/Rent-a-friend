@@ -1,0 +1,29 @@
+{
+  "result": "DEPLOYED_AND_READBACK_PASS",
+  "project": "hamrosathi1",
+  "verifiedAt": "2026-10-12T14:06:25.722Z",
+  "beforeHash": "764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402",
+  "candidateHash": "8bfecbb1465176c50eab501b2b4680a19e678d83678a6f2003b197b1514f768f",
+  "beforeRelease": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/ad82806d-52fe-4c75-a723-a2f3cdfc81e0",
+    "createTime": "2026-07-12T04:35:43.978011Z",
+    "updateTime": "2026-09-13T01:51:19.933304Z"
+  },
+  "afterRelease": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/e8b7524d-3fc8-4aa4-b19f-e89c3bedfac1",
+    "createTime": "2026-07-12T04:35:43.978011Z",
+    "updateTime": "2026-10-12T14:06:22.927363Z"
+  },
+  "directory": "docs/sathi/rollbacks/booking-release-2026-10-12T14-06-17-802Z",
+  "untouched": [
+    "Firestore documents",
+    "Auth claims",
+    "Storage",
+    "indexes",
+    "Functions",
+    "Hosting",
+    "CORS"
+  ]
+}

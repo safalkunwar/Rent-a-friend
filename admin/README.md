@@ -151,6 +151,10 @@ Admin authentication is completely independent from the main SATHI user applicat
 
 The admin application should be deployed independently from the main SATHI application.
 
+### App Check
+
+The admin app's App Check client is opt-in and requires production environment variables `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` and `VITE_APP_CHECK_ALLOWED_HOSTS` (comma-separated exact hostnames). Until the admin Firebase app/provider and deployed host are confirmed, leave these unset. Client initialization only requests and reports a token; enforcement stays off in Firebase until every deployed client is verified and a separate enforcement review is complete.
+
 ### Firebase Hosting
 
 ```bash

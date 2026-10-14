@@ -3,6 +3,7 @@ import { Companion, Activity, Event, ExperienceStory, CommunityPost } from '../t
 import { generateDiscoveryFeed, mulberry32, type FeedItem } from '../services/feedGenerator';
 import { stabilizeFeed } from '../services/feedStabilizer';
 import { useAppContext } from '../context/AppContext';
+import { searchStrings } from '../services/discoverySearch';
 
 export function useDiscoveryFeed(
   companions: Companion[],
@@ -14,13 +15,20 @@ export function useDiscoveryFeed(
   const { currentUser } = useAppContext();
 
   const userLocation = currentUser?.location;
-  const userInterests = (currentUser as any)?.interests;
+  const userInterests = searchStrings(currentUser?.interests);
+  const preferenceKey = JSON.stringify([userLocation, userInterests ?? []]);
+  const preferenceRef = useRef(preferenceKey);
 
   const sessionRef = useRef({ uid: currentUser?.id, seed: (Math.random() * 4294967296) >>> 0 });
 
   const stabilizedRef = useRef<FeedItem[]>([]);
 
   return useMemo(() => {
+    // Explicit preference edits rerank; source pagination alone stays stable.
+    if (preferenceRef.current !== preferenceKey) {
+      preferenceRef.current = preferenceKey;
+      stabilizedRef.current = [];
+    }
     if (sessionRef.current.uid !== currentUser?.id) {
       sessionRef.current = { uid: currentUser?.id, seed: (Math.random() * 4294967296) >>> 0 };
       stabilizedRef.current = [];

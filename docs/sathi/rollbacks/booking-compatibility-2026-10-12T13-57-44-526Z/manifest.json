@@ -1,0 +1,48 @@
+{
+  "mode": "READ_ONLY_BOOKING_COMPATIBILITY",
+  "project": "hamrosathi1",
+  "capturedAt": "2026-10-12T13:57:44.536Z",
+  "activeHash": "764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402",
+  "candidateHash": "8bfecbb1465176c50eab501b2b4680a19e678d83678a6f2003b197b1514f768f",
+  "release": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/ad82806d-52fe-4c75-a723-a2f3cdfc81e0",
+    "createTime": "2026-07-12T04:35:43.978011Z",
+    "updateTime": "2026-09-13T01:51:19.933304Z"
+  },
+  "completeUnderCap": true,
+  "inventoryConsistency": "BOUNDED_PAGED_READS_NOT_AN_ATOMIC_DATABASE_SNAPSHOT",
+  "counts": {
+    "bookings": 105,
+    "locks": 1,
+    "v2": 0,
+    "legacyOrOtherVersion": 105,
+    "missingBookingIdentity": 0,
+    "v2NoncanonicalCompanion": 0,
+    "orphanLocks": 0,
+    "mismatchedLockFields": 0,
+    "noncanonicalLockIds": 0,
+    "v2MissingOrDifferentLock": 0,
+    "statusCounts": {
+      "completed": 41,
+      "confirmed": 20,
+      "pending": 22,
+      "cancelled": 22
+    },
+    "paymentStatusCounts": {
+      "OTHER_OR_MISSING": 65,
+      "pending": 20,
+      "refunded": 20
+    }
+  },
+  "semanticDiff": {
+    "branches": [
+      "bookings",
+      "booking_locks"
+    ],
+    "helperPrefix": "sathiBooking",
+    "unrelatedSource": "BYTE_IDENTICAL"
+  },
+  "deployment": "NOT_PERFORMED",
+  "migration": "NOT_PERFORMED"
+}

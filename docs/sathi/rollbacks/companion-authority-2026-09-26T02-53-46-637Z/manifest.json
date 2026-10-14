@@ -1,0 +1,69 @@
+{
+  "mode": "READ_ONLY_COMPANION_AUTHORITY",
+  "project": "hamrosathi1",
+  "capturedAt": "2026-09-26T02:53:46.640Z",
+  "activeHash": "764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402",
+  "candidateHash": "966cb23050ee082543c449b359a74e2e6c15a091e001f62d9e07eb8dc5cc28b4",
+  "combinedHash": "b6eb8e7503db696e8afee82d7c910d6c22d9cba7e31b230bbc4196c6cf8c444c",
+  "release": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/ad82806d-52fe-4c75-a723-a2f3cdfc81e0",
+    "createTime": "2026-07-12T04:35:43.978011Z",
+    "updateTime": "2026-09-13T01:51:19.933304Z"
+  },
+  "completeUnderCap": true,
+  "inventoryConsistency": "BOUNDED_PAGED_READS_NOT_AN_ATOMIC_DATABASE_SNAPSHOT",
+  "counts": {
+    "users": 103,
+    "companions": 40,
+    "applications": 1,
+    "admins": 0,
+    "userCompanionStatus": {
+      "OTHER_OR_MISSING": 103
+    },
+    "applicationStatus": {
+      "SUBMITTED": 1
+    },
+    "verifiedProfiles": 40,
+    "approvedUsers": 0,
+    "approvedApplications": 0,
+    "profileMissingUserId": 0,
+    "profileNoncanonicalUserId": 40,
+    "profileMissingUser": 0,
+    "verifiedProfileWithoutApprovedUser": 40,
+    "approvedUserWithoutVerifiedCanonicalProfile": 0,
+    "profileWithApprovalPointer": 0,
+    "userWithApprovalPointer": 0,
+    "approvedApplicationWithMatchingPointers": 0,
+    "approvedApplicationMissingUser": 0,
+    "approvedApplicationWithNoncanonicalProfile": 0,
+    "usersWithMultipleApplications": 0,
+    "assignedKycReviewers": 0,
+    "assignedSuperAdmins": 0
+  },
+  "projectedFields": {
+    "users": [
+      "companionStatus",
+      "companionApprovalApplicationId"
+    ],
+    "companions": [
+      "id",
+      "userId",
+      "isVerified",
+      "verificationBadge",
+      "approvalApplicationId"
+    ],
+    "companion_applications": [
+      "id",
+      "userId",
+      "status",
+      "reviewAuditId"
+    ],
+    "admins": [
+      "uid",
+      "role"
+    ]
+  },
+  "deployment": "NOT_PERFORMED",
+  "migration": "NOT_PERFORMED"
+}

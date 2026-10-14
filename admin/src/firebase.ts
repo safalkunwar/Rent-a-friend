@@ -3,6 +3,7 @@ import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'fir
 import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getMessaging, type Messaging } from 'firebase/messaging';
+import { initializeAdminAppCheck } from './services/appCheck';
 
 const EXPECTED_PROJECT_ID = 'hamrosathi1';
 
@@ -67,6 +68,8 @@ try {
     app = getApps()[0];
     console.log('[SATHI Admin] Firebase app reused');
   }
+
+  if (app) initializeAdminAppCheck(app);
 
   auth = getAuth(app);
   setPersistence(auth, browserLocalPersistence)

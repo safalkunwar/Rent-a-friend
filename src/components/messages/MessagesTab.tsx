@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Send, Image as ImageIcon, Info, MessageSquare, LogIn, Wifi, Users, Compass, ShieldCheck, Paperclip } from 'lucide-react';
+import { Search, Send, Image as ImageIcon, Info, MessageSquare, LogIn, Wifi, Users, Compass, Paperclip } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../ui/Toast';
 import { messagingService } from '../../services/messaging';
@@ -439,7 +439,6 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                     <div className="flex justify-between items-baseline mb-0.5">
                       <h4 className="font-bold text-xs text-text-primary truncate flex items-center gap-1">
                         {comp.name}
-                        {comp.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-primary-action" />}
                       </h4>
                       <span className="text-[10px] text-text-secondary">
                         {convo.lastMessage?.timestamp ? new Date(convo.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -471,7 +470,6 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                   <div className="text-left">
                     <h3 className="font-bold text-text-primary text-xs flex items-center gap-1">
                       {companion.name}
-                      {companion.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-primary-action" />}
                     </h3>
                     <span className="text-[10px] text-green-500 flex items-center gap-1 font-semibold">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>

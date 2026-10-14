@@ -6,6 +6,8 @@ import { companionApplicationRepository, type ApplicationReviewAction } from '..
 import type { CompanionApplication, CompanionApplicationStatus } from '../types';
 import { requireUid } from '../services/identity';
 import { PrivateKycPreview } from '../components/companions/PrivateKycPreview';
+import { companionReviewEnabled } from '../services/releaseGates';
+import { useAppContext } from '../context/AppContext';
 
 const STATUS_TABS: Array<CompanionApplicationStatus | 'ALL'> = [
   'SUBMITTED',
@@ -18,25 +20,33 @@ const STATUS_TABS: Array<CompanionApplicationStatus | 'ALL'> = [
 
 const AdminApplicationsPageInner: React.FC = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAppContext();
   const [statusFilter, setStatusFilter] = useState<CompanionApplicationStatus | 'ALL'>('SUBMITTED');
   const [search, setSearch] = useState('');
   const [applications, setApplications] = useState<CompanionApplication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [actionTarget, setActionTarget] = useState<{ app: CompanionApplication; action: Exclude<ApplicationReviewAction, never> } | null>(null);
   const [reasonInput, setReasonInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [reviewError, setReviewError] = useState('');
 
   // Server-side status filter; search narrows the current page client-side.
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setLoadError('');
     companionApplicationRepository
-      .adminList(statusFilter)
+      .adminList(statusFilter, { id: currentUser?.id || '', role: String(currentUser?.claims?.adminRole || '') })
       .then(apps => active && setApplications(apps))
-      .catch(() => active && setApplications([]))
+      .catch(err => {
+        if (!active) return;
+        setApplications([]);
+        setLoadError(err instanceof Error ? err.message : 'Applications could not be loaded.');
+      })
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [statusFilter]);
+  }, [statusFilter, currentUser?.id, currentUser?.claims?.adminRole]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -52,10 +62,15 @@ const AdminApplicationsPageInner: React.FC = () => {
   const runReview = async () => {
     if (!actionTarget) return;
     setBusy(true);
+    setReviewError('');
     try {
+      const actorRole = currentUser?.claims?.adminRole;
+      if (actorRole !== 'super_admin' && actorRole !== 'kyc_reviewer') {
+        throw new Error('A current companion-review role is required.');
+      }
       await companionApplicationRepository.review(actionTarget.action, actionTarget.app.id, {
         id: requireUid(),
-        role: 'reviewer',
+        role: actorRole,
       }, {
         reason: reasonInput.trim() || undefined,
         requestedChanges: reasonInput.trim() || undefined,
@@ -65,6 +80,7 @@ const AdminApplicationsPageInner: React.FC = () => {
       setReasonInput('');
     } catch (err) {
       console.error('[AdminApplications] review failed:', err);
+      setReviewError(err instanceof Error ? err.message : 'Review could not be saved.');
     } finally {
       setBusy(false);
     }
@@ -80,6 +96,11 @@ const AdminApplicationsPageInner: React.FC = () => {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+        {!companionReviewEnabled && (
+          <p className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-xs text-text-secondary">
+            Application reviews are paused while identity evidence, reviewer assignment and historical profile ownership are qualified. Existing applications remain available to inspect.
+          </p>
+        )}
         {/* Filters */}
         <div className="flex flex-wrap gap-2 items-center">
           {STATUS_TABS.map(tab => (
@@ -103,9 +124,10 @@ const AdminApplicationsPageInner: React.FC = () => {
           </div>
         </div>
 
+        {loadError && <p role="alert" className="text-xs text-danger">{loadError}</p>}
         {loading ? (
           <p className="text-xs text-text-secondary animate-pulse py-8 text-center">Loading applications…</p>
-        ) : filtered.length === 0 ? (
+        ) : !loadError && filtered.length === 0 ? (
           <p className="py-12 text-center text-xs text-text-secondary">No applications in this view.</p>
         ) : (
           <div className="space-y-4">
@@ -130,11 +152,11 @@ const AdminApplicationsPageInner: React.FC = () => {
                   <p className="text-[11px] text-text-secondary leading-relaxed line-clamp-2">{app.applicationData.bio}</p>
                 )}
 
-                {['SUBMITTED', 'UNDER_REVIEW'].includes(app.status) && (
+                {companionReviewEnabled && ['SUBMITTED', 'UNDER_REVIEW'].includes(app.status) && (
                   <div className="pt-2 border-t border-border-token/40 flex flex-wrap gap-2">
-                    <button onClick={() => setActionTarget({ app, action: 'approve' })} className="px-3 py-1.5 rounded-xl bg-success/15 text-success border border-success/40 text-[11px] font-black flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Approve</button>
-                    <button onClick={() => setActionTarget({ app, action: 'request_changes' })} className="px-3 py-1.5 rounded-xl bg-warning/10 text-warning border border-warning/40 text-[11px] font-black flex items-center gap-1"><PenLine className="w-3.5 h-3.5" /> Request Changes</button>
-                    <button onClick={() => setActionTarget({ app, action: 'reject' })} className="px-3 py-1.5 rounded-xl bg-danger/10 text-danger border border-danger/40 text-[11px] font-black flex items-center gap-1"><X className="w-3.5 h-3.5" /> Reject</button>
+                    <button onClick={() => { setReviewError(''); setActionTarget({ app, action: 'approve' }); }} className="px-3 py-1.5 rounded-xl bg-success/15 text-success border border-success/40 text-[11px] font-black flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Approve</button>
+                    <button onClick={() => { setReviewError(''); setActionTarget({ app, action: 'request_changes' }); }} className="px-3 py-1.5 rounded-xl bg-warning/10 text-warning border border-warning/40 text-[11px] font-black flex items-center gap-1"><PenLine className="w-3.5 h-3.5" /> Request Changes</button>
+                    <button onClick={() => { setReviewError(''); setActionTarget({ app, action: 'reject' }); }} className="px-3 py-1.5 rounded-xl bg-danger/10 text-danger border border-danger/40 text-[11px] font-black flex items-center gap-1"><X className="w-3.5 h-3.5" /> Reject</button>
                   </div>
                 )}
                 {app.rejectionReason && <p className="text-[10px] text-danger">Reason: {app.rejectionReason}</p>}
@@ -172,6 +194,7 @@ const AdminApplicationsPageInner: React.FC = () => {
                 Approving will verify KYC, activate the user's public companion profile, and log this action to the audit trail.
               </p>
             )}
+            {reviewError && <p role="alert" className="text-xs text-danger">{reviewError}</p>}
             <div className="flex justify-end gap-3 pt-2">
               <button onClick={() => { setActionTarget(null); setReasonInput(''); }} disabled={busy} className="px-4 py-2 rounded-xl border border-border-token text-xs font-bold text-text-secondary hover:text-text-primary">
                 Cancel

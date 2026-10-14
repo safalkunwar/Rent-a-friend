@@ -271,9 +271,9 @@ async function runSeedCompanions() {
       const fName = isMale ? firstNamesMale[idx % firstNamesMale.length] : firstNamesFemale[idx % firstNamesFemale.length];
       const lName = lastNames[idx % lastNames.length];
       const name = `${fName} ${lName}`;
-      const email = `seed_${type}_${String(i + 1).padStart(3, '0')}@sathi.com`;
-      const companionUserId = `u-seed-${type}-${String(i + 1).padStart(3, '0')}`;
-      const companionId = `seed_${type}_${String(i + 1).padStart(3, '0')}`;
+      const email = `00_${type}_${String(i + 1).padStart(3, '0')}@sathi.com`;
+      const companionUserId = `u-00-${type}-${String(i + 1).padStart(3, '0')}`;
+      const companionId = `00_${type}_${String(i + 1).padStart(3, '0')}`;
 
       // Check if already exists
       const exists = await checkExistingCompanion(companionId);

@@ -3,7 +3,7 @@ import { Companion, Activity, CommunityPost, Event, ExperienceStory } from '../.
 import { type FeedItem } from '../../services/feedGenerator';
 import { SafeImage } from '../ui/SafeImage';
 import { DiscoveryContentContainer } from './DiscoveryContentContainer';
-import { MapPin, Star } from 'lucide-react';
+import { Heart, MapPin, Star } from 'lucide-react';
 import { chunkFeedByHeader } from '../../services/feedStabilizer';
 import { FeedStoryCard, FeedPostCard } from '../social/FeedSocialCards';
 import { groupStories } from '../../services/storyGroups';
@@ -128,7 +128,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
       {/* Stories */}
       <DiscoveryContentContainer>
         <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 snap-x">
-          <div
+          <button type="button" aria-label="Create your Story"
             onClick={onCreateStory}
             className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start"
           >
@@ -136,14 +136,14 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
               <span className="text-lg font-bold text-primary-action">+</span>
             </div>
             <span className="text-[10px] text-text-secondary font-bold">Your Story</span>
-          </div>
+          </button>
           {groupStories(stories).map(({ ownerId, stories: [st] }) => (
-            <div
+            <button type="button" aria-label={`View ${st.userName}'s Story`}
               key={ownerId}
               onClick={() => onViewStory(st)}
               className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start"
             >
-              <div className="relative p-[2px] rounded-full bg-gradient-to-tr from-[#C8A25E] via-pink-600 to-purple-600">
+              <div className="relative p-[2px] rounded-full bg-gradient-to-tr from-primary-action to-gold-accent">
                 <div className="p-[1.5px] rounded-full bg-background">
                   <SafeImage
                     src={st.userAvatar}
@@ -153,10 +153,9 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                     className="w-[60px] h-[60px] rounded-full object-cover"
                   />
                 </div>
-                <span className="absolute bottom-1 right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full" />
               </div>
               <span className="text-[10px] text-text-primary font-bold truncate max-w-[65px]">{st.userName}</span>
-            </div>
+            </button>
           ))}
         </div>
       </DiscoveryContentContainer>
@@ -190,13 +189,14 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
                             <span className="absolute top-3 left-3 bg-primary-action text-background text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
                               {item.category || companion.interests?.[0] || 'COMPANION'}
                             </span>
+                            <button type="button" aria-label={`Save ${companion.name}`} aria-pressed={favorites.includes(companion.id)} onClick={() => onToggleFavorite(companion.id)} className="absolute right-2 bottom-2 w-11 h-11 rounded-full bg-surface text-text-primary flex items-center justify-center border border-border-token"><Heart size={18} className={favorites.includes(companion.id) ? 'fill-current text-primary-action' : ''} /></button>
                           </div>
                           <div className="p-3 space-y-1.5 text-left">
                             <h4 className="text-sm font-bold text-text-primary">{companion.name}</h4>
                             <p className="text-xs text-text-secondary flex items-center gap-1">
                               <MapPin className="w-3 h-3 text-primary-action" />
                               {companion.location || 'Location unavailable'}
-                              {companion.hourlyRate ? ` • NPR ${companion.hourlyRate}/hr` : ' • Rate unavailable'}
+                              {typeof companion.hourlyRate === 'number' && Number.isFinite(companion.hourlyRate) && companion.hourlyRate >= 0 ? ` • NPR ${companion.hourlyRate}/hr` : ' • Rate unavailable'}
                             </p>
                             <div className="flex justify-between items-center pt-1.5 border-t border-white/5">
                               <div className="flex items-center gap-0.5 text-xs text-primary-action font-bold">

@@ -233,52 +233,97 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Bookings Collection: /bookings/{bookingId}
-    match /bookings/{bookingId} {
-      // Users can read their own bookings, companions their own, and admins all
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
-        request.auth.uid == resource.data.companionId ||
-        isAdmin()
-      );
-
-      // Users can create their own bookings
-      allow create: if isCustomer() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
-
-      // Admins can create, update, and delete any booking
-      allow create, update, delete: if isAdmin();
-
-      // Users can request cancellation, companions can confirm/complete, admins can update all
-      allow update: if isAuthenticated() && (
-        (request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
-        (isCompanion() && exists(/databases/$(database)/documents/companions/$(resource.data.companionId)) && request.auth.uid == get(/databases/$(database)/documents/companions/$(resource.data.companionId)).data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
-        isAdmin()
-      );
+    // BEGIN SATHI BOOKING COMPATIBILITY (v2 only; no provider payment activation)
+    function sathiBookingMember() {
+      return request.auth != null && request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous';
     }
-
-    // Booking Locks Collection: /booking_locks/{lockId}
-    match /booking_locks/{lockId} {
+    function sathiBookingOwn(uid) { return sathiBookingMember() && request.auth.uid == uid; }
+    function sathiBookingOperator() {
+      return sathiBookingMember() && request.auth.token.get('adminRole', '') in ['super_admin', 'booking_admin'];
+    }
+    function sathiBookingChangedOnly(fields) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields); }
+    function sathiBookingText(value) { return value is string && value.size() > 0 && value.size() <= 10000; }
+    function sathiBookingLockKey(data) { return 'lock_' + data.companionId + '_' + data.date.replace('[^a-zA-Z0-9]', '_'); }
+    function sathiBookingTime(data) {
+      return timestamp.date(int(data.date[0:4]),int(data.date[5:7]),int(data.date[8:10])) +
+        duration.value(int(data.time[0:2]) * 60 + int(data.time[3:5]) - 345,'m');
+    }
+    function sathiBookingPairedLock(data,id) {
+      let lock = getAfter(/databases/$(database)/documents/booking_locks/$(sathiBookingLockKey(data))).data;
+      return lock.bookingId == id && lock.companionId == data.companionId && lock.date == data.date && lock.status == data.status;
+    }
+    function sathiBookingAvailableLock(data) {
+      let path = /databases/$(database)/documents/booking_locks/$(sathiBookingLockKey(data));
+      return !exists(path) || (get(path).data.status == 'cancelled' &&
+        get(/databases/$(database)/documents/bookings/$(get(path).data.bookingId)).data.status == 'cancelled');
+    }
+    // BEGIN GENERATED BOOKING TRANSITIONS
+    function sathiBookingTransition(data, next) {
+      return (data.status == 'pending' && next == 'confirmed' && (sathiBookingOwn(data.companionUid) || sathiBookingOperator())) ||
+        (data.status == 'pending' && next == 'cancelled' && (sathiBookingOwn(data.userId) || sathiBookingOwn(data.companionUid) || sathiBookingOperator())) ||
+        (data.status == 'confirmed' && next == 'active' && (sathiBookingOwn(data.companionUid) || sathiBookingOperator())) ||
+        (data.status == 'confirmed' && next == 'cancelled' && (sathiBookingOwn(data.userId) || sathiBookingOwn(data.companionUid) || sathiBookingOperator())) ||
+        (data.status == 'active' && next == 'completed' && (sathiBookingOwn(data.companionUid) || sathiBookingOperator())) ||
+        (data.status == 'active' && next == 'cancelled' && (sathiBookingOperator()));
+    }
+    // END GENERATED BOOKING TRANSITIONS
+    function sathiBookingValidReservation(data,id) {
+      let companion = get(/databases/$(database)/documents/companions/$(data.companionId)).data;
+      return sathiBookingOwn(data.userId) && data.id == id && data.policyVersion == 2 &&
+        data.companionId == data.companionUid && data.companionUid == companion.userId && data.companionUid != request.auth.uid &&
+        companion.isVerified == true &&
+        get(/databases/$(database)/documents/users/$(data.companionUid)).data.companionStatus == 'APPROVED' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('status','ACTIVE') == 'ACTIVE' &&
+        data.status == 'pending' && data.paymentStatus == 'not_started' &&
+        data.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && data.time.matches('([01][0-9]|2[0-3]):[0-5][0-9]') &&
+        data.duration is int && data.duration >= 1 && data.duration <= 12 &&
+        data.participants is int && data.participants >= 1 && data.participants <= 8 &&
+        int(data.time[0:2])*60 + int(data.time[3:5]) + data.duration*60 <= 1440 &&
+        data.startAt == sathiBookingTime(data) && data.startAt > request.time &&
+        companion.hourlyRate is int && companion.hourlyRate >= 500 &&
+        data.quotedTotalPaisa == companion.hourlyRate * data.duration * (110 + 33 * (data.participants - 1)) &&
+        data.totalPrice == data.quotedTotalPaisa / 100 &&
+        data.createdAt is string && data.updatedAt is string &&
+        sathiBookingText(data.meetingPoint) && sathiBookingText(data.userNameAtBooking) && sathiBookingText(data.userPhoneAtBooking) &&
+        data.keys().hasOnly(['id','userId','companionId','companionUid','date','time','duration','participants','meetingPoint',
+          'meetingCoordinates','specialRequests','userNameAtBooking','userPhoneAtBooking','userEmailAtBooking','status',
+          'paymentStatus','policyVersion','totalPrice','quotedTotalPaisa','startAt','createdAt','updatedAt']) &&
+        sathiBookingAvailableLock(data) && sathiBookingPairedLock(data,id);
+    }
+    match /bookings/{id} {
+      allow get: if sathiBookingMember() && !exists(/databases/$(database)/documents/bookings/$(id));
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.companionId || isAdmin());
+      allow create: if sathiBookingValidReservation(request.resource.data,id);
+      allow update: if resource.data.policyVersion == 2 && sathiBookingChangedOnly(['status','updatedAt']) && request.resource.data.updatedAt is string &&
+        sathiBookingTransition(resource.data,request.resource.data.status) &&
+        (request.resource.data.status != 'active' || request.time >= resource.data.startAt) &&
+        (request.resource.data.status != 'completed' || request.time >= resource.data.startAt + duration.value(resource.data.duration,'h')) &&
+        get(/databases/$(database)/documents/booking_locks/$(sathiBookingLockKey(resource.data))).data.bookingId == id &&
+        sathiBookingPairedLock(request.resource.data,id);
+    }
+    match /booking_locks/{id} {
       allow read: if isAuthenticated();
-      allow create: if isBookingAdmin() &&
-        !exists(/databases/$(database)/documents/booking_locks/$(lockId)) &&
-        request.resource.data.keys().hasAll(['bookingId','companionId','date','status','updatedAt']) &&
-        request.resource.data.keys().hasOnly(['bookingId','companionId','date','status','updatedAt']) &&
-        request.resource.data.status == 'pending' &&
-        request.resource.data.companionId is string &&
-        request.resource.data.companionId.size() > 0 &&
-        request.resource.data.date is string &&
-        request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
-        request.resource.data.updatedAt is string;
-      allow update: if isBookingAdmin() &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
-        request.resource.data.updatedAt is string &&
-        (
-          (resource.data.status == 'pending' && request.resource.data.status in ['confirmed', 'cancelled']) ||
-          (resource.data.status == 'confirmed' && request.resource.data.status in ['active', 'cancelled']) ||
-          (resource.data.status == 'active' && request.resource.data.status in ['completed', 'cancelled'])
-        );
-      allow delete: if isBookingAdmin();
+      function matchingBooking() {
+        let data = request.resource.data;
+        let book = getAfter(/databases/$(database)/documents/bookings/$(data.bookingId)).data;
+        return data.keys().hasAll(['bookingId','companionId','date','status','updatedAt']) &&
+          data.keys().hasOnly(['bookingId','companionId','date','status','updatedAt']) &&
+          data.updatedAt is string && data.updatedAt == book.updatedAt && id == sathiBookingLockKey(book) &&
+          data.companionId == book.companionId && data.date == book.date && data.status == book.status;
+      }
+      function newReservation() {
+        let path = /databases/$(database)/documents/bookings/$(request.resource.data.bookingId);
+        return !exists(path) && sathiBookingOwn(getAfter(path).data.userId) && request.resource.data.status == 'pending';
+      }
+      allow create: if matchingBooking() && newReservation();
+      allow update: if matchingBooking() &&
+        ((newReservation() && resource.data.status == 'cancelled' &&
+          get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.status == 'cancelled') ||
+         (request.resource.data.bookingId == resource.data.bookingId && sathiBookingChangedOnly(['status','updatedAt']) &&
+          getAfter(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.status !=
+          get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.status));
     }
+    // END SATHI BOOKING COMPATIBILITY
 
     // Reviews Collection: /reviews/{reviewId}
     match /reviews/{reviewId} {

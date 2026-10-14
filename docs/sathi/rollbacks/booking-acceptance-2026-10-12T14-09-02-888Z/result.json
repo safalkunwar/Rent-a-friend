@@ -1,0 +1,35 @@
+{
+  "result": "LIVE_SDK_ACCEPTANCE_PASS",
+  "project": "hamrosathi1",
+  "verifiedAt": "2026-10-12T14:10:08.855Z",
+  "candidateHash": "8bfecbb1465176c50eab501b2b4680a19e678d83678a6f2003b197b1514f768f",
+  "checks": [
+    {
+      "name": "real customer booking transaction creates paired pending booking and lock",
+      "result": "PASS"
+    },
+    {
+      "name": "another customer cannot read or rewrite the booking",
+      "result": "PASS"
+    },
+    {
+      "name": "companion confirms and customer cancels through paired transitions",
+      "result": "PASS"
+    },
+    {
+      "name": "a new customer can reuse a cancelled reservation lock",
+      "result": "PASS"
+    },
+    {
+      "name": "active production rules still match the exact candidate",
+      "result": "PASS"
+    }
+  ],
+  "cleanup": {
+    "passed": true,
+    "accountsCreated": 3,
+    "generatedDocumentPaths": 7,
+    "errors": []
+  },
+  "scope": "DISPOSABLE_AUTH_ACCOUNTS_AND_GENERATED_BOOKING_FIXTURES_ONLY; PAYMENT_NOT_STARTED; NO_CHARGE"
+}

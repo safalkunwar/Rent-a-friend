@@ -11,15 +11,15 @@ if (hash(source) !== ACTIVE_HASH) {
 const candidate = patchBookingLocks(source);
 await writeFile('ops/booking-containment/candidate.firestore.rules', candidate);
 await writeFile('ops/booking-containment/manifest.json', JSON.stringify({
-  mode: 'LOCAL_BOOKING_LOCK_CONTAINMENT_CANDIDATE',
+  mode: 'LOCAL_PAIRED_BOOKING_LOCK_COMPATIBILITY_CANDIDATE',
   project: 'hamrosathi1',
   baselinePath: ACTIVE_SOURCE,
   baselineHash: ACTIVE_HASH,
   candidateHash: hash(candidate),
-  changedBranches: ['booking_locks'],
-  changedHelpers: [],
+  changedBranches: ['bookings', 'booking_locks'],
+  changedHelpers: ['sathiBooking* (dedicated v2 validation/paired-write helpers)'],
   deployment: 'NOT_PERFORMED',
-  scopeNote: 'Starts from active deployed source 764eb7a3... Does not use the unsafe archived booking draft.',
+  scopeNote: 'Actual booking transaction compatibility. Preserves unrelated source and existing read grants. Replaces rejected staff-only lock draft; not deployed.',
 }, null, 2) + '\n');
 
-console.log(JSON.stringify({ candidateHash: hash(candidate), changedBranches: ['booking_locks'] }));
+console.log(JSON.stringify({ candidateHash: hash(candidate), changedBranches: ['bookings', 'booking_locks'] }));

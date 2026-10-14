@@ -81,7 +81,7 @@ service cloud.firestore {
 
     function isResourceAdmin(requiredRoles) {
       return isAuthenticated() &&
-        !isAnonymous() &&
+        request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous' &&
         request.auth.token.get('adminRole', '') in requiredRoles;
     }
 
@@ -651,7 +651,7 @@ service cloud.firestore {
     // granted platform roles may read. This does NOT remove isAdmin() for
     // other collections — this is a scoped containment, not a full RBAC pass.
     match /analytics/{analyticId} {
-      allow read: if isResourceAdmin(['super_admin', 'platform_admin']);
+      allow read: if isResourceAdmin(['super_admin', 'platform_admin', 'analytics_admin']);
       allow create: if false;
       allow update, delete: if false;
     }

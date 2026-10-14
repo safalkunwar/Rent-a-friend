@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./desktop-polish.css";
+@import "./discovery-refresh.css";
 
 @keyframes sathi-story-heart-pop {
   0% { opacity: 0; transform: scale(.35) rotate(-15deg); }

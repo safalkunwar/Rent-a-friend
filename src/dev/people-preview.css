@@ -1,0 +1,40 @@
+.stage-preview-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 28px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 13px; }
+.stage-preview-header :is(a, span) { display: flex; align-items: center; gap: 8px; }
+.stage-preview-header :is(a, button) { min-height: 44px; display: flex; align-items: center; }
+.stage-preview-notice { padding: 16px 20px; border: 1px solid var(--border); border-left: 4px solid var(--gold-accent); border-radius: 14px; background: var(--surface); font-size: 13px; line-height: 1.7; }
+.stage-preview-notice p { color: var(--text-secondary); }
+.stage-preview-intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-block: 12px; }
+.stage-preview-intro h1 { font-size: clamp(28px, 4vw, 44px); line-height: 1.15; letter-spacing: -.035em; font-weight: 750; margin-block: 16px; }
+.stage-preview-intro h1 span { color: var(--text-secondary); }
+.stage-preview-intro p:last-child { color: var(--text-secondary); font-size: 14px; }
+.stage-preview-intro img { width: 110px; height: 110px; border-radius: 50%; }
+.stage-mode-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.stage-mode-tabs button { text-align: left; padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.stage-mode-tabs button[aria-pressed="true"] { background: var(--primary-action); color: var(--background); border-color: var(--primary-action); }
+.stage-mode-tabs strong, .stage-mode-tabs small { display: block; }
+.stage-mode-tabs small { font-size: 11px; margin-top: 7px; }
+.stage-preview-filters { display: flex; gap: 14px; align-items: end; flex-wrap: wrap; }
+.stage-preview-filters label { font-size: 12px; color: var(--text-secondary); }
+.stage-preview-filters select { display: block; min-height: 46px; background: var(--surface); border: 1px solid var(--border); color: var(--text-primary); border-radius: 12px; padding: 10px; margin-top: 6px; }
+.stage-preview-filters .stage-search { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 220px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0 14px; }
+.stage-search input { width: 100%; min-height: 46px; color: var(--text-primary); outline: none; }
+.stage-person-card { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: var(--surface); min-width: 0; }
+.stage-person-art { position: relative; height: 175px; background: linear-gradient(135deg, #edf2f9, #cedbeb); display: grid; place-items: center; color: #102a50; }
+.stage-person-art--local_host { background: linear-gradient(135deg, #fff5d8, #eedba8); }
+.stage-person-art--guide { background: linear-gradient(135deg, #08265a, #375582); color: white; }
+.stage-fixture-label { position: absolute; top: 12px; left: 14px; font-size: 10px; letter-spacing: .1em; font-weight: 700; }
+.stage-initials { font-size: 48px; font-weight: 500; letter-spacing: -.07em; opacity: .75; }
+.stage-mode-label { position: absolute; bottom: 12px; left: 14px; padding: 5px 10px; border-radius: 16px; background: #ffffffed; color: #102a50; font-size: 12px; font-weight: 650; }
+.stage-person-body { display: flex; flex: 1; flex-direction: column; gap: 12px; padding: 18px; }
+.stage-person-body h4 { font-size: 17px; font-weight: 700; }
+.stage-person-body p { font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
+.stage-person-state { display: flex; align-items: center; gap: 6px; }
+.stage-agency { padding: 8px; background: var(--surface-elevated); border-radius: 8px; }
+.stage-person-footer { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.stage-person-footer strong { display: block; font-size: 16px; }
+.stage-person-footer small { font-size: 11px; font-weight: 400; color: var(--text-secondary); }
+.stage-preview-detail { padding: 24px; border: 1px solid var(--primary-action); border-radius: 18px; background: var(--surface); display: grid; gap: 16px; }
+.stage-preview-detail p { font-size: 14px; line-height: 1.7; }
+.stage-preview-detail button:disabled { opacity: .6; cursor: not-allowed; }
+.stage-preview :is(button, a, select, input):focus-visible { outline: 2px solid var(--primary-action); outline-offset: 3px; }
+@media (max-width: 700px) { .stage-mode-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stage-preview-intro img { display: none; } .stage-preview-header { padding: 10px 16px; flex-wrap: wrap; } }

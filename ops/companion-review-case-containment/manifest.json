@@ -1,0 +1,22 @@
+{
+  "mode": "LOCAL_COMPANION_CASE_SCOPE_CANDIDATE",
+  "project": "hamrosathi1",
+  "authorityInputHash": "966cb23050ee082543c449b359a74e2e6c15a091e001f62d9e07eb8dc5cc28b4",
+  "bookingAuthorityInputHash": "b6eb8e7503db696e8afee82d7c910d6c22d9cba7e31b230bbc4196c6cf8c444c",
+  "candidateHash": "90c64653f78363a2b0fb52949e33d1f017a79a8d2b205e788c61c438d98e476c",
+  "bookingCombinedHash": "2b13d40ad67a87851aa9919390d23b99cc95fec45917e3c5590016fff616e386",
+  "changedBranches": [
+    "users",
+    "companions",
+    "companion_applications",
+    "companion_review_cases"
+  ],
+  "changedHelpers": [
+    "sathiAuthorityAssignedCase",
+    "sathiAuthorityReviewAuthorized",
+    "sathiCaseAuditAfter",
+    "sathiApprovalAppAfter"
+  ],
+  "deployment": "NOT_PERFORMED",
+  "limitations": "Case assignment/revocation require matching immutable audit docs in one write; no operational/backend command, KYC evidence, age or full reviewer queue qualification."
+}

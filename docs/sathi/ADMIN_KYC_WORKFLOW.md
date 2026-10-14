@@ -1,5 +1,7 @@
 # Admin KYC / Companion Application Workflow
 
+> **Current qualification note (2026-09-30):** The workflow below describes the August 26 design/implementation, not a currently qualified approval path. The main application review UI and repository now default to paused behind `VITE_COMPANION_REVIEW_ENABLED`; standalone legacy Guide/Companion screens are read-only. Private evidence, age, case assignment and 40 historical noncanonical identities still need review. See [the authority gate](COMPANION_AUTHORITY_CONTAINMENT_GATE_2026-09-26.md) and [Phase 1 proposal](PHASE_01_IDENTITY_EVIDENCE_DECISION_2026-09-30.md).
+
 **Last updated:** 2026-08-26 · Page: `/admin/applications` (guarded by `companions.verify`)
 
 ## Flow

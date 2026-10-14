@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
-const ACTIVE_SOURCE = 'docs/sathi/rollbacks/payment-staff-release-2026-09-13T01-51-14-023Z/firestore.rules';
+const ACTIVE_SOURCE = 'ops/payment-containment/combined-candidate.firestore.rules';
 const ACTIVE_HASH = '764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402';
 const OUTPUT = 'ops/staff-rbac-containment/candidate.firestore.rules';
 
@@ -27,7 +27,7 @@ const helperNew = `    function isContentAdmin() {
 
     function isResourceAdmin(requiredRoles) {
       return isAuthenticated() &&
-        !isAnonymous() &&
+        request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous' &&
         request.auth.token.get('adminRole', '') in requiredRoles;
     }
 
@@ -45,12 +45,13 @@ const analyticsNew = `    // Analytics Collection: /analytics/{analyticId}
     // granted platform roles may read. This does NOT remove isAdmin() for
     // other collections — this is a scoped containment, not a full RBAC pass.
     match /analytics/{analyticId} {
-      allow read: if isResourceAdmin(['super_admin', 'platform_admin']);
+      allow read: if isResourceAdmin(['super_admin', 'platform_admin', 'analytics_admin']);
       allow create: if false;
       allow update, delete: if false;
     }`;
 
 export function patchStaffRbac(source) {
+  if (hash(source) !== ACTIVE_HASH) throw new Error('Staff RBAC baseline drift; fresh review required.');
   if (!source.includes(helperOld)) throw new Error('Helper anchor not found; baseline may have drifted.');
   let result = source.replace(helperOld, () => helperNew);
   if (!result.includes(analyticsOld)) throw new Error('Analytics branch not found; baseline may have drifted.');

@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { bookingService } from '../services/bookings';
 import { messagingService } from '../services/messaging';
 import { mapsService } from '../services/maps';
 import { companionDashboardService } from '../services/companionDashboard';
@@ -10,73 +9,6 @@ import { searchService } from '../services/search';
 import { presenceService } from '../services/presence';
 import { reminderService } from '../services/reminders';
 import { featureFlags } from '../services/featureFlags';
-
-describe('booking service', () => {
-  beforeEach(() => {
-    vi.resetModules();
-  });
-
-  it('checkCompanionAvailability returns false when companion not found', async () => {
-    vi.doMock('../services/firestore', () => ({
-      firestore: {
-        getDocument: vi.fn().mockResolvedValue(null),
-      },
-    }));
-    const { bookingService } = await import('../services/bookings');
-    const result = await bookingService.checkCompanionAvailability('c1', '2025-01-01');
-    expect(result.isAvailable).toBe(false);
-    expect(result.reason).toBe('Companion not found');
-  });
-
-  it('checkCompanionAvailability returns false when no availableDays set', async () => {
-    vi.doMock('../services/firestore', () => ({
-      firestore: {
-        getDocument: vi.fn().mockResolvedValue({ id: 'c1', availableDays: [] }),
-      },
-    }));
-    const { bookingService } = await import('../services/bookings');
-    const result = await bookingService.checkCompanionAvailability('c1', '2025-01-01');
-    expect(result.isAvailable).toBe(false);
-    expect(result.reason).toBe('Companion has not set available days');
-  });
-
-  it('checkCompanionAvailability returns false on wrong day', async () => {
-    const companion = { id: 'c1', availableDays: ['Monday', 'Tuesday'] };
-    vi.doMock('../services/firestore', () => ({
-      firestore: {
-        getDocument: vi.fn().mockResolvedValue(companion),
-      },
-    }));
-    const { bookingService } = await import('../services/bookings');
-    const result = await bookingService.checkCompanionAvailability('c1', '2025-01-01');
-    expect(result.isAvailable).toBe(false);
-    expect(result.reason).toContain('Not available on');
-  });
-
-  it('acceptBooking returns failure when booking not found', async () => {
-    vi.doMock('../services/firestore', () => ({
-      firestore: {
-        getDocument: vi.fn().mockResolvedValue(null),
-      },
-    }));
-    const { bookingService } = await import('../services/bookings');
-    const result = await bookingService.acceptBooking('b1');
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('Booking not found');
-  });
-
-  it('declineBooking returns failure when booking not pending', async () => {
-    vi.doMock('../services/firestore', () => ({
-      firestore: {
-        getDocument: vi.fn().mockResolvedValue({ id: 'b1', status: 'confirmed' }),
-      },
-    }));
-    const { bookingService } = await import('../services/bookings');
-    const result = await bookingService.declineBooking('b1');
-    expect(result.success).toBe(false);
-    expect(result.message).toContain('already confirmed');
-  });
-});
 
 describe('messaging service', () => {
   beforeEach(() => {

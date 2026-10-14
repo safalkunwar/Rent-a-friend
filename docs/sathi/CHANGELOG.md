@@ -1,4 +1,483 @@
+## 2026-10-14 — Finish lint cleanup for Coins domain helpers
+- **Task:** Resume remaining local Phase 8 work after the profile-unlock lint repair.
+- **Objective:** Bring the welcome-grant and owner-wallet read helpers into strict lint compliance and verify the fail-closed snapshot handling.
+- **Files changed:** `functions/src/domains/rewards/welcomeGrant.ts`, `functions/src/domains/wallet/coinWalletRead.ts`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Implementation:** Added typed JSDoc and repository formatting. Missing Firestore documents with no data now fail closed or return `WALLET_UNAVAILABLE`; active campaign pointer data is read once and reused. Reward rules and amounts are unchanged.
+- **Validation:** ESLint passed across all `functions/src/domains` files with zero warnings; Functions TypeScript build passed; welcome-grant unit tests passed 9/9; wallet-read unit tests passed 5/5; Coins Firestore emulator suite passed 2/2; `git diff --check` passed. No Android emulator or physical device is attached.
+- **Remaining limits:** Coins remain policy-gated and inactive. Funding, owner/finance/counsel approval, Phase 1–3 qualification and separate Functions deployment approval remain open; no production state changed.
+- **Next action:** Continue only with dependency-ready local checks until required policy and release evidence is supplied.
+
+## 2026-10-13 — Close the local Coins candidate lint gap
+- **Task:** Resume the full roadmap and clear a known local validation issue in the disabled Phase 8 profile-unlock candidate.
+- **Objective:** Bring the transaction helper into repository lint compliance, remove unsafe snapshot assertions, and reconfirm its emulator behavior.
+- **Files changed:** `functions/src/domains/discovery/profileUnlockGrant.ts`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Implementation:** Added typed JSDoc and repository formatting to the profile-unlock helper. Missing entitlement, access, policy, and wallet snapshots now fail closed or return the existing unavailable state without non-null assertions. No reward amount, eligibility policy, UI, index, rules, flag, or deployment behavior changed.
+- **Validation:** Focused ESLint passed with zero warnings; Functions TypeScript build passed; Firestore emulator Coins suite passed 2/2, covering profile unlock and funded welcome grant; `git diff --check` passed. Android device inventory found no attached device or emulator.
+- **Remaining limits:** Phase 8 values and funding remain unapproved; feature flags stay off. Production Coins qualification and Phase 0–12 device/authority/policy/recovery gates remain open.
+- **Next action:** Continue only with local work that preserves the existing release gates; real-device acceptance requires an attached supported device.
+
+## 2026-10-13 — Restore Android local build and close People preview regression
+- **Task:** Re-audit the remaining Phase 0–12 work and finish checks that can be completed locally without policy, funding, device, or production approval.
+- **Objective:** Repair the invalid Android Gradle wrapper, restore truthful People mode previews, run relevant app/native checks, and refresh current stage documentation.
+- **Files changed:** `android/gradle/wrapper/gradle-wrapper.jar`, `android/gradle/wrapper/gradle-wrapper.properties`, `src/components/discovery/PeopleDirectory.tsx`, `docs/sathi/PHASE_00_APP_CHECK_BACKUP_READONLY_2026-10-12.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Implementation:** Replaced the corrupt wrapper with the Gradle 8.14.3 artifact whose SHA-256 matches Gradle's published checksum, and pinned the distribution checksum. A coming-soon People service mode now presents its own heading and explanation with navigation back to current people instead of falling through to the generic directory.
+- **Validation:** People directory focused tests 7/7; payment truthfulness focused tests 5/5; full root suite 433/433; root production build passed; admin suite 45/45 (run earlier in this continuation); `:app:processDebugGoogleServices` passed; `:app:assembleDebug` passed using a temporary JDK 21. No physical-device or installed-PWA acceptance was performed.
+- **Remaining limits:** Phase 0–12 are not complete. Policy, identity, finance, legal, provider, backup/restore, admin-host, live-release, iOS and device acceptance gates remain as listed in the roadmap. No Functions deployment, rules/index publication, paid backup change, Coin activation, migration, or money movement occurred.
+- **Next action:** Continue only with separately approved, dependency-ready gates; keep Coins inactive until approved policy/funding evidence and Phase 1–3 qualification exist.
+
+## 2026-10-13 — Complete the local Coins unlock candidate and update Phase 8 status
+- **Task:** Finish the remaining policy-independent Coins implementation and documentation.
+- **Objective:** Add a disabled server-side profile entitlement/spend candidate, prove its transaction boundaries locally, and distinguish the candidate from approved policy or release readiness.
+- **Files changed:** `functions/src/domains/discovery/profileUnlockGrant.ts`, `functions/src/index.ts`, `functions/test/profileUnlockGrant.emulator.test.mjs`, `functions/package.json`, `src/services/profileAccess.ts`, `firestore.indexes.json`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/PHASE_08_COINS_POLICY_DECISION_DRAFT_2026-10-13.md`, `docs/sathi/31_DATA_CONTRACTS.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Added Auth-derived profile unlock command, canonical server-side viewer/provider and KYC checks, bilateral block checks, five free Kathmandu-day grants, unique entitlement, command replay, and policy-gated paid spend. Replay validates the exact provider target and whether the stored result's charge matches its status. Paid spend consumes oldest backed non-cash lots and atomically writes wallet, balanced journal, statement, entitlement and operation records. Wallet/lot mismatch and more than 20 open lots fail closed; over-cap wallets require consolidation. The paid-spend environment flag defaults off and no 50-Coin default is embedded.
+- **Firebase changes:** Added the local `lots` state/createdAt composite index definition. No rules, index deployment, campaign/policy/funding documents, production data or deployment changed.
+- **Security implications:** Only server-owned access, provider profile, approved application, block, policy, wallet, lot and journal documents establish eligibility or value. The callable ignores caller-supplied identity and price. Local candidate is not Phase 1/2/3 production qualification; owner, finance, counsel, funding, Blaze and release gates remain open.
+- **Performance implications:** Source lots are bounded to 21 reads to detect the 20-lot ceiling; spend is refused when consolidation is needed. The manual index supports the bounded ordered open-lot query and is not live-validated.
+- **Tests performed:** Combined welcome-grant/profile-unlock Firestore emulator suite passed 2/2, including rejection when a committed request ID is replayed for another provider; welcome-grant unit tests 9/9; wallet-read unit tests 5/5; focused client/reward suites 55/55; Functions build; root `npx tsc --noEmit`; Firestore index JSON parse; and `git diff --check` passed. The initial full Functions lint run reported 592 violations before style autofix; focused lint after autofix still reports 89 errors and 6 warnings in the new helper, chiefly max-line and JSDoc rules.
+- **Known issues:** No approved welcome amount, unlock price, funding evidence, active policy pointer, profile UI integration, wallet rules, reversal/reconciliation qualification, or production release exists. Both financial environment flags remain off by default. The new helper still has strict ESLint max-line/JSDoc findings.
+- **Next recommended task:** Obtain owner/product, finance and counsel decisions plus funding evidence; then qualify the Phase 1/2/3 prerequisites and a separately approved release. Do not deploy Functions without explicit Blaze confirmation and separate deployment authorization.
+
+## 2026-10-13 — Bound the Coins pilot policy proposal
+- **Task:** Resolve the remaining Coins product-design questions with a concrete, reviewable recommendation.
+- **Objective:** Define a finite funded welcome cohort and a matching profile-unlock use proposal while preserving the user's funded earn-only direction and keeping all financial activation gates intact.
+- **Files changed:** `docs/sathi/PHASE_08_COINS_POLICY_DECISION_DRAFT_2026-10-13.md`, `docs/sathi/PHASE_08_REWARD_POLICY_INPUT_TEMPLATE.md`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/30_IMPLEMENTATION_ROADMAP.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Recommended 100 welcome Coins per eligible new account, capped at 1,000 grants (100,000 Coins / NPR 10,000 reference allocation), and 50 Coins per new full-profile unlock after five free daily grants; reopen remains free. Excluded cash redemption, purchase, transfers, direct-referrer and multilevel rewards from this proposed pilot. Specified unique entitlement, atomic spend/quota, replay, funding, counsel and deployment gates.
+- **Firebase changes:** None. No campaign, funding records, rules, indexes, configuration, data or deployment changed.
+- **Security implications:** Proposal explicitly keeps issuance and spend inactive until owner, finance, counsel and engineering prerequisites are accepted; Phase 1 identity, Phase 2 entitlement and Phase 3 durable ledger controls remain required.
+- **Performance implications:** None; documentation only.
+- **Tests performed:** Documentation cross-reference review and `git diff --check`.
+- **Known issues:** Owner/product values, actual NPR funding evidence, campaign dates and finance/legal approvals are not supplied. The 50-Coin spend path is not implemented. No production Functions deployment is authorized; Blaze upgrade confirmation remains required before any deployment.
+- **Next recommended task:** Owner/product, finance and Nepal counsel review the decision draft; after approval and funding evidence, complete Phase 1–3 prerequisites and separately qualify a bounded release.
+
+## 2026-10-13 — Harden welcome-grant replay integrity
+- **Task:** Continue the remaining policy-independent Coins acceptance work.
+- **Objective:** Return `ALREADY_GRANTED` only when the prior funded reward's immutable policy and complete journal, lot, statement, and wallet records remain consistent; reject damaged prior records without a second credit.
+- **Files changed:** `functions/src/domains/rewards/welcomeGrant.ts`, `functions/test/welcomeGrant.test.mjs`, `functions/test/welcomeGrant.emulator.test.mjs`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/31_DATA_CONTRACTS.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, and this changelog.
+- **Architecture changes:** Retry now reads and validates the original versioned approved campaign policy and checks the prior reward metadata, exact funding/user journal postings, lot provenance and bounds, owner statement projection, and wallet shape. Unit coverage checks missing statement and conflicting funding-account posting. Emulator coverage verifies concurrent duplicate delivery, cap exhaustion, and a damaged prior journal failing closed without a second credit.
+- **Firebase changes:** Firestore Emulator only, demo project `demo-sathi-coins`. No production project, rules, indexes, configuration, data, or deployment changed.
+- **Security implications:** Replay no longer trusts an incomplete prior artifact set. The helper still cannot prevent an operator/Admin SDK from tampering with data or provide durable reversal/reconciliation controls; Firestore transactions and approved backend authority remain required.
+- **Performance implications:** First grant still uses bounded reads; an idempotent replay adds one read of the retained campaign policy.
+- **Tests performed:** `npm run test:welcome-grant` passed 8/8 with Functions build; `npm run test:coin-emulator` passed 1/1; `npm run test:coin-wallet-read` passed 5/5 with Functions build; root TypeScript check and `git diff --check` passed.
+- **Known issues:** No policy/funding documents exist, the environment gate is off, and profile-unlock spending and durable replay/reversal reconciliation are not implemented. This local acceptance does not qualify production release.
+- **Next recommended task:** Collect approved funding, welcome amount, source eligibility and reversal treatment; then review Phase 2 entitlement and Phase 3 writer prerequisites before any Coin spend or activation.
+
+## 2026-10-13 — Verify paused campaigns deny new welcome grants
+- **Task:** Continue Phase 8 Coins campaign lifecycle acceptance.
+- **Objective:** Confirm a paused campaign allows stable retries for grants already posted but denies issuance to a new eligible account.
+- **Files changed:** `functions/test/welcomeGrant.emulator.test.mjs`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Extended the local Firestore emulator case to retry an existing UID and attempt a new UID with `activeVersion: null`; verified the existing result is unchanged and the new wallet/campaign counters remain untouched.
+- **Firebase changes:** Firestore Emulator only, demo project `demo-sathi-coins`; no production project or data was touched.
+- **Security implications:** Pausing the campaign stops future grants without changing prior reward records.
+- **Performance implications:** No production path change; acceptance uses existing bounded transaction reads.
+- **Tests performed:** `npm run test:coin-emulator` passed 1/1; Functions TypeScript build passed; `git diff --check` passed.
+- **Known issues:** Funding approvals, durable ledger reconciliation, profile-unlock spending and production release acceptance remain open; grant issuance stays off.
+- **Next recommended task:** Obtain approved campaign funding and policy values before configuring or activating reward issuance.
+
+## 2026-10-13 — Verify replay after campaign pause
+- **Task:** Resume Phase 8 Coins emulator acceptance for campaign lifecycle behavior.
+- **Objective:** Confirm pausing new welcome grants does not cause a successful existing grant to be issued twice or lose its stable replay result.
+- **Files changed:** `functions/test/welcomeGrant.emulator.test.mjs`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Extended the isolated emulator case to pause the campaign pointer after issuance, replay the same UID, and confirm `ALREADY_GRANTED` with unchanged wallet and campaign counters.
+- **Firebase changes:** Firestore Emulator only, demo project `demo-sathi-coins`; no production project or data was touched.
+- **Security implications:** Existing idempotency remains bound to the retained approved campaign and full prior grant record set; the pause only stops new issuance.
+- **Performance implications:** No production behavior change; the check uses the existing bounded transaction reads.
+- **Tests performed:** `npm run test:coin-emulator` passed 1/1; Functions TypeScript build passed.
+- **Known issues:** Approved campaign values/funding, durable ledger reconciliation, profile-unlock spending and release acceptance remain open; grant issuance stays off.
+- **Next recommended task:** Obtain the approved campaign policy and funding values before configuring any reward producer.
+
+## 2026-10-13 — Validate complete welcome-grant retries
+- **Task:** Continue the remaining policy-independent Coins acceptance work.
+- **Objective:** Return `ALREADY_GRANTED` only when the prior funded reward's immutable policy and complete journal, lot, statement, and wallet records remain consistent; reject damaged records without a second credit.
+- **Files changed:** `functions/src/domains/rewards/welcomeGrant.ts`, `functions/test/welcomeGrant.test.mjs`, `functions/test/welcomeGrant.emulator.test.mjs`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, and this changelog.
+- **Architecture changes:** Retry reads and validates the retained approved campaign policy, prior reward metadata, exact user/funding journal postings, source lot and remaining-amount bounds, statement projection, and wallet shape. A funding account cannot alias the beneficiary wallet. Unit coverage checks missing statements, conflicting journals, and funding-account aliasing. Emulator coverage checks concurrent duplicate delivery, cap exhaustion, and damaged-journal rejection without a second credit. A source audit found no client wallet/reward collection access or local Coin balance fallback; the wallet statement query relies on Firestore's automatic descending index and requires no new composite index.
+- **Firebase changes:** Firestore Emulator only, demo project `demo-sathi-coins`. No production project, rules, indexes, configuration, data, or deployment changed.
+- **Security implications:** Replay no longer trusts an incomplete artifact set. The helper still cannot prevent privileged out-of-band data tampering or provide durable reversal/reconciliation controls; backend authority and transactions remain required.
+- **Performance implications:** First grant keeps bounded reads; an idempotent replay adds one read of the retained campaign policy.
+- **Tests performed:** `npm run test:welcome-grant` passed 9/9 with Functions build; `npm run test:coin-emulator` passed 1/1; `npm run test:coin-wallet-read` passed 5/5 with Functions build; root TypeScript check and `git diff --check` passed.
+- **Known issues:** No policy/funding documents exist, the environment gate is off, and profile-unlock spending and durable replay/reversal reconciliation are not implemented. This local acceptance does not qualify production release.
+- **Next recommended task:** Collect approved funding, welcome amount, source eligibility, and reversal treatment; review Phase 2 entitlement and Phase 3 writer prerequisites before any Coin spend or activation.
+
+## 2026-10-13 — Add pure exact Coin ledger reversal contract
+- **Task:** Resume Coins work by tightening the policy-independent ledger reversal contract.
+- **Objective:** Ensure a locally constructed reversal exactly offsets the original postings while keeping durable authorization and one-time posting outside the pure helper.
+- **Files changed:** `shared/contracts/money.ts`, `src/__tests__/money-contract.test.ts`, `docs/sathi/PHASE_03_LEDGER_CONTRACT_SLICE_2026-09-30.md`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Added exact inverse-journal construction and validation, binding the same asset and original source journal, requiring a fresh operation identity, and rejecting reversal chains. This contract does not authorize or persist a reversal, or prevent duplicate reversals under concurrency.
+- **Firebase changes:** None. No rules, indexes, collections, Functions, configuration, data, or deployment changed.
+- **Security implications:** Reversal construction remains a pure helper. A future backend must read and authorize the original and atomically enforce single reversal/idempotency.
+- **Performance implications:** Local validation is bounded by the journal's existing maximum of 50 postings.
+- **Tests performed:** `npx vitest run src/__tests__/money-contract.test.ts --config vitest.config.ts` passed 25/25; `npx tsc --noEmit -p tsconfig.json` passed; `git diff --check` passed.
+- **Known issues:** No durable ledger writer, reversal emulator acceptance, reconciliation path, funding policy, or Coins activation exists. Phase 8 funding/amount approval and profile-unlock eligibility/price remain open.
+- **Next recommended task:** Obtain owner/finance-approved welcome reward budget and amount, then continue only through the reviewed Phase 3/8 ledger and entitlement gates. Keep all Coin producer and spend flags off.
+
+## 2026-10-13 — Pass local Coins Firestore emulator acceptance
+- **Task:** Resume the critical Phase 8 emulator gate after isolating the owner-only wallet read.
+- **Objective:** Exercise the funded grant with real Firestore transaction retries and validate the actual client rules/callable privacy boundary without touching a Firebase project.
+- **Files changed:** `functions/test/welcomeGrant.emulator.test.mjs`, `functions/package.json`, `functions/src/domains/wallet/coinWalletRead.ts`, `functions/src/index.ts`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Added a reproducible `test:coin-emulator` command and a demo-project integration case. It races two deliveries for one beneficiary against a one-grant campaign cap, confirms exactly one journal/lot/reward/wallet/statement and funded decrement, verifies wallet paths remain denied to client Firestore reads, and checks the callable rejects unauthenticated requests and ignores a caller-supplied target UID. Isolated the read helper and confirmed its projection/limit behavior in 5 unit cases.
+- **Firebase changes:** Firestore Emulator only, project `demo-sathi-coins`, local port 8085. No production project was selected or contacted; no rules/config/data were deployed or changed.
+- **Security implications:** Actual emulator rules denied direct reads of the owner's wallet and statement to an authenticated client; the callable returned the correct owner's view and a different user's no-wallet result when the request included the owner's UID as data.
+- **Performance implications:** Active wallet summary remains one wallet read plus a deterministic 20-row bounded statement query.
+- **Tests performed:** Emulator integration passed 1/1; owner-read unit tests passed 5/5; grant fake-transaction tests passed 7/7; panel tests passed 4/4; root typecheck, Functions build and `git diff --check` passed. A temporary Microsoft OpenJDK 21.0.12.1 ZIP was verified against Microsoft's published SHA-256 and used without changing system Java or global environment settings.
+- **Known issues:** This acceptance covers the welcome-grant and wallet-read candidate only. Approved grant budget/amount, financial/source policies, profile-unlock spending, wider replay/reversal/reconciliation tests, and separate deployment authorization remain open.
+- **Next recommended task:** Resolve the approved campaign schedule and funding inputs, then define profile-unlock spend only against Phase 2's authoritative free-quota/entitlement rules and an approved Coin price. Keep grant gate and deployment off meanwhile.
+
+## 2026-10-13 — Isolate and verify owner-only Coin wallet reads
+- **Task:** Continue Phase 8 acceptance for the new authenticated wallet summary callable.
+- **Objective:** Make the callable's UID scoping, field minimization, bounded query and fail-closed projection behavior independently testable.
+- **Files changed:** `functions/src/domains/wallet/coinWalletRead.ts`, `functions/src/index.ts`, `functions/package.json`, `functions/test/coinWalletRead.test.mjs`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Extracted the authenticated UID's wallet read into a helper. It validates UID shape before database access, reads only the matching wallet path, returns no fabricated balance for missing wallets, hides frozen/malformed projections, and returns only allowlisted statement properties from a deterministic newest-first 20-row query.
+- **Firebase changes:** No rules, indexes, config, documents or deployment changed. The callable remains local and undeployed.
+- **Security implications:** Tested owner-path selection, absence of private ledger/funding fields, UID rejection, malformed statement filtering and frozen-wallet fail-closed behavior. Real Firestore emulator authorization/privacy acceptance remains required.
+- **Performance implications:** Missing/frozen wallets avoid statement queries; active reads are bounded to one wallet document and at most 20 statement rows.
+- **Tests performed:** `npm run test:coin-wallet-read` passed 5/5 with Functions TypeScript build; wallet panel tests passed 4/4; root `npx tsc --noEmit` passed; `git diff --check` passed.
+- **Known issues:** Java 21 is not installed (available runtimes are Java 17), so the Firebase CLI cannot start the Firestore emulator. Reward amounts/funding and deployment approval remain pending.
+- **Next recommended task:** Obtain an isolated Java 21 runtime and run emulator acceptance. Then implement profile-unlock spending only when Phase 2 server entitlement/free-quota rules and an approved Coin price are available.
+
+## 2026-10-13 — Add owner wallet read and welcome-grant check
+- **Task:** Resume the Phase 8 Coins path after implementing the disabled funded welcome-grant writer.
+- **Objective:** Let an authenticated user inspect only their server-confirmed wallet and retry/check their welcome grant without exposing client balance writes or activating Coins.
+- **Files changed:** `functions/src/index.ts`, `src/services/coinWallet.ts`, `src/components/wallet/CoinWalletPanel.tsx`, `src/__tests__/coin-wallet-panel.test.tsx`, `docs/sathi/31_DATA_CONTRACTS.md`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Added `getCoinWallet`, which derives UID from Auth, returns only an active wallet's available/reserved amounts and up to 20 newest allowlisted statement rows. The client uses callable Functions only, validates the result, distinguishes an absent wallet from a verified zero, and refreshes after a successful/idempotent welcome claim. Client code never reads or writes wallet documents.
+- **Firebase changes:** Local Functions source export only. No rules, indexes, documents, financial config, deployment, or project data changed. Welcome issuance still requires both an approved funded policy and `SATHI_WELCOME_COINS_ENABLED=true`.
+- **Security implications:** Callable accepts no UID or arbitrary document path. No lots, funding references, counterparties, or raw journals are exposed. Purchase, spending, transfers, and cash redemption remain unavailable.
+- **Performance implications:** One wallet document and a descending, document-ID-tied statement query limited to 20 rows; no listeners or unbounded scan.
+- **Tests performed:** Wallet panel suite passed 4/4; root `npx tsc --noEmit` passed; `npm run build` in `functions/` passed. `git diff --check` passed after the documentation update. These do not replace emulator privacy/concurrency acceptance.
+- **Known issues:** Approved NPR budget/grant amounts/funding evidence and eligibility are pending. Firestore emulator run is still blocked by Java 17 while the installed CLI requires Java 21. Profile-unlock price/spend writer is not implemented. No Function deployment is authorized under the current Blaze-plan instruction.
+- **Next recommended task:** Complete the profile-unlock spend only after Phase 2 entitlement, daily free-grant accounting and an approved Coin price can be enforced atomically; install Java 21 and run emulator privacy/concurrency acceptance before any activation.
+
+## 2026-10-13 — Implement disabled server-side welcome Coin grant
+- **Task:** Continue the requested new-user Coins flow after defining the proposed 100-Coin welcome grant.
+- **Objective:** Build a retry-safe, funded-only server grant candidate without exposing client balance writes or activating an unapproved campaign.
+- **Files changed:** `functions/src/domains/rewards/welcomeGrant.ts`, `functions/src/index.ts`, `functions/package.json`, `functions/test/welcomeGrant.test.mjs`, `docs/sathi/31_DATA_CONTRACTS.md`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/PHASE_08_REWARD_POLICY_INPUT_TEMPLATE.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Added an atomic Admin SDK writer for the stable one-time UID reward. It requires a verified email/phone Auth record, a configured effective cohort, an approved versioned policy, a dedicated funded allocation, campaign and per-beneficiary caps, and `SATHI_WELCOME_COINS_ENABLED=true`. The transaction writes the reward receipt, balanced COIN journal, wallet projection, source lot, owner statement, usage counter and funding decrement together. Existing `onUserCreate` attempts verified accounts; `claimWelcomeCoins` re-reads the caller's Auth record for later verified claims. Both routes deduplicate to the same reward ID. The environment gate defaults off.
+- **Firebase changes:** None deployed or configured. No campaign/funding documents, wallet rules/indexes or project data were created or changed. The proposed 100 Coins is not a code default.
+- **Security implications:** No client can choose UID, amount, source or funding; callable UID comes from Auth and the server re-reads Auth. Missing policy, funding, cohort, verified identity or enabled environment gate results in no grant. Cash eligibility is false. Client wallet read/spend and claim UI remain unimplemented.
+- **Performance implications:** One bounded transaction with six initial reads and three policy/funding/usage reads, then bounded atomic writes; no listeners or collection scans.
+- **Tests performed:** `npm run test:welcome-grant` passed 7/7 deterministic fake-transaction cases and includes Functions TypeScript build. A Firebase Emulator run was attempted but the installed Firebase CLI requires Java 21; host has Java 17. The fake does not substitute for emulator concurrency testing. `git diff --check` passed.
+- **Known issues:** Approved reward amount/budget/funding evidence and identity policy remain pending; wallet read rules, user-facing claim/read path, profile-unlock price/spend writer, emulator acceptance and live release are open. Firebase Functions deployment remains separately gated by the explicit Blaze-upgrade instruction.
+- **Next recommended task:** Complete wallet summary/statement read and profile-unlock spend against approved price/eligibility policy, install/use Java 21 for Firestore emulator concurrency acceptance, then configure the approved campaign and seek the required deployment authorization.
+
+## 2026-10-13 — Propose funded new-user welcome Coin grant
+- **Task:** Apply the owner's request to provide new users Coins and make those Coins useful within SATHI.
+- **Objective:** Recommend a bounded, product-aligned welcome grant without minting an unfunded wallet balance.
+- **Files changed:** `docs/sathi/PHASE_08_REWARD_POLICY_INPUT_TEMPLATE.md`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Proposed one 100-Coin `NEW_USER_WELCOME` grant per eligible account (NPR 10 reference allocation), aimed at future profile unlocks after the five free daily grants. At current denomination, budget reservation is NPR 10 per eligible account; the grant is non-transferable and not cash-redeemable. Existing FIFO lot allocation is the intended spending order.
+- **Firebase changes:** None. The proposal is not approved or configured; no user balances or reward records were created and no producer was enabled.
+- **Security implications:** The approved recurring campaign cap and new-account eligibility must exist before guaranteeing grants to every user. Issuance must stop at its funded cap; signup must not mint an unfunded balance. Unlock pricing/eligibility remain unset.
+- **Performance implications:** None.
+- **Tests performed:** Documentation-only update; no code changed in this entry. Prior 43 focused tests and TypeScript validation remain current; `git diff --check` passed.
+- **Known issues:** User has not yet supplied approved budget, grant amount, recurring funding plan or eligibility rules. Recommendation is for review only.
+- **Next recommended task:** Convert the recommendation or the owner's replacement values into an approved finite campaign policy, establish the funding and source evidence, then implement the internal atomic writer and acceptance checks. Keep wallet issuance disabled until then.
+
+## 2026-10-13 — Calculate worst-case Coin exposure per beneficiary
+- **Task:** Continue local Phase 8 policy preparation while approved campaign values are pending.
+- **Objective:** Make campaign review disclose both total scheduled liability and the maximum configured exposure to one beneficiary.
+- **Files changed:** `shared/contracts/rewardPolicy.ts`, `src/__tests__/reward-policy-contract.test.ts`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, and this changelog.
+- **Architecture changes:** Budget planning now aggregates per-beneficiary Coin and NPR-paisa exposure across all schedule rows, using integer arithmetic and the configured per-row grant caps.
+- **Firebase changes:** None. No policy values, financial state, Function, rule, index, or deployment changed.
+- **Security implications:** This is an additional review calculation; it does not enforce backend counters, establish beneficiary uniqueness or prove policy approval.
+- **Performance implications:** Still O(n) over at most 100 allocation rows.
+- **Tests performed:** Focused money, wallet UI, reward and reward-policy suites passed 43/43; `npx tsc --noEmit` exited 0; `git diff --check` passed.
+- **Known issues:** Approved budget/amounts and qualified sources remain pending; no reward writer is active.
+- **Next recommended task:** Validate the supplied campaign against aggregate and beneficiary caps, then implement the isolated server transaction after source and accounting policy review.
+
+## 2026-10-13 — Prepare funded earn-only reward policy input
+- **Task:** Continue the selected funded earn-only Phase 8 Coins path while approved budget and reward amounts are pending.
+- **Objective:** Capture the exact policy inputs needed to validate and implement a bounded campaign without inventing values.
+- **Files changed:** `docs/sathi/PHASE_08_REWARD_POLICY_INPUT_TEMPLATE.md`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, and this changelog.
+- **Architecture changes:** Added a fill-in policy template for NPR budget, funding evidence, per-source qualification, reward/recipient/amount/caps, direct-referral attribution, reversal/vesting, eligibility and operations ownership. It explicitly leaves cash redemption, P2P, and multilevel rewards disabled.
+- **Firebase changes:** None. No live config, reward, balance, journal, collection, rule, index or Function changed.
+- **Security implications:** The template is an input checklist only; completing it does not prove funds, source truth, or activation authorization.
+- **Performance implications:** None.
+- **Tests performed:** Documentation-only update; prior 42 focused tests, app TypeScript and Functions build remain the latest code validation. `git diff --check` passed.
+- **Known issues:** Campaign approval values and funding evidence are not yet provided; no trusted qualified-source adapter or atomic server writer exists.
+- **Next recommended task:** Validate supplied policy values against the pure budget contract, then implement and test the server-only transaction only after its source, accounting, reversal and release boundaries are resolved.
+
+## 2026-10-13 — Add bounded funded-reward campaign budget contract
+- **Task:** Continue Phase 8 after the owner selected funded earn-only rewards and said approved budget and reward amounts will follow.
+- **Objective:** Prepare a policy validation boundary without inventing campaign values or creating financial state.
+- **Files changed:** `shared/contracts/rewardPolicy.ts`, `src/__tests__/reward-policy-contract.test.ts`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Added a pure campaign planner that requires explicit NPR-paisa budget, funding reference, whole-Coin reward amounts, finite global grant counts and per-beneficiary caps. It computes worst-case liability with integer arithmetic, rejects duplicate allocation rows and over-budget schedules, and limits referral allocation to the direct referrer. It does not verify funding or approve policy activation.
+- **Firebase changes:** None. No collection, rule, index, export, provider, balance, ledger, reward grant or deployment was added.
+- **Security implications:** A valid schedule is not proof of finance approval, available funds, source qualification or grant authority. No client or admin path can invoke this contract as an earning command.
+- **Performance implications:** O(n) validation for at most 100 allocation rows; arithmetic uses BigInt to avoid overflow/rounding.
+- **Tests performed:** Focused money, wallet UI, reward and reward-policy suites passed 42/42; `npx tsc --noEmit` exited 0; `npm run build` in `functions/` exited 0.
+- **Known issues:** Approved NPR budget and reward amounts/count caps are pending from the owner. Qualified source, trusted backend authority, funded source record, ledger writer, anti-abuse/reversal policy and isolated financial acceptance remain open. Cash redemption and multilevel referral rewards remain disabled.
+- **Next recommended task:** Apply the owner's approved values to a reviewed campaign policy, then implement/test its server-only funding reservation and atomic journal/wallet/reward writer. Do not export or deploy it before the Phase 3/8 release gates and required Firebase deployment approval.
+
+## 2026-10-13 — Define bounded referral and Coin reward contracts
+- **Task:** Continue the Coins/referrals portion of Phase 8 without creating financial state.
+- **Objective:** Define reusable validation for ancestry, reward envelopes, and stable reward deduplication while authority and policy decisions remain open.
+- **Files changed:** `shared/contracts/rewards.ts`, `src/__tests__/rewards-contract.test.ts`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `DOCUMENTATION_STATUS.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Added bounded parent-first referral ancestry validation using caller-supplied signup ordinals, level/depth validation capped at five, Coin reward shape/funding-reference validation, and a deterministic SHA-256 ID derived from source, beneficiary, and reward kind. Versions and level are excluded from identity to prevent duplicate grants on policy/source replay.
+- **Firebase changes:** None. Helpers do not authenticate, read authoritative identity/order, qualify economic activity, reserve budgets, write attribution/rewards, or post Coin journals.
+- **Security implications:** UIDs, signup ordinals, source facts, funding references, and policy versions must come from trusted backend records. Contracts do not authorize rewards; cash and multi-level rewards remain disabled pending approval.
+- **Performance implications:** Bounded O(5) ancestry validation and one SHA-256 operation per proposed reward key.
+- **Tests performed:** Focused money/UI/reward contract suites passed 35/35 with a single worker; `npx tsc --noEmit` exited 0.
+- **Known issues:** No authoritative signup ordinal, attribution/qualification command, budget caps, funded source, journal writer, reversal/reconciliation, or approval for referral incentives exists.
+- **Next recommended task:** Resolve Phase 1 immutable identity ordering and Finance-approved reward funding/caps before implementing an isolated backend attribution or vesting command.
+
+## 2026-10-13 — Add a truthful Coins wallet pre-launch slice
+- **Task:** Continue the requested Coins portion of the SATHI roadmap.
+- **Objective:** Make the current wallet entry Coins-specific and define exact unit conversion without inventing wallet balances or activating money movement.
+- **Files changed:** `src/ClientApp.tsx`, `src/components/wallet/CoinWalletPanel.tsx`, `src/__tests__/coin-wallet-panel.test.tsx`, `shared/contracts/money.ts`, `src/__tests__/money-contract.test.ts`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `DOCUMENTATION_STATUS.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Added a read-only Coins wallet explanation with the planned 10 Coins = NPR 1 reference conversion, no displayed placeholder balance, and explicit unavailable states for earning, purchasing, spending/unlock, and cash redemption. Added safe-integer whole-Coin/NPR-paisa converters and the documented 5,000-Coin threshold constant.
+- **Firebase changes:** None. No schema, rules, indexes, Functions, provider call, balance, reward, referral write, or deployment.
+- **Security implications:** Client cannot create or infer balance truth. P2P transfers remain unsupported; cash and deep referral rewards remain off.
+- **Performance implications:** None; no wallet reads or listeners added.
+- **Tests performed:** Focused money-contract and Coins-panel suites passed 25/25 with a single worker; `npx tsc --noEmit` exited 0.
+- **Known issues:** Phase 8 is not complete: no funded source, backend journal/wallet/statement writer, eligible purchase or reward provider, unlock debit/entitlement policy, qualified referral system, reconciliation, or release acceptance exists. Finance/legal/owner policy and upstream Phase 1/2/3/5/7 dependencies remain.
+- **Next recommended task:** Review the Coin funding/accounting and Phase 2 unlock policy decisions, then build a server-only ledger slice in an isolated emulator after those inputs are approved. Do not expose a live balance or enable Coin actions before its own reviewed release gate.
+
+## 2026-10-13 — Register native Firebase apps for App Check readiness
+- **Task:** Continue Phase 0 native App Check prerequisites.
+- **Objective:** Register the existing Android/iOS package identities in `hamrosathi1` and retrieve their Firebase SDK configuration.
+- **Files changed:** `android/app/google-services.json`, `ios/App/App/GoogleService-Info.plist`, `docs/sathi/PHASE_00_APP_CHECK_BACKUP_READONLY_2026-10-12.md`, `DOCUMENTATION_STATUS.md`, `ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** None. Registered Android app `1:932995524964:android:57f1c61369de623bbb3271` and iOS app `1:932995524964:ios:64d1711973a740d0bb3271`, both with identifier `com.sathi.app`; fetched standard client SDK config files into their native app directories.
+- **Firebase changes:** Added two Firebase app registrations and read their client configuration. No App Check provider/service config, enforcement, rules, Functions, backup, or user data changed.
+- **Security implications:** SDK config contains public client identifiers and API key, not server credentials. App Check remains unenforced; provider setup and token acceptance are still required before any enforcement review.
+- **Performance implications:** None.
+- **Tests performed:** Firebase CLI create/readback/config commands succeeded; local config parsing confirmed `hamrosathi1` and the expected native app IDs/identifiers. Android `:app:processDebugGoogleServices` was attempted but could not start because the checked-in `gradle-wrapper.jar` is invalid/corrupt. No native build or provider initialization was accepted.
+- **Known issues:** Android Play Integrity setup and signing identity, iOS App Attest/DeviceCheck setup and signing capability, Capacitor plugin/native integration, admin deployment identity, device acceptance, and repair/verification of the Android Gradle wrapper remain open.
+- **Next recommended task:** Resolve native signing/provider prerequisites and admin app identity, then add a reviewed Capacitor App Check integration and accept tokens on supported devices before considering enforcement.
+
+## 2026-10-13 — Add guarded admin App Check token monitoring
+- **Task:** Continue Phase 0 App Check integration on the standalone admin web surface.
+- **Objective:** Add an opt-in token acquisition path without enabling enforcement or assuming the unknown admin deployment host.
+- **Files changed:** `admin/src/firebase.ts`, `admin/src/services/appCheck.ts`, `admin/src/__tests__/firebase-app-check.test.ts`, `admin/README.md`, and Phase 0 readiness/status/handoff docs.
+- **Architecture changes:** Added admin initialization behind production mode, explicit public reCAPTCHA Enterprise site key, and an exact comma-separated host allowlist. It reports pending/verified/unverified token state. All missing configuration fails closed; no root consumer UI or Firebase registration changed.
+- **Firebase changes:** None; no App Check service config, app registration, enforcement, data, or deployment change.
+- **Security implications:** Client initialization is monitoring only. Enforcement must remain off until deployed admin app identity/provider is confirmed and actual acceptance/metrics are reviewed.
+- **Performance implications:** When explicitly configured, performs one startup token request with SDK auto-refresh. No new listeners or Firestore work.
+- **Tests performed:** Focused guard suite `npx vitest run src/__tests__/firebase-app-check.test.ts --config vitest.config.ts` passed 3/3; `npx tsc --noEmit -p tsconfig.json` exited 0; `npm run build` completed. Build reports existing mixed dynamic/static import and >500 kB chunk warnings; `git diff --check` passed.
+- **Known issues:** Admin host/app ID, provider registration, and native apps remain unresolved; token success has not been accepted in production.
+- **Next recommended task:** Run focused validation, then resolve admin deployment identity and native registration/provider plan before any production setup.
+
+## 2026-10-13 — Reconcile the Phase 0–12 remaining-task audit
+- **Task:** Check the full roadmap backlog against the newest Phase 0 evidence.
+- **Objective:** Correct stale status dates and surface the exact native app IDs and remaining Phase 0 blockers in the audit.
+- **Files changed:** `docs/sathi/DOCUMENTATION_STATUS.md`, `ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** None. Updated the roadmap status summary to include the Oct. 13 App Check registration inventory and retain all 13 phase outcomes as partial/not complete.
+- **Firebase changes:** None; documentation reconciliation only.
+- **Security implications:** No release or enforcement authorization inferred; analytics and companion authority remain local, while other Phase 0 gates remain open.
+- **Performance implications:** None.
+- **Tests performed:** No tests; documentation-only status reconciliation.
+- **Known issues:** Roadmap items still depend on owner/counsel policy decisions, separate scoped release approvals, paid recovery settings, platform registrations, and real-device/provider operations acceptance.
+- **Next recommended task:** Follow the dependency-ordered outstanding items in the execution audit, starting with review of the current-source analytics candidate for separate approval, alongside owner/counsel identity-policy decisions.
+
+## 2026-10-13 — Map App Check platform readiness
+- **Task:** Continue Phase 0 by identifying each client surface's App Check prerequisites.
+- **Objective:** Convert app inventory and source evidence into a dependency-ordered readiness gate.
+- **Files changed:** `docs/sathi/PHASE_00_APP_CHECK_BACKUP_READONLY_2026-10-12.md`, `DOCUMENTATION_STATUS.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** None. Recorded consumer web, standalone admin, Android and iOS identity/integration evidence and the order for resolving remaining setup.
+- **Firebase changes:** None. Root Hosting config and app inventory inspected read-only; no app registrations, providers, deployments or enforcement changed.
+- **Security implications:** Enforcement remains off. Do not register/enable providers until actual admin and native identifiers are resolved; each surface needs token and monitor acceptance before enforcement review.
+- **Performance implications:** None.
+- **Tests performed:** No tests; documentation-only update after source/config inventory.
+- **Known issues:** Admin runtime host/app ID unavailable in this checkout; native IDs are identified but Firebase registrations/configs are absent.
+- **Next recommended task:** Resolve the deployed admin host/app ID, then prepare a separately reviewed native registration/integration plan for package/bundle ID `com.sathi.app`.
+
+## 2026-10-12 — Confirm registered Firebase platform apps
+- **Task:** Continue App Check readiness using read-only Firebase project and repository inventories.
+- **Objective:** Identify the exact platform-registration blockers for admin and native attestation.
+- **Files changed:** `docs/sathi/PHASE_00_APP_CHECK_BACKUP_READONLY_2026-10-12.md`, `DOCUMENTATION_STATUS.md`, `ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** None. Firebase CLI lists two WEB app registrations only; no Android/iOS app registrations or corresponding native config files were found. Admin app ID remains environment-dependent.
+- **Firebase changes:** Read-only `firebase apps:list`; no registration, provider, enforcement, app config, or data change.
+- **Security implications:** Native App Check cannot be initialized/accepted against an unregistered Firebase native app. Do not treat the Capacitor package ID as registration or enable enforcement before each client is accepted.
+- **Performance implications:** None.
+- **Tests performed:** No tests; read-only project inventory and documentation update.
+- **Known issues:** Admin's deployed Firebase app ID is not established by source; native app registration and credentials are absent.
+- **Next recommended task:** Resolve app registration/hosting identities and provider choices before local cross-platform App Check integration; keep enforcement off.
+
+## 2026-10-12 — Classify ledger retries safely
+- **Task:** Continue the independent Phase 3 pure-contract foundation.
+- **Objective:** Make retry decisions explicit for durable operation statuses, especially UNKNOWN outcomes.
+- **Files changed:** `shared/contracts/money.ts`, `src/__tests__/money-contract.test.ts`, `docs/sathi/PHASE_03_LEDGER_CONTRACT_SLICE_2026-09-30.md`, `DOCUMENTATION_STATUS.md`, `ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Added a pure replay decision helper: committed returns stored journal refs, rejected returns the stable rejection, in-progress waits, and UNKNOWN requires reconciliation. Same-key/different-intent replay still fails closed. No database schema or writer was added.
+- **Firebase changes:** None; no Functions, rules, indexes, reads, writes or deployment.
+- **Security implications:** The helper explicitly does not retry UNKNOWN or establish authorization/funding; production idempotency remains a backend responsibility.
+- **Performance implications:** Constant-time status classification after bounded record validation.
+- **Tests performed:** `npx vitest run src/__tests__/money-contract.test.ts --config vitest.config.ts` passed 21/21; `npx tsc --noEmit -p tsconfig.json` exited 0; `git diff --check` exited 0.
+- **Known issues:** No durable command implementation, ledger emulator, concurrency proof, reconciliation worker, finance-approved chart or source policy.
+- **Next recommended task:** Continue pure contract work only while policy and durable backend gates remain unresolved; keep financial flags off.
+
+## 2026-10-12 — Add measured Firestore storage baseline
+- **Task:** Continue Phase 0 recovery readiness with a read-only Cloud Monitoring query.
+- **Objective:** Ground the future backup/PITR cost review in the observed database size.
+- **Files changed:** `docs/sathi/PHASE_00_APP_CHECK_BACKUP_READONLY_2026-10-12.md`, `DOCUMENTATION_STATUS.md`, `ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** None. Recorded 6,277,897 bytes (5.987 MiB) of data/index storage, sampled 2026-10-12 14:42 UTC; the one-hour Monitoring query returned no PITR or backup-storage series.
+- **Firebase changes:** Cloud Monitoring metadata only; no database documents or configuration read/written. No pricing estimate asserted because the gauge is not a billing export and no backup/PITR policy was chosen.
+- **Security implications:** No configuration changed; production controls remain as previously observed.
+- **Performance implications:** None.
+- **Tests performed:** No tests; read-only operational query and documentation update.
+- **Known issues:** Point-in-time sample may change; no historical backup/PITR storage or external exports were inventoried.
+- **Next recommended task:** Use current size with a chosen schedule/retention for the owner’s cost review; continue independent local work meanwhile.
+
+## 2026-10-12 — Record Firestore recovery-control pricing boundary
+- **Task:** Continue Phase 0 backup/PITR readiness using current operational evidence.
+- **Objective:** Make the cost gate concrete without selecting a paid retention policy.
+- **Files changed:** `docs/sathi/PHASE_00_APP_CHECK_BACKUP_READONLY_2026-10-12.md`, `DOCUMENTATION_STATUS.md`, `ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** None. Recorded official pricing behavior: PITR and backup/restore have no free usage; a project-specific estimate requires database size, location, retention and restore volume.
+- **Firebase changes:** None; no additional production configuration or data access.
+- **Security implications:** No control was enabled; owner cost/retention choice and isolated restore acceptance remain prerequisites.
+- **Performance implications:** None.
+- **Tests performed:** No tests; documentation-only update.
+- **Known issues:** No database-size-based estimate or external archive inventory; no managed backup or PITR history observed in the October 12 snapshot.
+- **Next recommended task:** Continue only local/read-only work while the owner selects separate release, identity-policy and paid recovery-control decisions.
+
+## 2026-10-12 — Capture App Check and backup readiness state
+- **Task:** Continue Phase 0 recovery and abuse-protection readiness with current read-only evidence.
+- **Objective:** Replace stale assumptions with observed Firestore backup/PITR and App Check configuration state.
+- **Files changed:** `docs/sathi/PHASE_00_APP_CHECK_BACKUP_READONLY_2026-10-12.md`, `DOCUMENTATION_STATUS.md`, `ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** None. Added a bounded readiness record and exact next gates only.
+- **Firebase changes:** Read-only metadata/API calls. Observed PITR disabled, no backup schedules or managed backups in `nam5`, App Check service list empty, and project billing enabled. No user documents read and no configuration changed.
+- **Security implications:** Recorded that service configs are not explicitly configured and code coverage is incomplete for admin/native, so enforcement readiness is not established. No App Check enforcement or database protection was enabled.
+- **Performance implications:** None.
+- **Tests performed:** No tests; read-only metadata and source inspection only.
+- **Known issues:** Backup costs/retention are undecided; external exports were not inventoried; no restore drill or App Check token acceptance across platforms.
+- **Next recommended task:** Obtain cost/retention and restoration-target decisions before enabling backup controls; complete App Check platform integration and monitoring before a separate enforcement review.
+
+## 2026-10-12 — Rebase scoped analytics RBAC candidate on active rules
+- **Task:** Continue Phase 0 staff authorization work after the booking/lock release changed the active rules source.
+- **Objective:** Produce a reviewable analytics-only candidate against the exact active rules hash.
+- **Files changed:** `ops/staff-rbac-containment/active-2026-10-12/`, `tests/staff-rbac-active-composition.test.mjs`, `tests/staff-resource-emulator.test.mjs`, `docs/sathi/STAFF_RBAC_CONTAINMENT_GATE.md`, `DOCUMENTATION_STATUS.md`, `ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** Candidate hash `94249bae...` starts from active `8bfecbb1...` and changes only analytics read authorization plus the scoped role helper. Analytics writes remain denied; unrelated branches are byte-identical.
+- **Firebase changes:** Read-only active rules-source/release metadata fetch only. No user-document reads, deployment, writes, Functions, indexes, or billing changes.
+- **Security implications:** Explicit role allowlist contains super_admin, platform_admin and analytics_admin; emulator coverage confirms other roles, anonymous tokens and subject reads of staff-only suspiciousActivity are denied. This does not establish production role-token inventory or complete staff RBAC.
+- **Performance implications:** None.
+- **Tests performed:** Current-source composition/static checks 2/2; isolated Firestore emulator suite 17/17. Money contract suite 16/16 and root TypeScript `tsc --noEmit -p tsconfig.json` also passed during this continuation. Emulator used demo project and loopback port 8087; clean startup/shutdown.
+- **Known issues:** Candidate remains local and needs separate release approval and an immediate exact-source/hash recheck before deployment. Broader staff grants and legacy role migration remain open.
+- **Next recommended task:** Review this candidate for separate release approval; continue Phase 1 policy-gated identity work and local-only Phase 3 foundation without activating money.
+
+## 2026-10-12 — Add pure ledger replay and lot contracts
+- **Task:** Continue the Phase 3 preparatory slice while Phase 1 identity policy remains under review.
+- **Objective:** Define deterministic operation replay binding and oldest-first lot allocation without adding financial writes.
+- **Files changed:** `shared/contracts/money.ts`, `src/__tests__/money-contract.test.ts`, `docs/sathi/PHASE_03_LEDGER_CONTRACT_SLICE_2026-09-30.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, and this changelog.
+- **Architecture changes:** Added pure operation-record shape and replay-intent validation plus a lot planner with a 20-lot maximum, stable creation-time/ID ordering, and whole-request `INSUFFICIENT` / `CONSOLIDATION_REQUIRED` results. These helpers do not authenticate actors, persist idempotency, verify source funding/eligibility, apply state transitions, or mutate balances/lots.
+- **Firebase changes:** None; no schema, rules, indexes, Functions, reads, writes, or deployment.
+- **Security implications:** Documented that caller-supplied lot facts must be re-read and authorized by a future backend transaction. No client authority or balance path was introduced.
+- **Performance implications:** Bounded candidate sort; no runtime integration or database reads.
+- **Tests performed:** Focused tests were authored for replay conflicts (including ambiguous actor/request key pairs), operation result shape, ordering, ineligible lots, insufficient value, cap behavior, duplicate IDs, and invalid amounts. They were not run, following the owner's instruction to skip the testing phase.
+- **Known issues:** The contracts are not a ledger or durable idempotency system. Finance-approved accounts/funding policy, Phase 1 authority/config, atomic writers, reconciliation and concurrency qualification remain open.
+- **Next recommended task:** Continue policy-independent contract preparation only; do not create wallet balances or activate financial flags.
+
+## 2026-10-12 — Reconcile Phase 1 identity proposal with official legal sources
+- **Task:** Continue the full roadmap by making the Phase 1 identity/evidence proposal easier to review against primary Nepal sources.
+- **Objective:** Separate source-text screening findings from product policy choices and legal conclusions.
+- **Files changed:** `docs/sathi/PHASE_01_IDENTITY_EVIDENCE_DECISION_2026-09-30.md`, `DOCUMENTATION_STATUS.md`, `ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Architecture changes:** None. No application, schema, authorization or backend changes.
+- **Firebase changes:** None; no reads, writes, migrations, rules, indexes, Functions or deployments.
+- **Security implications:** The proposal records that birth details and government identity identifiers are personal information and that the Privacy Act includes consent/purpose provisions in specified contexts. It preserves legal applicability, age threshold and retention as counsel-reviewed questions; 18+ remains a proposed product floor only.
+- **Performance implications:** None.
+- **Tests performed:** No tests run; documentation-only change, consistent with the owner's instruction to skip the testing phase.
+- **Known issues:** Owner policy choices and Nepal counsel review remain prerequisites before enabling identity review or migrating any historical profile.
+- **Next recommended task:** Continue independent Phase 3 local ledger foundation work while the owner/counsel review Phase 1 policy decisions. Keep financial flags off.
+
+## 2026-10-02 — Simplify Explore discovery
+- **Task:** Replace the crowded Explore presentation with a focused local-discovery page.
+- **Objective:** Help people browse supported local categories, listings, map locations and partner-listed benefits using existing app data and navigation.
+- **Files changed:** `src/ClientApp.tsx`, `src/components/discovery/ExplorePage.tsx`, `src/components/discovery/explore-page.css`, `src/components/maps/MapPreview.tsx`, `src/__tests__/explore-page.test.tsx`, `src/__tests__/explore-map.test.tsx`, and this changelog.
+- **Architecture changes:** Added a presentation-only Explore page that consumes ClientApp's current bounded activities, event and partner sources and existing search, city, map and navigation callbacks. No new Firebase reads/listeners, services, dependencies or data fields.
+- **Firebase changes:** None. No writes, rules, indexes, migrations, Functions, deployments or billing changes.
+- **UI changes:** Replaced Explore's tabbed people/activity/event interface and collapsed map/partner sections with a concise search/location row, horizontal category cards, useful map and bounded activity, partner-place and upcoming-event previews. Added local category selection and place listing, accessible map pins, explicit partner-offer limitations, and links to existing deeper views. Explore alone uses attributed OpenStreetMap tiles to avoid the existing provider's API-key watermark; other map pages keep their current provider. Responsive rail, grid and compact map behavior are scoped to Explore.
+- **Security implications:** No auth, permissions, booking, payment, companion eligibility, messaging or KYC changes. Partner descriptions are identified as partner-listed offers; the UI makes no redemption or availability guarantee.
+- **Performance implications:** Reuses existing loaded/paginated sources and in-memory filters; no additional reads or listeners. Explore map scrolling does not zoom the page map. Existing large JavaScript chunk warning remains.
+- **Tests performed:** Full main suite completed before the request to skip further testing: 395/395 across 50 files. TypeScript and Vite/PWA production build completed successfully; build emitted the existing >500 kB chunk warning. No additional tests were run after the skip instruction. Browser screenshots captured for desktop and mobile layout.
+- **Known issues:** Existing partner categories/photos are inconsistently matched to some venue names and are shown as stored; no replacement imagery or records were invented. Partners have no coordinates, so the partner-category map has no pins. No upcoming events were present in the loaded data; past events are omitted from the preview. Offers are unverified partner text and have no in-app redemption. Physical-device acceptance and production tile-service capacity were not assessed. No deployment.
+- **Next recommended task:** Review the Explore page with current production partner/event content and correct source category, imagery, coordinates and offer terms through an independently scoped data-quality task.
+
 # SATHI Documentation Changelog
+
+## 2026-09-24 — Finish People category and responsive-state behavior
+- **Task:** Resume the simplified People experience and close remaining UI gaps.
+- **Objective:** Keep filtered headings and selected service tabs consistent across interests and breakpoints.
+- **Files changed:** `src/ClientApp.tsx`, `src/components/discovery/{PeopleDirectory,PeopleCategoryGroups}.tsx`, `src/__tests__/{people-directory,people-category-groups}.test.tsx`, simplification report, status/handoff and this log.
+- **Architecture changes:** Service-mode UI state is owned by ClientApp and supplied to both responsive mounts. Selected-category presentation groups the existing filtered results without modifying profile interests or adding queries.
+- **Firebase changes:** None; no writes, deployments, migrations or authorization changes.
+- **UI changes:** Secondary-interest matches now appear under the selected interest heading. Desktop/mobile resizing preserves the selected service-mode disclosure.
+- **Security implications:** Modes remain Coming soon; no new capabilities, eligibility claims or booking access.
+- **Performance implications:** In-memory grouping only; no extra reads/listeners. Existing bundle warning remains.
+- **Tests performed:** TypeScript and Vite/PWA build passed. Full suite: 331/332 tests passed; unchanged first booking-availability test timed out at 5 seconds and also timed out in a focused rerun. All 11 directory/category tests passed in the full run. Browser confirmed Guides remains selected through desktop→390px mobile→1440px desktop and Conversations secondary-interest selection groups two loaded profiles under Conversations. No production writes.
+- **Known issues:** Current full suite is NOT entirely green due to the recorded booking timeout. Physical-device/PWA and broader release gates remain unverified; service modes remain unavailable.
+- **Next recommended task:** Separately investigate the booking test's cold import/timeout behavior; obtain UI review before publishing. Implement authoritative service modes only through the planned backend gate.
+
+## 2026-09-24 — Simplify real People and discovery UI
+- **Task:** Fix the overly complex UI and align the companion section with the product plan.
+- **Objective:** Give People a focused directory and remove competing promotional/search/sidebar elements without inventing service eligibility.
+- **Files changed:** `src/ClientApp.tsx`, `src/components/discovery/{PeopleDirectory,PeopleCategoryGroups,DiscoveryWelcome}.tsx`, `src/components/companions/CompanionCard.tsx`, `src/discovery-refresh.css`, directory/preview tests, People simplification report, documentation status/handoff and this log.
+- **Architecture changes:** Dedicated shared People renderer uses existing filtering, pagination and profile callbacks at all breakpoints; no second query engine. Mode navigation is explanatory until authoritative projections exist.
+- **Firebase changes:** None. No data/rule/index/Function deployment, seed records or production writes.
+- **UI changes:** One People search with interest/saved filters; planned service-mode disclosure; grouped readable cards with explicit View profile and accessible save actions; removed People event rail, duplicate desktop search and development link; compact Home shortcuts and Explore title without repeated logo/marketing hero.
+- **Security implications:** No permissions changed. No guide/free-friend eligibility inferred from legacy fields; no compact-card verification claim from legacy approval. New People saves prompt guests to authenticate; removed premature save-success toast.
+- **Performance implications:** In-memory presentation only; no new fetches/listeners. Existing large bundle warning remains.
+- **Tests performed:** Main 330/330 across 40 files passed with one worker; TypeScript and final Vite/PWA build passed (main JS 1,965.49 kB / gzip 515.91 kB; existing chunk warning). Browser checked 1440x900 and 390x844 People, unavailable mode/back, Coffee filtering, no-result/reset and compact Home. Initial parallel run had a booking timeout and outdated preview-link assertion; corrected assertion and unchanged booking test passed in full rerun.
+- **Known issues:** Service modes are explicitly Coming soon, not functional filters/booking flows. Sparse/unnormalized legacy categories, existing optimistic favorite persistence and broader device/backend release gates remain. No deployment.
+- **Next recommended task:** Review the actual `/companions` page; implement authoritative service-mode eligibility and requests as a separately scoped backend phase before activating those modes.
+
+## 2026-09-15 — Isolated stage-based test companions and UI
+- **Task:** Add filler companions for testing and adapt discovery UI to the planned product stages.
+- **Objective:** Demonstrate dense categories and Free Friend/Local Host/Guide presentation without introducing fake people or authority into production.
+- **Files changed:** `dev/people-preview.html`, `src/dev/{peopleFixtures.ts,PeopleStagePreview.tsx,peoplePreviewMain.tsx,people-preview.css}`, PeopleCategoryGroups optional card renderer, development-only ClientApp link, `src/__tests__/people-stage-preview.test.tsx`, stage test-view report/status/handoff and this changelog.
+- **Architecture changes:** Separate development entry with no AppProvider/Firebase initialization. Reuses existing category grouping/layout; fixture metadata is not added to real Companion contracts or inferred from existing profiles.
+- **Firebase changes:** None. No sample records/accounts uploaded, no deployments or migrations, no permissions changed.
+- **UI changes:** 24 marked fictional profiles, four categories with six each, three service-mode selectors, search/category/state filters, reset/empty state, stage-appropriate price/agency labels, profile explanation and disabled real-world actions. Theme control is local to the test page.
+- **Security implications:** No Auth UID, fake verification or review claims. Fixture cards cannot send messages, request bookings, pay, save or write to Firebase. Both preview entry and app link gated to development.
+- **Performance implications:** Local in-memory fixtures; no network data queries. Normal production build excludes fixture code and preview HTML; output scan passed.
+- **Tests performed:** New fixture/filter/UI/isolation tests 5/5, grouping regressions 4/4; full main suite 325/325 across 39 files with two workers. TypeScript and Vite/PWA build pass. Browser confirms populated rows, eight Free Friends, focused detail and disabled hangout action. Dist scan confirms fixture identifiers/text/preview URL and HTML absent.
+- **Known issues:** UI prototype, not Phase 1/2/4/10 completion. Real entitlement, agency/credential, payment and release gates remain. Physical devices and exhaustive responsive/dark/accessibility acceptance not certified; existing bundle warning remains.
+- **Next recommended task:** Review stage UI in the isolated preview before integrating authoritative service-mode data. Do not seed these fixtures into production.
+
+## 2026-09-15 — Group People results by category
+- **Task:** Display People according to category as requested by the owner.
+- **Objective:** Make matching people easier to browse without duplicating profiles or changing data queries.
+- **Files changed:** `src/components/discovery/PeopleCategoryGroups.tsx`, `src/ClientApp.tsx`, `src/discovery-refresh.css`, `src/__tests__/people-category-groups.test.tsx`, UI refresh report and this changelog.
+- **Architecture changes:** Reuses `useCompanionCategories` on the already-filtered/sorted results. Each profile appears once under its primary listed interest; missing/malformed interests use Local Companion. Shared search renderer applies this to People and the people portion of Explore on all breakpoints.
+- **Firebase changes:** None; no queries, rules, writes or deployments added.
+- **UI changes:** Category headings, per-category person counts, responsive card grids and bounded image proportions. Existing search, filters, favorites/profile callbacks, empty/error states and global pagination remain in place.
+- **Security implications:** No authorization changes; existing favorite persistence behavior remains unchanged.
+- **Performance implications:** In-memory grouping of loaded results only; no per-category listeners or fetches.
+- **Tests performed:** Category grouping/action tests 4/4 plus discovery-search regressions 8/8 passed. TypeScript and Vite/PWA build passed. Local browser confirmed real category groups/counts and corrected image proportions. Full suite was not rerun for this small follow-up.
+- **Known issues:** Category names and membership come from existing first-interest data; synonyms are not merged and sparse categories remain sparse. Counts cover loaded/filtered results, not the entire database. Existing bundle-size warning remains.
+- **Next recommended task:** Review the categorized People view locally; no hosting publication performed.
+
+## 2026-09-15 — Simplified taste-led discovery UI
+- **Task:** Implement the owner's request for an advanced but uncomplicated SATHI UI, continuing the September 14 UI session.
+- **Objective:** Put relevant people and things to do within easy reach, retain the logo palette, and remove competing/fake discovery controls.
+- **Files changed:** `src/ClientApp.tsx`, `src/components/discovery/DiscoveryWelcome.tsx`, `DiscoveryFeed.tsx`, `src/discovery-refresh.css`, `src/index.css`, `src/hooks/useDiscoveryFeed.ts`, `src/types.ts`, `src/__tests__/discovery-refresh.test.tsx`, discovery result/status/handoff documentation and this log. Earlier backend work remains untouched by this UI scope.
+- **Architecture changes:** Shared Home renderer and shared Explore search/results across breakpoints; profile-interest editing uses existing UserRepository through AppContext; explicit preference edits invalidate stabilized feed ordering, pagination alone does not. No new backend pipeline.
+- **Firebase changes:** None deployed; no production writes performed for UI verification. Interest save uses the existing authenticated profile path. Existing data and queries retained.
+- **UI changes:** Logo-aligned introduction, intent shortcuts, profile-interest editor, responsive people cards, honest activity descriptions/prices, collapsed map/partners/safety details, repaired URL navigation, clearer filters, fewer promotional panels and keyboard Story controls. Removed scripted Explore itinerary suggestions and unverified presence dots. Alerts/profile access retained.
+- **Security implications:** Guest personalization and new Home save actions open sign-in; no permission/security-rule changes. No live payment/provider or privileged operation enabled.
+- **Performance implications:** Removed duplicated catalog/rendering branches and an obsolete slideshow timer; mounts only the visible Home/Explore renderer. Map initialized only after expansion. Preference matching uses already-loaded data, without new Firestore listeners/queries. Large existing JS bundle warning remains.
+- **Tests performed:** Main suite 316/316 across 37 files passed with two workers; new discovery tests 7/7, final focused layout/discovery 9/9. TypeScript and Vite/PWA build passed. Initial unconstrained run had one unchanged booking timeout; repeated bounded runs passed. Browser inspected 390/768/1440 light layouts, activity navigation, search/clear/empty states, community and guest auth gating. No authenticated production mutation testing.
+- **Known issues:** Production interest persistence, dark/device/PWA/zoom/accessibility and composing-draft resize acceptance not certified. Existing optimistic favorite failure handling remains. Sample/stale production content and sparse categories remain; no fake fill data. Broader security/payment/backup gates are not completed by this UI change.
+- **Next recommended task:** Review local design and perform dedicated-account persistence/device acceptance before app publication; keep Firebase containment gates separate.
+
+## 2026-09-14 — Repair inherited booking/staff drafts and verify actual transactions
+- **Task:** Continue remaining work by validating inherited containment drafts against real application transactions and realistic Firebase Auth tokens.
+- **Objective:** Repair customer-booking compatibility, preserve released payment/staff protections, fix isolated analytics authorization and correct corrupted rollback/documentation evidence.
+- **Files changed:** Booking patch/generator/candidate/manifest, scoped v2 rules fragment and aggregate-only preflight; booking transaction coordinate-retry guard; booking/static/regression/staff emulator tests; analytics helper/candidate/manifest/static tests; original release rollback restored; combined-draft baseline reference/rejection metadata/generator guard; current gate/handoff/status/result documentation and this changelog. Unrelated booking/debug drafts retained.
+- **Architecture changes:** Reused `reserveBooking`/`transitionBooking` and existing v2 policy; no second booking engine. Booking+lock writes are paired and independently validated by scoped rules. Analytics uses actual provider claims. Restored immutable BEFORE evidence and separated it from active-source inputs.
+- **Firebase changes:** ZERO production writes/deployments/migrations. Fresh read-only source still `764eb7a3...`. Inventory at 12:28 UTC: 105 legacy/other-version bookings, zero v2, one linked canonical lock. Local booking candidate `8bfecbb1...`; local analytics candidate `e50ec156...`. Pre-release rollback restored locally to its recorded hash `28709c31...`, not deployed.
+- **UI changes:** None. Only application service change compares retried meeting coordinates by value; no component/style changes or hosting publication.
+- **Security implications:** Tested candidate denies forged booking owner/price/payment/state, unpaired locks, outsider/operator escalation and deletion; released payment/admin-assignment rules remain intact. Corrected analytics rejects anonymous/legacy/document-only roles. Five-branch draft rejected after customer transaction failure and five staff/privacy failures, including subject access to internal suspiciousActivity notes. Broader upstream approval and resource grants remain unresolved.
+- **Performance implications:** No new app listener/query. Preflight reads masked metadata in 200-document pages, capped below 1,000 per collection, retaining aggregate enum/count data only. No runtime installation; cached emulator 1.19.8 worked on Java 17.
+- **Tests performed:** Booking actual-transaction emulator 29/29; existing payment/staff regressions on new booking candidate 39/39; analytics emulator 17/17; booking/rollback static 6/6 and analytics static 8/8. Main app Vitest 309/309 across 36 files, main TypeScript and Vite/PWA build exit 0. Inherited five-branch review honestly failed 5/17 staff tests and the actual customer booking probe; not hidden as passing evidence. Production preflight hash/inventory completed; no live write acceptance performed.
+- **Known issues:** All 105 production bookings are legacy, so readable-but-client-read-only handling needs an explicit rollout policy; no fake migration or payment history invented. Current companion approval/rate sources still have unsafe upstream writers under unchanged rules. Full staff mapping/resource RBAC, Event policy, App Check/restore/device/provider gates remain open. Local candidates are independent, not safe sequential deployment inputs without composition/retesting.
+- **Next recommended task:** Resolve legacy-booking handling, qualify the exact booking candidate for a fresh scoped production rollout with dedicated-account acceptance, and finish upstream approval authority. Do not repeat released payment/staff deployment, run the rejected combined generator, deploy root rules or claim all product stages complete.
+
+## 2026-09-13 — Combined containment: analytics + auditLogs + suspiciousActivity + sosAlerts + booking_locks
+- **Task:** Extend the staff-RBAC containment candidate to also scope auditLogs, suspiciousActivity, sosAlerts, and booking_locks branches, producing a combined containment candidate from the active deployed source `764eb7a3...`.
+- **Objective:** Close additional unscoped `isAdmin()` access paths in a single candidate without modifying application code or production rules.
+- **Files changed:** `ops/combined-containment/{candidate.firestore.rules,patch.mjs,generate.mjs,manifest.json}` (new); `tests/combined-containment.test.mjs` (new); `docs/sathi/COMBINED_CONTAINMENT_GATE.md` (new); this changelog.
+- **Architecture changes:** None to application. Candidate changes 5 branches (analytics, auditLogs, suspiciousActivity, sosAlerts, booking_locks) and adds the `isResourceAdmin` helper; all other lines are byte-identical to the active source.
+- **Firebase changes:** Local candidate only (hash `f5df74d9...`). ZERO production mutations, deployments, or rule changes.
+- **UI changes:** None.
+- **Security implications:** Analytics read scoped to `isResourceAdmin(['super_admin', 'platform_admin'])`; auditLogs read scoped to the same; suspiciousActivity create/update scoped to `isResourceAdmin(['super_admin', 'safety_admin'])` (read also permits resource owner); sosAlerts update scoped to `isResourceAdmin(['super_admin', 'safety_admin'])` (read also permits resource owner); all 5 branches reduce broad `isAdmin()` access to resource-level role claims.
+- **Performance implications:** No new indexes, queries, or listeners.
+- **Tests performed:** 11/11 static contract tests pass (candidate hash, composition, reversibility, drift rejection, isAdmin() count reduced by 8, per-branch verification, byte-identical outside all changed branches). Combined: 27/27 total static contract tests (payment + operator + booking-lock + staff-rbac + combined). Main app 309/309, admin 41/41, TypeScript `tsc --noEmit` passed. Emulator suite requires Java 21+.
+- **Known issues:** Not emulator-verified (Java 17 environment). Candidate is local-only; requires separate deployment authorization if approved.
+- **Next recommended task:** Install Java 21+ and run the combined-containment emulator suite; if it passes, request separate deployment authorization for each branch.
 
 ## 2026-09-13 — Staff RBAC containment: analytics resource-scoped read
 - **Task:** Produce a scoped staff-RBAC containment candidate from the active deployed source `764eb7a3...` that narrows the broad `isAdmin()` read path on `analytics/{analyticId}` to `isResourceAdmin(['super_admin', 'platform_admin'])`.
@@ -890,3 +1369,171 @@ Each session entry records the test count AT THE TIME of the work. Current total
 - **Tests performed:**12/12 targeted checks: two DIAGNOSTIC bug reproductions, one canonical reuse control and nine existing unread-writer regressions. Main tsc --noEmit and git diff --check passed. No full main/build/emulator or live acceptance rerun claimed; diagnostic passes mean bugs reproduced, not fixed.
 - **Known issues:** Shared resolver implementation needs approval. Profile document IDs vs Auth UIDs, lookup/auth races, duplicate-pair ambiguity and concurrent creation require explicit regression coverage. Existing30 opaque parents are not a justification for data migration. Production deployment remains unauthorized.
 - **Next recommended task:** Approve minimal messaging existing-thread resolution/peer-membership fix per MESSAGING_ENTRY_PATH_REVIEW.md, preserve existing IDs/UI, convert diagnostics to desired-behavior regressions, run application and exact candidate checks, and stop before deployment.
+
+## 2026-09-25 — Assess simpler Home, recommendations and Coins concept
+- **Task:** Compare the owner's Home concept with the actual project stage and develop a stronger, reviewable product proposal.
+- **Objective:** Establish a finite people-first Home scope without presenting planned financial/access features as implemented.
+- **Files changed:** Added `docs/sathi/HOME_CONCEPT_REVIEW_2026-09-25.md`; appended this log. Created a thread-owned inline concept preview outside the repository. No application source edits; existing working-tree changes preserved.
+- **Architecture changes:** None implemented. Proposal reuses existing discovery/profile/card/query paths and the target platform_config, profile entitlement and wallet contracts.
+- **Firebase changes:** None. No production inventory/read/write, rules/index/Storage/Function deployment, configuration activation or data migration.
+- **UI changes:** No runtime app change. Illustrative preview explores finite sections, interest matching, sparse-area behavior and compact Community/Stories. It contains no live people, balance or booking claims.
+- **Security implications:** Identified target-only wallet/quotas, unproven review/availability signals and coming-soon service modes. Preserved the no-P2P/no monetary gift activation boundary; no authorization changes.
+- **Performance implications:** Documented existing source page capacities (65 initial discovery documents, 55 per continued Home batch when full), distinct from billed reads. Proposed stopping Home pagination first and qualifying smaller source requests separately; no measured savings claimed.
+- **Tests performed:** Fresh scoped discovery/People run: 29/29 across five files. Isolated preview: eight interaction/structure checks passed; browser default-width and390px dark appearance inspected, no root horizontal overflow or captured browser errors. No new app build/full suite/emulator/authenticated production test.
+- **Known issues:** This is an assessment/proposal, not an implemented redesign or completed roadmap phase. Secure service eligibility, full-profile access, wallet/offer contracts, acknowledged favorites and real device/PWA acceptance remain separate work.
+- **Next recommended task:** Implement the finite Home and explicit-interest ranking slice over existing bounded data, preserving working destinations and unavailable financial/service states; qualify later query and financial changes independently.
+
+## 2026-09-25 — Implement finite people-first Home locally
+- **Task:** Continue the approved Home simplification concept with a reviewable application implementation.
+- **Objective:** Put relevant real people first, retain concise paths to plans and Community, and reduce Home's bounded discovery load without claiming unfinished Coins or service access.
+- **Files changed:** `src/ClientApp.tsx`, `src/components/home/HomePage.tsx`, `src/components/companions/CompanionCard.tsx`, `src/components/discovery/DiscoveryWelcome.tsx`, `src/services/homeRecommendations.ts`, `src/hooks/useFirestoreData.ts`, `src/discovery-refresh.css`, `src/__tests__/{home-summary,discovery-refresh}.test.tsx`, `docs/sathi/{HOME_CONCEPT_REVIEW_2026-09-25,DOCUMENTATION_STATUS}.md`, and this log.
+- **Architecture changes:** Home now composes one finite shared desktop/mobile summary instead of the progressive mixed feed. A pure deterministic ranker compares all explicit user and companion interests, plus an exact normalized location match, over the loaded 15-person window; known user IDs are deduplicated. Existing destination routes and social viewers are reused.
+- **Firebase changes:** No rules, indexes, Functions, migrations, configuration, production writes or deployments. Existing one-shot query shapes are unchanged; Home requests smaller page limits through backward-compatible hook parameters.
+- **UI changes:** Three direct actions; up to four people with factual relevance and current listed NPR rate; up to one future ISO-dated Event and one activity; up to two factual partner listings; compact Stories/posts and an owned upcoming-booking summary when present. Home has no infinite continuation, duplicate desktop utility rail, or ungrounded rating/discount/Coin claim. Detailed People and Explore remain reachable, including the Local places anchor.
+- **Security implications:** No access/eligibility or wallet permission changes. No zero-price Free Friend classification, live Coin balance, paid unlock, partner redemption or simulated production profiles. Existing favorite persistence limitation remains.
+- **Performance implications:** Home source page capacities now total up to 39 returned discovery documents (15 companions + 10 Stories + 4 activities + 4 Events + 4 partners + 2 posts), versus the prior 65 when all initial pages filled; no Home continuation batch. This is a request capacity comparison, not measured billed reads or proof of lower cost. Existing bundle-size warning remains.
+- **Tests performed:** Focused Home/discovery/card tests 12/12; final one-worker main suite 341/341 across 42 files; `npx tsc --noEmit`, Vite/PWA production build and `git diff --check` passed. A two-worker rerun timed out once in an unchanged messaging-service test; that file passed 33/33 in isolation and in the final full run. Local app browser checked desktop and 390×844 mobile Home, plus the People destination. No authenticated production write, real-device/PWA acceptance or deployment.
+- **Known issues:** Matching sees only the loaded candidate window; first limited Event page may contain no future ISO date. Coins, daily full-profile grants, approved offers, authoritative service-mode eligibility and acknowledgment of favorite-write failures still need their planned backend and release gates. Current local UI is not assumed published.
+- **Next recommended task:** Review the local Home with users and a dedicated account, measure real query/read behavior, then plan authoritative service-access and wallet/benefit increments independently before any activation or publication.
+
+## 2026-09-25 — Make Home and People Save acknowledge persistence
+- **Task:** Continue the Home implementation by closing the favorite-write reliability gap identified in the concept review.
+- **Objective:** Ensure Save reflects an acknowledged profile update, surfaces failures and does not overwrite rapid same-tab saves or show an earlier account's late result.
+- **Files changed:** `src/context/AppContext.tsx`, `src/ClientApp.tsx`, `src/components/companions/CompanionCard.tsx`, `src/components/home/HomePage.tsx`, `src/components/discovery/{PeopleDirectory,PeopleCategoryGroups}.tsx`, `src/__tests__/{favorite-write-lifecycle,people-directory}.test.tsx`, `docs/sathi/{HOME_CONCEPT_REVIEW_2026-09-25,DOCUMENTATION_STATUS}.md`, and this log.
+- **Architecture changes:** Reuses `UserRepository.updateFavorites`; the shared context serializes favorite writes within one tab, commits local state only after a successful write and ignores a late result after the signed-in session changes. Cards disable repeat taps while a write is pending. Home, People, Explore and Saved cards use the same guest-auth and failure path.
+- **Firebase changes:** No new query, listener, collection, rule, index, Function, migration, production write or deployment. The existing user-profile favorites array writer remains the persistence path.
+- **UI changes:** The Save heart no longer claims success before persistence; rejected writes leave the previous state visible and show a retry toast. Guest Save still opens sign-in.
+- **Security implications:** Each write checks the current registered Auth UID before queuing and again before committing local state; Firestore rules remain authoritative. A session switch invalidates queued old-account changes locally. No service entitlement, Coin or payment behavior changes.
+- **Performance implications:** One existing profile update per completed Save action; no additional read or listener. Booking/notification subscriptions now depend on user ID, so changing that same user's favorites does not restart them. Rapid distinct saves are serialized in one tab. Cross-device simultaneous whole-array writes remain a known conflict risk.
+- **Tests performed:** Focused favorite/People checks 9/9; final main suite 344/344 across 43 files; `npx tsc --noEmit`, Vite/PWA build and `git diff --check` passed. Tests cover delayed acknowledgment, rejection/recovery, rapid saves, account switch and button pending/error behavior. No authenticated production persistence or physical-device acceptance was performed.
+- **Known issues:** Cross-device concurrent array replacement can still lose one writer's update; it requires an atomic-field or transaction compatibility review. A Firestore write awaiting network acknowledgment may keep the card pending during connectivity loss. Other Home/Coins/service-mode limits in the previous entry still apply.
+- **Next recommended task:** Validate the local Home and favorite persistence with a dedicated account, then qualify an atomic favorite mutation against active rules before claiming multi-device reliability. Keep financial and service-mode activation behind their separate backend gates.
+
+## 2026-09-25 — Continue full roadmap through booking compatibility and atomic review
+- **Task:** Continue the owner-selected Phase 0–12 roadmap in dependency order.
+- **Objective:** Protect legacy booking history from unsupported client transitions, remove false cancellation success, close the partial-write gap in the existing companion review path, and record the actual status of every roadmap phase.
+- **Files changed:** `src/ClientApp.tsx`, `src/components/bookings/CustomerBookingActions.tsx`, `src/services/bookings.ts`, `src/repositories/CompanionApplicationRepository.ts`, `src/__tests__/{customer-booking-actions,booking-service,companion-application-review}.test.ts{x}`, `docs/sathi/{ROADMAP_EXECUTION_STATUS_2026-09-25,DOCUMENTATION_STATUS,ANTIGRAVITY_HANDOFF,CHANGELOG}.md`, and the read-only `docs/sathi/rollbacks/booking-compatibility-2026-09-25T15-53-37-569Z/` capture.
+- **Architecture changes:** Existing v2 booking transactions remain canonical. Legacy bookings are readable but not client-mutable in the local customer/companion flows. Application review uses one Firestore SDK transaction to update the application, user status, optional public profile and immutable audit record; stale/self reviews are rejected before writes.
+- **Firebase changes:** Read-only `hamrosathi1` preflight captured active rules hash `764eb7a3...` and confirmed candidate `8bfecbb1...` changes only bookings/locks. Under the bounded 1,000-record cap, inventory completed at 105 legacy bookings, zero v2 and one linked lock; these paged reads are not an atomic snapshot. No production write, migration, rule/index/Storage/Function/Hosting deployment or money movement.
+- **UI changes:** Customer cards on both responsive layouts show a view-only note for legacy bookings. Valid v2 booker cancellation waits for the repository write before a success toast, prevents repeated taps, and shows a failure toast. An invalid customer Mark Complete control was removed.
+- **Security implications:** A local client transaction prevents partial review commits through that path but does not replace backend authorization. Current companion profile creation, broad `isAdmin()` branches and booking eligibility's trust in approval/verification fields still require scoped rules/backend containment. No commercial activation is claimed.
+- **Performance implications:** Review has one transactional round trip instead of four independent writes; transaction retries may increase reads under contention. No new query/listener is added. Build still warns about large chunks.
+- **Tests performed:** Booking static 6/6; paired booking/payment/staff emulator 68/68; focused application/booking UI/service tests 24/24; final main 356/356 across 45 files, admin 41/41 across 7 files; main TypeScript, Functions TypeScript build, booking-policy matrix check, main Vite/PWA build, admin Vite build, and `git diff --check` passed. No dedicated-account live write, physical-device or restored-backup acceptance.
+- **Known issues:** Phase 0 and all later roadmap definitions of done remain open as detailed in the execution audit. Application approval's private KYC path check proves syntax, not document existence, age eligibility or reviewer scope. The local booking candidate is not production-ready with upstream authority unresolved. Legacy records were not migrated.
+- **Next recommended task:** Build a narrow companion authority candidate from the exact active rules source, test ordinary-user self-verification/reviewer revocation/double-review and existing approval compatibility, then compose it with booking rules and rerun the full local gate before a separate production decision. Continue Phase 1 onward only on their documented dependencies.
+
+## 2026-09-26 — Build and validate local companion approval containment
+- **Task:** Continue the full-roadmap Phase 0/1 authority dependency without activating any feature.
+- **Objective:** Prevent owner self-verification and generic-admin companion approval; make a new review decision, user status, public projection and audit document agree atomically; prove booking/payment/staff compatibility in the emulator.
+- **Files changed:** `src/repositories/CompanionApplicationRepository.ts`, `src/__tests__/companion-application-review.test.ts`, `ops/companion-authority-containment/{patch,generate}.mjs` and generated rules/manifest, `tests/{companion-authority-containment.test.ts,companion-authority-static.test.mjs,booking-compatibility.test.ts,payment-write-containment.test.mjs,staff-assignment-containment.test.mjs}`, `docs/sathi/{COMPANION_AUTHORITY_CONTAINMENT_GATE_2026-09-26,ROADMAP_EXECUTION_STATUS_2026-09-25,DOCUMENTATION_STATUS,ANTIGRAVITY_HANDOFF,CHANGELOG}.md`.
+- **Architecture changes:** Review transaction now records a stable application pointer on the user/public profile and an audit ID on the decision. Rules validate the old pending application and matching final state with `getAfter`, allowing no standalone new approval. Reviewer authorization uses a trusted role claim plus a current assignment document for `kyc_reviewer`; root uses its trusted claim. Existing canonical legacy profile creation time is preserved; mismatched owners are rejected. Partial draft saves use dotted updates instead of replacing the KYC map.
+- **Firebase changes:** Local rules candidates only, generated from last read active hash `764eb7a3...` and tested booking hash `8bfecbb1...`. Standalone candidate hash `966cb23050ee082543c449b359a74e2e6c15a091e001f62d9e07eb8dc5cc28b4`; booking-combined hash `b6eb8e7503db696e8afee82d7c910d6c22d9cba7e31b230bbc4196c6cf8c444c`. No 2026-09-26 live read, production write, migration or deployment.
+- **UI changes:** None in this session. Existing standalone admin direct-verification controls are a known incompatibility with this candidate and must be transitioned before publication.
+- **Security implications:** Ordinary users, legacy/generic admins and revoked reviewers cannot grant new companion approval in the candidate; private contact fields cannot enter a newly approved public profile. KYC document existence, adult evidence, assigned-case scope, historical flags, other broad staff grants and root claim lifecycle are not certified.
+- **Performance implications:** A review remains one transaction but includes an existing-profile read and bounded rule `getAfter` lookups. No new list query or listener. Production read-cost/latency not measured.
+- **Tests performed:** Final combined emulator **78/78** (10 authority, 29 booking, 39 payment/staff), static source/hash/drift **4/4**, main app **360/360 across 45 files**, main `npx tsc --noEmit`, Vite/PWA build and `git diff --check` passed. Earlier 2026-09-25 admin 41/41, Functions TypeScript build and booking-policy check remain unchanged baseline evidence. No dedicated-account SDK acceptance, physical-device/PWA, restored-backup drill or live approval test.
+- **Known issues:** This is a local containment candidate, not Phase 0 or Phase 1 completion. Legacy admin guide/companion verification screens would receive permission errors; redacted production identity/application inventory and policy decisions are needed. Noncanonical IDs, duplicate applications and historical `isVerified`/`APPROVED` pairs cannot be silently converted to the new chain.
+- **Next recommended task:** Inventory production companion/application/admin assignment shapes read-only with bounded redacted output; resolve legacy admin controls and evidence/age policy, then repeat fresh source/rollback and cross-branch gates before any separate deployment decision.
+
+## 2026-09-30 — Contain legacy operator approvals and pause unqualified review
+- **Task:** Continue the owner's full Phase 0–12 roadmap at its current companion-authority dependency.
+- **Objective:** Make the operator UI truthful about historical verification, prevent direct legacy flag writes, and keep application review paused until identity evidence and reviewer policy are qualified.
+- **Files changed:** `admin/src/pages/{AdminCompanions,AdminGuides}.tsx`, `admin/src/repositories/AdminRepository.ts`, `admin/src/__tests__/legacy-guide-readonly.test.tsx`, `src/services/releaseGates.ts`, `src/pages/AdminApplicationsPage.tsx`, `src/repositories/CompanionApplicationRepository.ts`, `src/__tests__/companion-application-review.test.ts`, `src/components/modals/CompanionProfileModal.tsx` (line-ending cleanup), authority gate, Phase 1 identity/evidence proposal, historical auth/KYC docs (current qualification notes), roadmap status, documentation index, handoff and this log. Earlier same-continuation work added the read-only inventory classifier/preflight and local consumer approval/booking presentation gate, as recorded in the authority gate.
+- **Architecture changes:** Standalone Guide/Companion lists are read-only historical views. Direct verification, legacy Guide approval/rejection, and profile status mutation methods were removed from the standalone repository and screens. Main application review now has a default-off UI and repository gate (`VITE_COMPANION_REVIEW_ENABLED`) and uses the actor's actual trusted role claim in the audit record. The reviewer sees a write error instead of silent console-only failure.
+- **Firebase changes:** The September 26 projected production inventory was read-only: 103 users, 40 noncanonical companion profiles with old verified flags, one submitted application and zero admin assignments; no user has approved companion status. Active rule source remained `764eb7a3...` before/after that inventory. No September 30 live read/write, rules/index/Functions deploy, money movement or migration.
+- **UI changes:** Historical flags and legacy Guide application status are explicitly labeled as such. The Guide screen no longer displays a fabricated document or nonfunctional View control. Main application review actions are hidden while paused. Existing companion badges/new v2 booking entry remain default-off in the local consumer build.
+- **Security implications:** Local operator paths no longer assert approval through unreviewed legacy flags. Client-side gates do not secure deployed clients or replace authoritative rules. KYC document existence, adult eligibility, assigned-case review, real UID/profile crosswalk and broader staff grants remain unqualified.
+- **Performance implications:** Read-only Guide/Companion pages retain their existing bounded list calls. No additional runtime database query or listener. The existing large-bundle warnings remain.
+- **Tests performed:** Isolated main suite **363/363 across 46 files**; isolated admin suite **42/42 across 8 files**; main and admin TypeScript checks passed; main Vite/PWA and admin Vite builds passed; `git diff --check` passed. An earlier resource-contended main run had 361/362 with one 5-second messaging timeout; its focused rerun passed 35/35 and the isolated full rerun passed. The prior combined 78/78 emulator and 4/4 static gate are unchanged candidate evidence, not rerun for this UI-only change.
+- **Known issues:** The full roadmap is not complete. Candidate Firestore authority/booking rules are local, existing 40 profiles do not satisfy the new canonical eligibility contract, and no safe automatic mapping is inferred. Legacy admin operations are paused rather than replaced with a qualified end-to-end workflow. No live SDK, physical-device/PWA, restored-backup or provider acceptance.
+- **Next recommended task:** Review the proposed adult/evidence/retention and reviewer-assignment policy, resolve each historical UID/profile identity with an evidence-backed crosswalk, then implement a qualified review command and migration dry run. Refresh exact production source/rollback and repeat cross-branch gates before any separately authorized release; proceed through dependent phases in roadmap order.
+
+## 2026-09-30 — Recheck historical companion crosswalk shape read-only
+- **Task:** Determine whether the 40 noncanonical public profiles have structurally unique candidate UID targets without exporting personal identifiers.
+- **Objective:** Separate a possible migration mapping from actual proof of person/account ownership and approval.
+- **Files changed:** `ops/companion-authority-containment/inventory.mjs`, `tests/companion-authority-inventory.test.mjs`, new redacted `docs/sathi/rollbacks/companion-authority-2026-09-30T06-36-20-455Z/` capture, authority gate, Phase 1 decision proposal, roadmap status, documentation index, handoff and this log.
+- **Architecture changes:** Pure inventory now counts existing-user links, duplicate profile targets and canonical-ID collisions without serializing IDs. No runtime schema or writer changed.
+- **Firebase changes:** Read-only paged projection on `hamrosathi1`; 103 users, 40 profiles, one submitted application, zero assignment docs. Active rules hash `764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402` unchanged before/after. No production writes or deployment.
+- **UI changes:** None in this follow-up.
+- **Security implications:** All 40 stored profile user IDs point to existing users and are unique; zero old-ID/user or canonical-target collisions. This is a candidate structural crosswalk, not identity evidence. All 40 legacy verified flags remain commercially unqualified, no user has approved status, and there are no reviewer assignment docs.
+- **Performance implications:** Bounded 200-document pages under the 1,000-document safety cap; no app query/listener change. Inventory is paged, not an atomic database snapshot.
+- **Tests performed:** Pure redaction/classifier tests 3/3 plus unchanged candidate static/source checks 4/4 (7/7 combined); read-only preflight completed with exact candidate/source drift checks, unchanged active rules readback and redacted manifest. `git diff --check` passed. No live SDK write, migration, emulator rerun or production release.
+- **Known issues:** Candidate stored UID links require protected per-person account/evidence confirmation; historical booking/message references need compatibility mapping. Reviewer, age, evidence and retention policy remain unapproved. Full Phase 0–12 roadmap is not complete.
+- **Next recommended task:** Approve the Phase 1 evidence and reviewer policy, create a protected per-record ownership review queue, then implement a no-write migration dry run with update-time preconditions and historical-reference checks. Keep flags off and release gates separate.
+
+## 2026-09-30 — Add a pure Phase 3 ledger journal contract
+- **Task:** Advance an independently testable roadmap slice while Phase 1 owner policy is pending.
+- **Objective:** Reject malformed, fractional, overflowing, unbalanced or cross-asset Coin/NPR-paisa journal inputs before any future backend writer is considered.
+- **Files changed:** `shared/contracts/money.ts`, `src/__tests__/money-contract.test.ts`, `docs/sathi/PHASE_03_LEDGER_CONTRACT_SLICE_2026-09-30.md`, roadmap status, documentation index, handoff and this log.
+- **Architecture changes:** Pure `LedgerJournal`/paired-operation validators require exact asset-specific IDs, bounded unique account postings, safe integer amounts, BigInt zero sum, source/version/hash fields and shared intent/source binding across assets. They do not post or authorize entries.
+- **Firebase changes:** None. No schema/rules/index/Function/provider/wallet write, migration, deployment or money movement. All financial flags remain off.
+- **UI changes:** None.
+- **Security implications:** A future backend still must enforce actor authority, funding proof, approved chart of accounts, operation idempotency, source-lot rules, journal immutability and reconciliation; the pure parser alone grants no financial capability.
+- **Performance implications:** At most 50 postings per journal and two assets per operation; in-memory checks only. No runtime app import/query/listener was added.
+- **Tests performed:** Contract negative/positive tests 9/9; isolated full main suite 372/372 across 47 files; main TypeScript and `git diff --check` passed. Earlier admin 42/42 and main/admin Vite builds remain unchanged evidence. No emulator ledger/concurrency or live acceptance claimed.
+- **Known issues:** Phase 3 is not complete: no transactional writer, lots, projection, receipt dedupe, reversal resolution, race tests, provider sandbox or approved finance policy. Phases 0/1 and the rest of the roadmap remain open.
+- **Next recommended task:** After Phase 1 authority/config and finance chart decisions, implement a server-only emulator ledger command with replay-safe operation storage and lot/projection invariants; keep provider and cash flags off.
+
+## 2026-09-30 — Scope local companion reviews to assigned cases
+- **Task:** Continue the full Phase 0–12 roadmap at its current Phase 0/1 authority dependency.
+- **Objective:** Replace general reviewer authority in the local candidate with an active, matching application case and make the paused reviewer queue use those case IDs.
+- **Files changed:** `ops/companion-review-case-containment/{patch,generate}.mjs` and generated candidate/config/manifest, `tests/{companion-review-case-containment.test.ts,companion-review-case-static.test.mjs,booking-compatibility.test.ts,payment-write-containment.test.mjs,staff-assignment-containment.test.mjs}`, `src/repositories/CompanionApplicationRepository.ts`, `src/pages/AdminApplicationsPage.tsx`, `src/__tests__/companion-application-review.test.ts`, case gate, Phase 1 proposal, roadmap status, documentation index, handoff and this log.
+- **Architecture changes:** Reviewer case documents bind application ID, subject UID, reviewer UID and active status. A root case assignment or revocation must create a matching immutable audit document in the same atomic write. The local reviewer queue queries at most 50 of its own case documents and fetches each application directly; root retains the status queue. The review UI remains default-off. First-stage authority inputs are frozen and the second-stage generator rejects source drift.
+- **Firebase changes:** Local standalone hash `90c64653f78363a2b0fb52949e33d1f017a79a8d2b205e788c61c438d98e476c`; booking-combined hash `2b13d40ad67a87851aa9919390d23b99cc95fec45917e3c5590016fff616e386`. No production source re-read in this code session, production data/rules/index/Functions/Hosting deployment, migration or money movement. Last read-only active hash remained `764eb7a3...`.
+- **UI changes:** Paused application review page supplies the current role/UID to the repository and shows load errors. No review action is activated.
+- **Security implications:** Candidate rejects unassigned, revoked and wrong-subject reviewer approvals and arbitrary reviewer application reads. Owner direct/list and root status reads remain valid locally. Root case creation/revocation requires matching action, actor, subject, reviewer, application and version in a newly created audit document; a reviewed operational command and root break-glass policy remain unqualified.
+- **Performance implications:** Reviewer queue is bounded to 50 case reads followed by direct application reads, with no new listener. Pagination after 50 cases remains open. Existing Vite large-chunk warning remains.
+- **Tests performed:** Combined Firestore emulator 74/74 (6 case, 29 booking, 39 payment/staff) with the exact second-stage rules; 3/3 static source/hash/drift checks; focused case emulator rerun 6/6 after owner/root list assertions; application review unit tests 15/15; full main 375/375 across 47 files; main TypeScript, Vite/PWA build and final diff check passed. Earlier admin 42/42 remains unchanged baseline evidence. No live SDK write, device/PWA or restore acceptance.
+- **Known issues:** This is a local candidate, not completed Phase 0/1 or the full roadmap. No production case assignments exist; evidence/age/retention policy, historical UID/person proof, operational assignment/reassignment command, backend authority and other Phase 0 gates remain open.
+- **Next recommended task:** Define and test an operational assignment/revocation command and case pagination, then qualify evidence/age/identity policy and backend review. Before any separately approved production release, refresh active source and rollback, compose all scoped branches, and run dedicated-account acceptance.
+
+## 2026-10-01 — Complete the Companion category sphere carousel
+- **Task:** Implement only the owner's Companion category entry brief, replacing the existing mode buttons with an orbiting sphere carousel.
+- **Objective:** Provide deliberate, seamless category preview and existing destination entry across desktop and mobile without changing Companion services or other product areas.
+- **Files changed:** `src/components/discovery/{CompanionCategoryCarousel.tsx,companion-category-carousel.css,peopleModes.ts,PeopleDirectory.tsx}`, `src/ClientApp.tsx`, `src/__tests__/{companion-category-carousel,people-directory}.test.tsx`, and this changelog. Pre-existing unrelated workspace changes were preserved.
+- **Architecture changes:** Extracted the same four existing directory destinations into presentation config. ClientApp owns one unbounded carousel step across responsive mounts; modular indexing selects the active category while sine/cosine transforms animate four stable nodes around an orbit. No cloned categories, route reload, automatic rotation or new dependency. Saved shortcuts explicitly retain entry to the existing results view.
+- **Firebase changes:** None. No schema, query, listener, rule, index, Function, data write, migration or deployment change.
+- **UI changes:** Scoped brand-colored circular icons, active ring, smaller adjacent/rear spheres, 400ms eased rotation, dot/arrow controls, drag/swipe/horizontal-wheel preview and one dynamic CTA. Adjacent selection centers first; active selection enters the existing destination. Results replace the carousel and provide All Companion Types back navigation. Existing three Coming soon disclosures remain intact.
+- **Security implications:** Presentation only; no eligibility, verification, authentication, booking, payment, Coin, pricing or staff capability was activated or altered. All people remains the existing aggregate directory, not an invented fourth service.
+- **Performance implications:** Four transformed nodes using the already-installed Motion library and Lucide icons; no image downloads, extra database reads/listeners, timer or carousel package. Existing large-bundle warning remains.
+- **Tests performed:** Isolated full main suite 383/383 across 48 files, including 7 carousel and 7 directory tests. Final main TypeScript and Vite/PWA build passed (main JS 1,965.94 kB / gzip 516.60 kB; existing chunk warning). An earlier full run concurrent with a build hit one unchanged messaging send timeout; the isolated full rerun passed. Browser checks at 1440x900, 390x844 and 320x740 covered keyboard/focus/Enter, wraparound, drag, horizontal wheel, vertical scroll, CTA/back, original results, Saved-only shortcut, selected-category persistence on resizing and absence of horizontal page overflow. Desktop/mobile screenshots saved; temporary viewport restored. Final `git diff --check` passed.
+- **Known issues:** Physical touch devices and installed-PWA acceptance were not performed. Free Friends, Local Hosts and Guides retain their existing unavailable screens; this UI does not complete those backend phases or the broader roadmap. No publication. Existing bundle-size warning remains.
+- **Next recommended task:** Review the completed local Companion entry UI. Stop this carousel scope; any service activation or broader roadmap continuation requires its own scoped work.
+## 2026-10-12 — Refresh Phase 0 booking compatibility inventory
+- **Task:** Resume the SATHI roadmap with a current booking/lock compatibility read.
+- **Objective:** Confirm whether the local paired booking/lock candidate still matches the active production rules baseline and refresh the bounded legacy inventory.
+- **Files changed:** `docs/sathi/BOOKING_COMPATIBILITY_READONLY_RESULT_2026-10-12.md`, `docs/sathi/BOOKING_LOCK_CONTAINMENT_GATE.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog. A protected rollback source and aggregate manifest were saved under `docs/sathi/rollbacks/booking-compatibility-2026-10-12T13-57-44-526Z/`.
+- **Architecture changes:** None. Read-only preflight used the existing scoped Firebase Rules and Firestore inventory helper.
+- **Firebase changes:** No production changes. Active hash remained `764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402`; 105 legacy bookings, zero v2, one consistent lock. No migration, write or deployment.
+- **UI changes:** None.
+- **Security implications:** No access changed. Candidate remains local; broad rules and Functions deployment remain unauthorized.
+- **Performance implications:** Bounded, paged reads under the 1,000-document cap; aggregate counts only in the manifest. Inventory is not an atomic database snapshot.
+- **Tests performed:** None in this continuation, per user direction to skip testing. Existing candidate evidence (29 booking emulator checks, 39 payment/staff regressions, 6 static checks) was not rerun.
+- **Known issues:** All 105 records remain legacy; payment status was missing or outside the known enum on 65 records. No v2 compatibility release or production SDK acceptance was performed.
+- **Next recommended task:** Review the exact candidate and rollback, prepare dedicated-account acceptance and obtain separate authorization for a narrowly scoped release before any production writes.
+
+## 2026-10-12 — Release paired booking/lock compatibility containment
+- **Task:** Complete the separately approved Phase 0 booking/lock compatibility release and dedicated-account acceptance.
+- **Objective:** Make the real v2 reservation transaction compatible with paired booking/lock rules while preserving unrelated deployed rule bytes and leaving legacy records unchanged.
+- **Files changed:** `.gitignore`, `ops/booking-containment/{deploy-booking.mjs,production-acceptance.mjs,cleanup-generated-accounts.mjs,preflight.mjs}`, booking gate and release result, pre-release inventory status, companion authority/case gate composition notes, roadmap status, documentation index, handoff and this changelog. Release/rollback, acceptance and post-release inventory evidence are under `docs/sathi/rollbacks/`.
+- **Architecture changes:** Added an exact-hash Rules API deployment path that compiles a ruleset, checks source/release immediately before activation and verifies exact active-source readback. Added isolated live SDK acceptance using three unique disposable accounts and generated-only fixture paths; cleanup checks identity, run marker and update-time preconditions.
+- **Firebase changes:** Activated Firestore ruleset `projects/hamrosathi1/rulesets/e8b7524d-3fc8-4aa4-b19f-e89c3bedfac1` in `hamrosathi1`. Active hash `8bfecbb1465176c50eab501b2b4680a19e678d83678a6f2003b197b1514f768f`; before hash `764eb7a390c58ee077a38fe51798ddc994ac5d8db12c556e6bb41db68c08f402`. Scope is bookings, booking_locks and `sathiBooking*` helpers. No document migration, Functions, index, Hosting, Storage, claims or provider deployment/action.
+- **UI changes:** None.
+- **Security implications:** Real SDK verified paired reservation creation, cross-user read denial, payment mutation denial, companion confirmation, customer cancellation, canceled-lock reuse and active-source hash. Legacy bookings remained readable and unchanged; historical companion authority remains an independent blocker.
+- **Performance implications:** No queries/listeners were added. Pre/post inventories were bounded paged reads under 1,000 documents, not atomic snapshots.
+- **Tests performed:** 29/29 booking emulator cases passed on demo project/loopback port 8087; 6/6 static/rollback checks passed; live SDK acceptance passed 5/5; all three Auth accounts and seven generated Firestore paths were deleted and verified. Post-release inventory read back the candidate and found 105 legacy bookings, zero v2 and one consistent lock, matching pre-release counts. No payment charge; test bookings remained `paymentStatus: not_started`.
+- **Known issues:** This does not finish Phase 0 or Phase 5. No v2 production booking exists; all 105 observed records remain legacy. Companion authority, broader staff scope, Event policy, App Check, PITR/restore, installed-PWA/device acceptance, server-authoritative booking v3, provider verification, refunds and reconciliation remain open. Existing authority combined artifacts still match the newly active booking source, but remain local and unreleased. An initial cleanup attempt surfaced email-case normalization; the generated identities were recovered/deleted and the final acceptance teardown passed. Generated fixture plans are excluded from Git. No new Functions deployment is authorized.
+- **Next recommended task:** Continue the dependency-ordered Phase 0–12 roadmap. Review and separately scope the next Phase 0 authority gate against the new active hash; do not reuse the pre-release baseline or infer authorization for another production release.
+## 2026-10-12 — Add bounded pure ledger lot planning
+- **Task:** Continue the Phase 3 preparatory slice while Phase 1 identity policy remains under review.
+- **Objective:** Define deterministic oldest-first lot allocation and an explicit consolidation result without adding financial writes.
+- **Files changed:** `shared/contracts/money.ts`, `src/__tests__/money-contract.test.ts`, `docs/sathi/PHASE_03_LEDGER_CONTRACT_SLICE_2026-09-30.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, and this changelog.
+- **Architecture changes:** Added a pure lot planner with a 20-lot maximum, stable creation-time/ID ordering, and whole-request `INSUFFICIENT` / `CONSOLIDATION_REQUIRED` results. It does not verify source funding or eligibility, persist a plan, or mutate balances/lots.
+- **Firebase changes:** None; no schema, rules, indexes, Functions, reads, writes, or deployment.
+- **Security implications:** Documented that caller-supplied lot facts must be re-read and authorized by a future backend transaction. No client authority or balance path was introduced.
+- **Performance implications:** Bounded candidate sort; no runtime integration or database reads.
+- **Tests performed:** Focused tests were authored for ordering, ineligible lots, insufficient value, cap behavior, duplicate IDs, and invalid amounts. They were not run, following the owner's instruction to skip the testing phase.
+- **Known issues:** The planner is not a ledger. Finance-approved accounts/funding policy, Phase 1 authority/config, durable operation idempotency, atomic writers, reconciliation and concurrency qualification remain open.
+- **Next recommended task:** Continue policy-independent contract preparation only; do not create wallet balances or activate financial flags.
+
+## 2026-10-12 — Reconcile Phase 1 identity proposal with official legal sources

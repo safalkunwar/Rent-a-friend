@@ -107,39 +107,8 @@ export class AdminRepository {
     });
   }
 
-  async approveGuideApplication(applicationId: string, companionId?: string) {
-    if (companionId) {
-      await firestore.updateDocument(`companions/${companionId}`, { isVerified: true, updatedAt: new Date().toISOString() });
-    }
-    await firestore.updateDocument(`guideApplications/${applicationId}`, { status: 'approved', updatedAt: new Date().toISOString() });
-    await auditService.log({
-      action: 'approve_guide',
-      actorId: 'admin',
-      actorName: 'Admin',
-      targetType: 'guideApplication',
-      targetId: applicationId,
-      details: { companionId },
-    });
-  }
-
-  async rejectGuideApplication(applicationId: string) {
-    await firestore.updateDocument(`guideApplications/${applicationId}`, { status: 'rejected', updatedAt: new Date().toISOString() });
-    await auditService.log({
-      action: 'reject_guide',
-      actorId: 'admin',
-      actorName: 'Admin',
-      targetType: 'guideApplication',
-      targetId: applicationId,
-      details: {},
-    });
-  }
-
   async listCompanions(limitCount = 100) {
     return firestore.getDocuments<any>('companions', { limitCount });
-  }
-
-  async toggleCompanionVerification(companionId: string, isVerified: boolean) {
-    await firestore.updateDocument(`companions/${companionId}`, { isVerified: !isVerified });
   }
 
   async listCommunityPosts(limitCount = 100) {

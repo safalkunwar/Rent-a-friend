@@ -1,5 +1,7 @@
 # Authentication + KYC + Companion Onboarding Architecture
 
+> **Current qualification note (2026-09-30):** The August 26 “Phase-1 foundation implemented & live-verified” label below is historical and does not establish current approval authority. A September 26 read-only inventory found 40 noncanonical companion profiles with old verified flags, zero approved users, and no reviewer assignment documents. The local review UI/repository are paused by default. See [the current authority gate](COMPANION_AUTHORITY_CONTAINMENT_GATE_2026-09-26.md) and [Phase 1 decision proposal](PHASE_01_IDENTITY_EVIDENCE_DECISION_2026-09-30.md). No new identity capability is released.
+
 **Last updated:** 2026-08-26 · Status: Phase-1 foundation implemented & live-verified
 
 ## Core rule

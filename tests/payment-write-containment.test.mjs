@@ -6,18 +6,31 @@ import { doc, setDoc, getDoc, updateDoc, deleteDoc, writeBatch, setLogLevel } fr
 import { BASELINE_PATH, patchPayments, originalPayments, containedPayments } from '../ops/payment-containment/patch.mjs';
 import { composeContainment } from '../ops/payment-containment/combined.mjs';
 import { originalAssignments, containedAssignments } from '../ops/staff-containment/assignment-patch.mjs';
+import { patchBookingLocks, bookingSection, fragment } from '../ops/booking-containment/patch.mjs';
+import { patchCompanionAuthority, BOOKING_HASH } from '../ops/companion-authority-containment/patch.mjs';
+import { patchCaseAuthority, BOOKING_AUTHORITY_HASH } from '../ops/companion-review-case-containment/patch.mjs';
 
 if (process.env.FIRESTORE_EMULATOR_HOST !== '127.0.0.1:8087') throw new Error('Use isolated loopback Firestore at 127.0.0.1:8087; no live fallback.');
 let env;
 const combined = process.env.SATHI_COMBINED_GATE === '1';
+const bookingGate = process.env.SATHI_BOOKING_COMPATIBILITY_GATE === '1';
+const caseGate = process.env.SATHI_REVIEW_CASE_COMBINED_GATE === '1';
+const companionGate = caseGate || process.env.SATHI_COMPANION_AUTHORITY_COMBINED_GATE === '1';
 const db = (uid, claims = {}) => env.authenticatedContext(uid, { admin: false, role: 'customer', adminRole: 'none', ...claims }).firestore();
 before(async () => {
   const baseline = await readFile(BASELINE_PATH, 'utf8');
-  const candidate = await readFile(`ops/payment-containment/${combined ? 'combined-' : ''}candidate.firestore.rules`, 'utf8');
-  assert.equal(candidate, combined ? composeContainment(baseline) : patchPayments(baseline));
-  let restored = candidate.replace(containedPayments, originalPayments);
-  if (combined) restored = restored.replace(containedAssignments, originalAssignments);
-  assert.equal(restored, baseline, 'Every unrelated byte must be preserved');
+  const candidate = await readFile(caseGate ? 'ops/companion-review-case-containment/booking-combined.firestore.rules' : companionGate ? 'ops/companion-authority-containment/booking-combined.firestore.rules' : bookingGate ? 'ops/booking-containment/candidate.firestore.rules' : `ops/payment-containment/${combined ? 'combined-' : ''}candidate.firestore.rules`, 'utf8');
+  const reviewed = combined ? composeContainment(baseline) : patchPayments(baseline);
+  if (bookingGate) assert.ok(combined, 'Booking gate must retain the combined release.');
+  const expected = bookingGate ? patchBookingLocks(reviewed) : reviewed;
+  const authorityExpected = companionGate ? patchCompanionAuthority(expected, BOOKING_HASH) : expected;
+  assert.equal(candidate, caseGate ? patchCaseAuthority(authorityExpected, BOOKING_AUTHORITY_HASH) : authorityExpected);
+  if (!companionGate) {
+    let restored = bookingGate ? candidate.replace(fragment + '\n', bookingSection(reviewed).original) : candidate;
+    restored = restored.replace(containedPayments, originalPayments);
+    if (combined) restored = restored.replace(containedAssignments, originalAssignments);
+    assert.equal(restored, baseline, 'Every unrelated byte must be preserved');
+  }
   setLogLevel('silent');
   env = await initializeTestEnvironment({ projectId: 'demo-sathi-payment-containment', firestore: { host: '127.0.0.1', port: 8087, rules: candidate } });
 });

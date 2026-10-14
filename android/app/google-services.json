@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "932995524964",
+    "project_id": "hamrosathi1",
+    "storage_bucket": "hamrosathi1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:932995524964:android:57f1c61369de623bbb3271",
+        "android_client_info": {
+          "package_name": "com.sathi.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "932995524964-ndlr0nc374n1psri2sabqrgh0ppj2qak.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBql6MC0wwlApXK4GTVX__96zXcS7vvdtk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "932995524964-ndlr0nc374n1psri2sabqrgh0ppj2qak.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "932995524964-b1hopove6jqp4sevtha9v88asrp00or8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.sathi.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

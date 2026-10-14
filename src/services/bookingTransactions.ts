@@ -12,7 +12,11 @@ export async function reserveBooking(store: Firestore, uid: string, input: Booki
     const existing = await tx.get(bookingRef);
     if (existing.exists()) {
       const saved = existing.data();
-      if (saved.userId !== uid || intentFields.some(field => (saved[field] ?? '') !== (input[field] ?? ''))) {
+      const sameCoordinates = (!saved.meetingCoordinates && !input.meetingCoordinates) ||
+        (saved.meetingCoordinates && input.meetingCoordinates &&
+          saved.meetingCoordinates.latitude === input.meetingCoordinates.latitude &&
+          saved.meetingCoordinates.longitude === input.meetingCoordinates.longitude);
+      if (saved.userId !== uid || !sameCoordinates || intentFields.some(field => (saved[field] ?? '') !== (input[field] ?? ''))) {
         throw new Error('This request ID already belongs to a different booking intent.');
       }
       return existing.id;

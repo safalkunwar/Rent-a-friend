@@ -211,10 +211,10 @@ Feature rollout: compare current deployed rules to exact candidate, preserve rol
 - **Dependencies:** Phases 3/5/6; camera/device acceptance; explicitly funded cashback policy before posting any live reward.
 - **Domain reading:** 23_PARTNER_QR_ARCHITECTURE.md, 24_WALLET_LEDGER_ARCHITECTURE.md, 28_SAFETY_TRIP_ARCHITECTURE.md, 31_DATA_CONTRACTS.md
 
-### Phase 8 — Coins and qualified referrals
+### Phase 8 — Coins and funded rewards
 
-- **Goal:** Activate separately gated funded coin earning/spending and bounded qualified attribution.
-- **Business rules:** No P2P, no coin expiry; minimum potential cash redemption 5000 Coins but cash flag remains OFF. Direct verification reward only if approved; deeper levels reward completed qualified activity only, max5. No recruitment-chain payouts.
+- **Goal:** Qualify a separately gated, funded Coin earn-and-spend pilot with auditable liability and safe profile entitlements.
+- **Business rules:** Current recommendation is 100 one-time welcome Coins for at most 1,000 eligible new accounts (100,000 Coins; NPR 10,000 reference allocation) and 50 Coins for a new full-profile unlock after the five free daily grants; reopening is free. This is a proposal only. No P2P, purchase, cash redemption, direct-referrer or multilevel reward in the proposed pilot. Coins do not expire under the current target policy, pending counsel review.
 - **Reuse:** Phase 3 ledger/lots, Phase 2 profile grants, verified events from Phase 5/7 and provider sandbox adapters.
 - **Existing files expected to change/inspect:** src/services/payments.ts; src/services/preferences.ts; existing Wallet/referral UI route components (resolve current imports).
 - **New files/modules proposed:** functions/src/domains/referrals/; functions/src/domains/rewards/; src/services/wallet.ts; shared/contracts/rewards.ts; tests/integration/referral-rewards.test.ts.
@@ -222,12 +222,12 @@ Feature rollout: compare current deployed rules to exact candidate, preserve rol
 - **UI work:** Unified coin statement, truthful earnings/held/reversed states, purchase only when merchant-approved; show unlock as platform fee, not person payment.
 - **Permissions:** Adult/standing/source eligibility verified server-side; no client ancestor list, reward rate or balance authority; staff cannot inspect full private referral graph without case scope.
 - **Migration and preservation:** No fake engagement qualification or demo balances. Attribution immutable from validated invitee registration ordinal; existing accounts no retroactive parent without approved migration policy.
-- **Tests and verification:** Cycles including >5 length, self-referral, shared-device review, repeated qualified event, cap race, refunded source reversal, paid unlock concurrency, source cash ineligibility and chargeback freeze.
+- **Tests and verification:** Welcome cap race and replay, unique profile entitlement, free-quota/spend serialization, repeated unlock, insufficient balance, spend failure rollback, source reversal, UNKNOWN reconciliation, abuse review and client-write denial.
 - **Edge cases:** Missing ancestor, suspended ancestor, policy changes, no eligible funding, purchaser refund after coin spend.
 - **Failure handling:** Hold suspect reward with appeal; never hide failed spend behind local balance. Refund corrections are journal reversals.
-- **Definition of done:** Funded source-to-statement audit and negative tests; every activation recorded by feature/cohort. Deep rewards/cash remain off absent explicit legal approval.
+- **Definition of done:** Owner/finance/counsel-approved funded source-to-statement audit, durable replay/reversal/reconciliation, atomic profile entitlement, and negative/concurrency tests; every activation recorded by feature/cohort. Redemption and referral rewards require separate policy and release decisions.
 - **Must NOT touch:** No automatic multi-level activation, cash payout, money tips/gifts workaround or recruitment promise.
-- **Dependencies:** Phases 2/3/5/7 as applicable source; owner-reviewed costs/caps/funding and merchant/compliance approval.
+- **Dependencies:** Phase 1 canonical identity/provider eligibility, Phase 2 authoritative profile grants, Phase 3 durable ledger; owner/finance/counsel-reviewed costs, cap, funding evidence, and separate deployment authorization.
 - **Domain reading:** 24_WALLET_LEDGER_ARCHITECTURE.md, 25_REFERRAL_ARCHITECTURE.md, 27_RECOMMENDATION_ARCHITECTURE.md, 31_DATA_CONTRACTS.md
 
 ### Phase 9 — Moderated Events and admission

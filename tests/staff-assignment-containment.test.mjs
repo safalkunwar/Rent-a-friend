@@ -5,20 +5,33 @@ import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebas
 import { doc, collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, setLogLevel } from 'firebase/firestore';
 import { BASELINE_PATH, originalPayments, containedPayments } from '../ops/payment-containment/patch.mjs';
 import { composeContainment } from '../ops/payment-containment/combined.mjs';
+import { patchBookingLocks, bookingSection, fragment } from '../ops/booking-containment/patch.mjs';
+import { patchCompanionAuthority, BOOKING_HASH } from '../ops/companion-authority-containment/patch.mjs';
+import { patchCaseAuthority, BOOKING_AUTHORITY_HASH } from '../ops/companion-review-case-containment/patch.mjs';
 import { patchAssignments, originalAssignments, containedAssignments } from '../ops/staff-containment/assignment-patch.mjs';
 
 if (process.env.FIRESTORE_EMULATOR_HOST !== '127.0.0.1:8087') throw new Error('Requires isolated loopback emulator; no live fallback.');
 let env;
 const combined = process.env.SATHI_COMBINED_GATE === '1';
+const bookingGate = process.env.SATHI_BOOKING_COMPATIBILITY_GATE === '1';
+const caseGate = process.env.SATHI_REVIEW_CASE_COMBINED_GATE === '1';
+const companionGate = caseGate || process.env.SATHI_COMPANION_AUTHORITY_COMBINED_GATE === '1';
 const db = (uid, claims = {}) => env.authenticatedContext(uid, { admin: false, role: 'customer', adminRole: 'none', ...claims }).firestore();
 const assignment = uid => ({ uid, role: 'read_only_admin', updatedAt: '2026-09-13T00:00:00.000Z' });
 before(async () => {
   const baseline = await readFile(BASELINE_PATH, 'utf8');
-  const candidate = await readFile(combined ? 'ops/payment-containment/combined-candidate.firestore.rules' : 'ops/staff-containment/assignment-candidate.firestore.rules', 'utf8');
-  assert.equal(candidate, combined ? composeContainment(baseline) : patchAssignments(baseline));
-  let restored = candidate.replace(containedAssignments, originalAssignments);
-  if (combined) restored = restored.replace(containedPayments, originalPayments);
-  assert.equal(restored, baseline);
+  const candidate = await readFile(caseGate ? 'ops/companion-review-case-containment/booking-combined.firestore.rules' : companionGate ? 'ops/companion-authority-containment/booking-combined.firestore.rules' : bookingGate ? 'ops/booking-containment/candidate.firestore.rules' : combined ? 'ops/payment-containment/combined-candidate.firestore.rules' : 'ops/staff-containment/assignment-candidate.firestore.rules', 'utf8');
+  const reviewed = combined ? composeContainment(baseline) : patchAssignments(baseline);
+  if (bookingGate) assert.ok(combined, 'Booking gate must retain the combined release.');
+  const expected = bookingGate ? patchBookingLocks(reviewed) : reviewed;
+  const authorityExpected = companionGate ? patchCompanionAuthority(expected, BOOKING_HASH) : expected;
+  assert.equal(candidate, caseGate ? patchCaseAuthority(authorityExpected, BOOKING_AUTHORITY_HASH) : authorityExpected);
+  if (!companionGate) {
+    let restored = bookingGate ? candidate.replace(fragment + '\n', bookingSection(reviewed).original) : candidate;
+    restored = restored.replace(containedAssignments, originalAssignments);
+    if (combined) restored = restored.replace(containedPayments, originalPayments);
+    assert.equal(restored, baseline);
+  }
   setLogLevel('silent');
   env = await initializeTestEnvironment({ projectId: 'demo-sathi-staff-assignments', firestore: { host: '127.0.0.1', port: 8087, rules: candidate } });
 });

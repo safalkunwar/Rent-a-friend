@@ -15,6 +15,7 @@ interface MapPreviewProps {
   height?: string;
   onMarkerClick?: (id: string) => void;
   className?: string;
+  presentation?: 'default' | 'explore';
 }
 
 // Helper to extract valid numeric lat/lng from various object formats
@@ -39,6 +40,7 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
   height = '320px',
   onMarkerClick,
   className = '',
+  presentation = 'default',
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -76,7 +78,8 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
         center: [safeCenter.lat, safeCenter.lng],
         zoom: zoom,
         zoomControl: false,
-        attributionControl: false,
+        attributionControl: presentation === 'explore',
+        scrollWheelZoom: presentation !== 'explore',
       });
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -121,14 +124,17 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
       }
     });
 
-    const tileUrl = currentTheme === 'light'
+    const tileUrl = presentation === 'explore'
+      ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+      : currentTheme === 'light'
       ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
       : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
     L.tileLayer(tileUrl, {
-      maxZoom: 20,
+      maxZoom: presentation === 'explore' ? 19 : 20,
+      ...(presentation === 'explore' ? { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', referrerPolicy: 'strict-origin-when-cross-origin' } : {}),
     }).addTo(map);
-  }, [currentTheme]);
+  }, [currentTheme, presentation]);
 
   // Handle map centering updates
   useEffect(() => {
@@ -157,7 +163,7 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
       if (marker.type === 'hotel') pinColor = '#8B5CF6'; // Partner Purple
 
       const markerIcon = L.divIcon({
-        html: `
+        html: presentation === 'explore' ? `<span class="explore-map-pin" style="background-color: ${pinColor}"></span>` : `
           <div class="relative flex items-center justify-center w-8 h-8 group">
             <div class="absolute w-8 h-8 rounded-full bg-[${pinColor}]/20 animate-ping"></div>
             <div class="absolute w-4.5 h-4.5 rounded-full bg-[${pinColor}] border-2 border-surface shadow-lg flex items-center justify-center transition-transform group-hover:scale-125 duration-300">
@@ -170,7 +176,7 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
         iconAnchor: [16, 16],
       });
 
-      const leafletMarker = L.marker([lat, lng], { icon: markerIcon });
+      const leafletMarker = L.marker([lat, lng], { icon: markerIcon, title: marker.title, alt: marker.title });
       
       const popupThemeText = currentTheme === 'light' ? '#1D1B18' : '#FFFFFF';
       const popupThemeBg = currentTheme === 'light' ? '#FFFFFF' : '#17191C';
@@ -217,15 +223,15 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
       <div ref={mapContainerRef} className="w-full h-full z-10" />
 
       {/* Map Header Overlay */}
-      <div className="absolute top-4 left-4 z-[400] bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl px-3 py-1.5 flex items-center gap-2 pointer-events-none">
+      {presentation === 'default' && <div className="absolute top-4 left-4 z-[400] bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl px-3 py-1.5 flex items-center gap-2 pointer-events-none">
         <Compass className="w-4 h-4 text-primary-action animate-spin" style={{ animationDuration: '6s' }} />
         <span className="text-[10px] md:text-xs font-bold text-white tracking-wide">
           SATHI Live Map • Kathmandu
         </span>
-      </div>
+      </div>}
 
       {/* Map Actions Overlay */}
-      {markers.length > 0 && (
+      {presentation === 'default' && markers.length > 0 && (
         <div className="absolute inset-x-0 bottom-4 z-[400] flex justify-center px-4 pointer-events-none">
           <div className="flex flex-wrap justify-center gap-1.5 max-w-full">
             {markers.slice(0, 4).map((marker, i) => (

@@ -1,3 +1,20 @@
+import type { Companion } from '../types';
+
+/** Historical isVerified alone is not evidence of an approved application. */
+export function canDisplayCompanionApproval(companion: Companion, releaseEnabled: boolean): boolean {
+  return releaseEnabled && companion.isVerified === true &&
+    companion.userId === companion.id &&
+    companion.verificationBadge === 'KYC_VERIFIED' &&
+    typeof companion.approvalApplicationId === 'string' && companion.approvalApplicationId.length > 0;
+}
+
+export function canOfferV2Booking(companion: Companion, releaseEnabled: boolean): boolean {
+  return canDisplayCompanionApproval(companion, releaseEnabled) &&
+    companion.availability !== false &&
+    Number.isInteger(companion.hourlyRate) && companion.hourlyRate >= 500 &&
+    Array.isArray(companion.availableDays) && companion.availableDays.length > 0;
+}
+
 export interface BookingEligibilityUser {
   uid?: string;
   id?: string;

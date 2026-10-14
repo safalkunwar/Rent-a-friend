@@ -1,4 +1,22 @@
-# Staff RBAC Containment Gate — 2026-09-13
+# Staff RBAC containment gate — updated 2026-10-12
+
+## Current-source continuation — October 12, 2026
+
+The earlier candidate below starts from `764eb7a3...`, which is no longer active after the separately approved booking/lock release. A fresh read-only production read on October 12 confirmed active rules hash `8bfecbb1465176c50eab501b2b4680a19e678d83678a6f2003b197b1514f768f` and ruleset `e8b7524d-3fc8-4aa4-b19f-e89c3bedfac1`. The analytics-only patch was regenerated from that exact source and saved separately at `ops/staff-rbac-containment/active-2026-10-12/`; candidate hash is `94249bae2dc106e30b112e3f763a92695bbcf0e9fdb55359b6a3d00cd20b1fd1`.
+
+The current-source candidate changes only the `analytics` read check and adds the scoped `isResourceAdmin` helper; its source bytes outside those anchors are identical. The branch admits non-anonymous `super_admin`, `platform_admin`, and `analytics_admin` claims, and continues to deny all analytics writes. Current-source static composition checks passed 2/2, and the Firestore emulator role/privacy suite passed 17/17 on loopback port 8087, including denial for customer, legacy/document-only, finance, support, moderation, booking, KYC, safety, content and read-only roles, anonymous provider, and subject access to staff-only suspicious-activity notes.
+
+**This remains a local candidate and is not deployed.** The tests establish candidate behavior in the emulator, not live staff-token validity or production impact. The change needs its own explicit release approval and exact active-source/hash recheck immediately before any deployment. It does not qualify broader staff RBAC, audit/SOS/report permissions, or role migration. See `ops/staff-rbac-containment/active-2026-10-12/manifest.json` for the captured source/ruleset and candidate hashes.
+
+## Current result
+
+The analytics-only candidate was repaired after realistic Auth-token emulator tests exposed the old `isAnonymous()` assumption. It now reads `firebase.sign_in_provider`, permits explicit `super_admin`, `platform_admin`, and `analytics_admin` claims, and denies other/legacy/document-only roles. The analytics role is included because the existing admin permission registry grants it `analytics.read`. Client analytics writes remain denied; no suspiciousActivity/audit/SOS permission is changed by this isolated candidate.
+
+New SHA-256: `e50ec15688584e69e8ffd94918cea23b34802cf76c5f14b79b41bc4a39ff97db`. **17/17 emulator and 8/8 static checks passed; NOT deployed.** Correct baseline path is `ops/payment-containment/combined-candidate.firestore.rules` (active `764eb7a3...`), not the BEFORE rollback. See [continuation repair result](CONTINUATION_REPAIR_RESULT_2026-09-14.md).
+
+The cached emulator works on installed Java 17. The older draft/hash/blocker narrative below is historical, not current qualification. The five-branch combined draft remains rejected and must not be substituted for this tested candidate.
+
+## Historical analytics draft — September 13
 
 ## Purpose
 

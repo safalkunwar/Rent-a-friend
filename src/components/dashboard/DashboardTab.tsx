@@ -4,7 +4,7 @@ import { useToast } from '../ui/Toast';
 import { useCompanions } from '../../hooks/useFirestoreData';
 import { companionDashboardService, type CompanionBookingRequest } from '../../services/companionDashboard';
 import { eventParticipantsService } from '../../services/eventParticipants';
-import { Star, ShieldCheck, Heart, MapPin, Settings, Calendar, X, Bell } from 'lucide-react';
+import { Star, Heart, MapPin, Settings, Calendar, X, Bell } from 'lucide-react';
 import * as motion from 'motion/react-client';
 import { SafeImage } from '../ui/SafeImage';
 import { selectCustomerDashboard } from '../../services/dashboardData';
@@ -320,7 +320,7 @@ const DashboardContent: React.FC<{ onMessageCompanion?: (companionId: string) =>
                       </button>
                     </div>
                     <div className="p-4 bg-surface-elevated">
-                      <h3 className="font-bold text-text-primary flex items-center gap-1.5">{companion.name} {companion.isVerified && <ShieldCheck aria-label="Application approved" className="w-3.5 h-3.5 text-primary-action" />}</h3>
+                      <h3 className="font-bold text-text-primary flex items-center gap-1.5">{companion.name}</h3>
                       <p className="text-xs text-text-secondary flex items-center gap-1 mt-1"><MapPin className="w-3 h-3" /> {companion.location}</p>
                     </div>
                   </div>

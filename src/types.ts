@@ -15,6 +15,7 @@ export interface User {
   phone?: string;
   bio?: string;
   location?: string;
+  interests?: string[];
 }
 
 export interface Review {
@@ -56,6 +57,9 @@ export interface ExperienceStory {
 export interface Companion {
   id: string;
   userId?: string;
+  approvalApplicationId?: string;
+  verificationBadge?: string;
+  availability?: boolean;
   name: string;
   age: number;
   gender: string;

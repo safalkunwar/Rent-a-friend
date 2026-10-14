@@ -4,11 +4,35 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { user } from "firebase-functions/v1/auth";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
+import { issueNewUserWelcomeCoins, type WelcomeAccountEvidence } from "./domains/rewards/welcomeGrant";
+import { readCoinWalletForUid } from "./domains/wallet/coinWalletRead";
+import { grantProfileUnlockWithCoins } from "./domains/discovery/profileUnlockGrant";
 
 admin.initializeApp();
 export { onStoryLike, onEventLike, onEventComment, cleanupExpiredStories, onStoryDeletedMedia, onMediaUploadFinalized, cleanupMediaOrphans } from './mediaSocial';
 
 setGlobalOptions({ region: "us-central1", maxInstances: 10 });
+
+async function issueWelcomeGrantForVerifiedAccount(userRecord: admin.auth.UserRecord): Promise<void> {
+  const createdAtMillis = Date.parse(userRecord.metadata.creationTime);
+  const evidence: WelcomeAccountEvidence = {
+    uid: userRecord.uid,
+    createdAtMillis,
+    emailVerified: userRecord.emailVerified,
+    phoneNumber: userRecord.phoneNumber ?? null,
+    disabled: userRecord.disabled,
+  };
+  try {
+    const result = await issueNewUserWelcomeCoins(admin.firestore(), evidence);
+    if (result.status === "GRANTED") {
+      logger.info("Welcome Coins grant posted", { uid: userRecord.uid, rewardId: result.rewardId });
+    } else if (result.status !== "NOT_CONFIGURED" && result.status !== "ALREADY_GRANTED") {
+      logger.warn("Welcome Coins grant was not posted", { uid: userRecord.uid, status: result.status });
+    }
+  } catch (error) {
+    logger.error("Welcome Coins grant failed closed", { uid: userRecord.uid, error });
+  }
+}
 
 // --- Authentication & User Management ---
 
@@ -30,8 +54,59 @@ export const onUserCreate = user().onCreate(async (user) => {
 
     await admin.auth().setCustomUserClaims(uid, { role: "customer" });
     logger.info(`User profile and claims created for ${uid}`);
+    await issueWelcomeGrantForVerifiedAccount(user);
   } catch (error) {
     logger.error(`Error in onUserCreate for ${uid}:`, error);
+  }
+});
+
+/** Lets a newly verified owner retry the grant; eligibility and UID come from Firebase Auth. */
+export const claimWelcomeCoins = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to check welcome Coin eligibility.");
+  try {
+    const userRecord = await admin.auth().getUser(request.auth.uid);
+    const createdAtMillis = Date.parse(userRecord.metadata.creationTime);
+    const result = await issueNewUserWelcomeCoins(admin.firestore(), {
+      uid: userRecord.uid,
+      createdAtMillis,
+      emailVerified: userRecord.emailVerified,
+      phoneNumber: userRecord.phoneNumber ?? null,
+      disabled: userRecord.disabled,
+    });
+    return result;
+  } catch (error) {
+    logger.error("Welcome Coins claim failed closed", { uid: request.auth.uid, error });
+    throw new HttpsError("internal", "Welcome Coins could not be issued. Please try again later.");
+  }
+});
+
+/** Returns only the caller's server-owned wallet projection and a bounded statement window. */
+export const getCoinWallet = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to view your Coin wallet.");
+  const uid = request.auth.uid;
+  try {
+    return await readCoinWalletForUid(admin.firestore(), uid);
+  } catch (error) {
+    logger.error("Coin wallet read failed", { uid, error });
+    throw new HttpsError("internal", "Your Coin wallet could not be loaded. Please try again.");
+  }
+});
+
+/** Grants the caller's canonical profile entitlement under a versioned, disabled-by-default policy. */
+export const requestCompanionProfileUnlock = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to open this profile.");
+  const providerUid = request.data?.providerUid;
+  const requestId = request.data?.requestId;
+  if (typeof providerUid !== "string" || typeof requestId !== "string") {
+    throw new HttpsError("invalid-argument", "A profile and request ID are required.");
+  }
+  try {
+    return await grantProfileUnlockWithCoins(
+      admin.firestore(), request.auth.uid, providerUid, requestId,
+    );
+  } catch (error) {
+    logger.error("Profile unlock request failed closed", { uid: request.auth.uid, providerUid, error });
+    throw new HttpsError("internal", "This profile could not be opened. Please try again later.");
   }
 });
 

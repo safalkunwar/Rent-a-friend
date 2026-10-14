@@ -7,6 +7,8 @@ import { BookingFlowModal } from './BookingFlowModal';
 import { MapPreview } from '../maps/MapPreview';
 import { MAP_CENTER } from '../../services/maps';
 import { SafeImage } from '../ui/SafeImage';
+import { canDisplayCompanionApproval, canOfferV2Booking } from '../../services/bookingEligibility';
+import { bookingV2PresentationEnabled } from '../../services/releaseGates';
 
 interface CompanionProfileModalProps {
   companion: Companion | null;
@@ -23,8 +25,11 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
   if (!companion) return null;
 
   const isFavorite = favorites.includes(companion.id);
+  const approvalVisible = canDisplayCompanionApproval(companion, bookingV2PresentationEnabled);
+  const bookingAvailable = canOfferV2Booking(companion, bookingV2PresentationEnabled);
 
   const handleBookClick = () => {
+    if (!bookingAvailable) return;
     if (!currentUser && onOpenAuth) {
       onOpenAuth('login');
       return;
@@ -88,7 +93,7 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                 <div className="flex items-end gap-3 md:gap-4 mb-3 md:mb-4">
                   <h1 id="companion-profile-name" className="text-2xl md:text-4xl font-bold text-overlay-text-primary flex items-center gap-2">
                     {companion.name}, {companion.age}
-                    {companion.isVerified && <ShieldCheck className="w-5 h-5 md:w-6 md:h-6 text-primary-action" />}
+                    {approvalVisible && <ShieldCheck aria-label="Application approved" className="w-5 h-5 md:w-6 md:h-6 text-primary-action" />}
                   </h1>
                 </div>
 
@@ -172,10 +177,10 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                   </div>
 
                   <div className="space-y-4 mb-8">
-                    <div className="flex items-center gap-3 text-sm text-text-primary">
+                    {companion.responseTime && <div className="flex items-center gap-3 text-sm text-text-primary">
                       <CheckCircle2 className="w-5 h-5 text-primary-action" />
-                      <span>Usually responds in {companion.responseTime || '1 hour'}</span>
-                    </div>
+                      <span>Listed response time: {companion.responseTime}</span>
+                    </div>}
                     <div className="flex items-center gap-3 text-sm text-text-primary">
                       <Calendar className="w-5 h-5 text-primary-action" />
                       <span>
@@ -193,12 +198,12 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                     )}
                   </div>
 
-                  <button
+                  {bookingAvailable ? <button
                     onClick={handleBookClick}
                     className="w-full py-4 bg-primary-action text-white rounded-2xl font-bold text-lg hover:bg-primary-action-hover transition-colors mb-3 shadow-md shadow-primary-action/20"
                   >
                     Request to Book
-                  </button>
+                  </button> : <p className="text-sm text-text-secondary mb-3">Booking requests are unavailable while companion approvals are reviewed.</p>}
                   <button
                     onClick={handleMessageClick}
                     className="w-full py-3 bg-surface-elevated text-text-primary border border-border-token rounded-2xl font-medium hover:border-primary-action transition-colors flex items-center justify-center gap-2"
@@ -219,12 +224,12 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
               </div>
             </div>
             <div className="flex gap-2">
-              <button
+              {bookingAvailable ? <button
                 onClick={handleBookClick}
                 className="flex-1 py-3 bg-primary-action text-white rounded-xl font-bold text-sm hover:bg-primary-action-hover transition-colors shadow-md shadow-primary-action/20"
               >
                 Request to Book
-              </button>
+              </button> : <p className="flex-1 text-xs text-text-secondary">Booking requests are unavailable while companion approvals are reviewed.</p>}
               <button
                 onClick={handleMessageClick}
                 className="px-4 py-3 bg-surface-elevated text-text-primary border border-border-token rounded-xl font-medium hover:border-primary-action transition-colors flex items-center justify-center gap-2"

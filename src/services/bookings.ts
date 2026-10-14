@@ -64,6 +64,10 @@ export const bookingService = {
         return { success: false, message: 'Booking not found' };
       }
 
+      if (booking.policyVersion !== 2) {
+        return { success: false, message: 'Earlier booking is view-only while records are reviewed.' };
+      }
+
       if (booking.status !== 'pending') {
         return { success: false, message: `Booking is already ${booking.status}` };
       }
@@ -82,6 +86,10 @@ export const bookingService = {
       const booking = await firestore.getDocument<any>(`bookings/${bookingId}`);
       if (!booking) {
         return { success: false, message: 'Booking not found' };
+      }
+
+      if (booking.policyVersion !== 2) {
+        return { success: false, message: 'Earlier booking is view-only while records are reviewed.' };
       }
 
       if (booking.status !== 'pending') {

@@ -1,0 +1,22 @@
+{
+  "mode": "LOCAL_ANALYTICS_AUTHORITY_REBASE_CANDIDATE",
+  "project": "hamrosathi1",
+  "release": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/e8b7524d-3fc8-4aa4-b19f-e89c3bedfac1",
+    "createTime": "2026-07-12T04:35:43.978011Z",
+    "updateTime": "2026-10-12T14:06:22.927363Z"
+  },
+  "baselineHash": "8bfecbb1465176c50eab501b2b4680a19e678d83678a6f2003b197b1514f768f",
+  "candidateHash": "94249bae2dc106e30b112e3f763a92695bbcf0e9fdb55359b6a3d00cd20b1fd1",
+  "changedBranches": [
+    "analytics"
+  ],
+  "changedHelpers": [
+    "isResourceAdmin"
+  ],
+  "sourceOutsideScopedPatch": "BYTE_IDENTICAL",
+  "deployment": "NOT_PERFORMED",
+  "approval": "NOT_REQUESTED",
+  "note": "Local candidate composed from current production readback after the booking/lock release. This does not authorize a rules release."
+}

@@ -1,4 +1,20 @@
-# Booking Lock Containment Gate — 2026-09-13
+# Booking/lock compatibility gate — updated 2026-09-14
+
+## Current status — 2026-10-12
+
+The separately approved paired booking/lock candidate is now active as ruleset `e8b7524d-3fc8-4aa4-b19f-e89c3bedfac1`; the [release result](BOOKING_COMPATIBILITY_RELEASE_RESULT_2026-10-12.md) records exact source readback and dedicated-account acceptance. The [post-release inventory](rollbacks/booking-compatibility-2026-10-12T14-10-52-117Z/manifest.json) confirms 105 legacy bookings, zero v2 and one consistent lock, with no migration. The active hash is `8bfecbb1465176c50eab501b2b4680a19e678d83678a6f2003b197b1514f768f`. This is only the booking/lock containment slice; companion approval authority and the other Phase 0 release gates remain open.
+
+## Current result
+
+The original staff-only lock draft described below is **superseded and not safe to deploy**. Real `reserveBooking()` failed at its initial missing-booking read, and ordinary customer lock writes were incompatible by construction. The tracked candidate now changes both bookings and locks together, from active source `764eb7a3...`, using the existing v2 transaction policy.
+
+Candidate: `ops/booking-containment/candidate.firestore.rules`, SHA-256 `8bfecbb1465176c50eab501b2b4680a19e678d83678a6f2003b197b1514f768f`. **Released 2026-10-12.** The current rerun passed 29/29 real-transaction emulator checks and 6/6 static/rollback checks; dedicated-account live SDK acceptance passed 5/5 with cleanup verified. Existing booking/lock read grants are preserved; mutations require validated paired writes, quote/initial payment state, actor/time transitions and immutable ownership. See [the release result](BOOKING_COMPATIBILITY_RELEASE_RESULT_2026-10-12.md) and [the original repair result](CONTINUATION_REPAIR_RESULT_2026-09-14.md).
+
+The before-release and after-release bounded inventories found 105 legacy bookings, zero v2 and one valid linked lock. No records were migrated/deleted. Existing companion/approval flags remain a separate authority risk. Current source is the released paired candidate; future scoped candidates must compose from the current active source and take a fresh rollback capture. The older pre-deployment rollback noted below is historical and is not the active baseline.
+
+The cached emulator 1.19.8 passed these tests using installed Java 17. The old Java-21 blocker below was not applicable to this available test path.
+
+## Historical rejected lock-only draft — September 13
 
 ## Purpose
 

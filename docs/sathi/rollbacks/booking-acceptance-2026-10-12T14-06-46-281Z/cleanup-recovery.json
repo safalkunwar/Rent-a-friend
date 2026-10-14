@@ -1,0 +1,11 @@
+{
+  "result": "GENERATED_ACCOUNT_CLEANUP_RECOVERED",
+  "accounts": {
+    "bookerA": "DELETED",
+    "bookerB": "DELETED",
+    "companion": "DELETED"
+  },
+  "verification": "Each exact generated UID was matched to its run-owned email (case-insensitive normalization), then Auth lookup confirmed auth/user-not-found.",
+  "fixtureCleanup": "The original SDK run verified all seven generated Firestore paths absent.",
+  "privateIdentityDetails": "Kept under ignored ops/booking-containment/.private/."
+}

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { User, Companion, Booking, Message, Notification, CommunityPost, ExperienceStory } from '../types';
 import { authService, AuthUser } from '../services/auth';
 import { firestore } from '../services/firestore';
@@ -16,7 +16,7 @@ interface AppState {
   currentUser: User | null;
   setCurrentUser: React.Dispatch<React.SetStateAction<User | null>>;
   favorites: string[];
-  toggleFavorite: (companionId: string) => void;
+  toggleFavorite: (companionId: string) => Promise<void>;
   bookings: Booking[];
   addBooking: (booking: Booking) => Promise<void>;
   updateBookingStatus: (id: string, status: Booking['status']) => Promise<void>;
@@ -79,6 +79,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const committedFavorites = useRef<string[]>([]);
+  const favoriteQueue = useRef<Promise<void>>(Promise.resolve());
+  const favoriteSession = useRef(0);
+  const currentUserRef = useRef(currentUser);
+  currentUserRef.current = currentUser;
 
   useEffect(() => {
     console.log('[SATHI] AppProvider auth effect starting');
@@ -87,6 +92,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const unsubscribe = authService.onAuthStateChanged(async (authUser) => {
       if (cancelled) return;
       const requestGeneration = ++generation;
+      favoriteSession.current += 1;
+      favoriteQueue.current = Promise.resolve();
+      committedFavorites.current = [];
       const isCurrent = () => !cancelled && requestGeneration === generation;
       setCurrentUser(null);
       setFavorites([]);
@@ -108,6 +116,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (!isAnonymous) {
             const profile = await loadAuthenticatedProfile(authUser);
             if (isCurrent()) {
+              committedFavorites.current = profile.favorites;
               setCurrentUser(profile);
               setFavorites(profile.favorites);
             }
@@ -201,17 +210,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       unsubCompanionBookings();
       unsubNotifications();
     };
-  }, [currentUser]);
+  }, [currentUser?.id]);
 
-  const toggleFavorite = useCallback((companionId: string) => {
-    setFavorites(prev => {
-      const next = prev.includes(companionId) ? prev.filter(id => id !== companionId) : [...prev, companionId];
-      if (currentUser) {
-        firestore.updateDocument(`users/${currentUser.id}`, { favorites: next });
-      }
-      return next;
+  const toggleFavorite = useCallback((companionId: string): Promise<void> => {
+    if (!companionId || !currentUser || currentUser.role === 'guest') {
+      return Promise.reject(new Error('Sign in to save people.'));
+    }
+    let uid: string;
+    try { uid = requireUid(currentUser.id); } catch (error) { return Promise.reject(error); }
+    const session = favoriteSession.current;
+    const operation = favoriteQueue.current.catch(() => {}).then(async () => {
+      if (session !== favoriteSession.current || currentUserRef.current?.id !== uid) return;
+      requireUid(uid);
+      const previous = committedFavorites.current;
+      const next = previous.includes(companionId)
+        ? previous.filter(id => id !== companionId)
+        : [...previous, companionId];
+      await userRepository.updateFavorites(uid, next);
+      if (session !== favoriteSession.current || currentUserRef.current?.id !== uid) return;
+      try { requireUid(uid); } catch { return; }
+      committedFavorites.current = next;
+      setFavorites(next);
+      setCurrentUser(prev => prev?.id === uid ? { ...prev, favorites: next } : prev);
     });
-  }, [currentUser]);
+    favoriteQueue.current = operation.catch(() => {});
+    return operation;
+  }, [currentUser?.id, currentUser?.role]);
 
   const addBooking = useCallback(async (booking: Booking) => {
     await bookingRepository.createBooking(booking);
@@ -261,6 +285,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [currentUser]);
 
   const logout = useCallback(async () => {
+    favoriteSession.current += 1;
+    favoriteQueue.current = Promise.resolve();
+    committedFavorites.current = [];
     try {
       await authService.logout();
     } catch (err) {
@@ -277,6 +304,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const authUser = await authService.signInAnonymously();
       const user = mapAuthUserToUser(authUser);
       if (user) {
+        favoriteSession.current += 1;
+        favoriteQueue.current = Promise.resolve();
+        committedFavorites.current = [];
         setCurrentUser(user);
         setFavorites([]);
       }

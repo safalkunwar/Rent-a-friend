@@ -1,0 +1,877 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the user is anonymous
+    function isAnonymous() {
+      return isAuthenticated() && request.auth.token.anonymous == true;
+    }
+
+    // Helper function to check if the user is an admin (via custom claim, role or admins collection)
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin' ||
+        request.auth.token.adminRole in ['super_admin','platform_admin','safety_admin','moderation_admin','support_agent','booking_admin','finance_admin','kyc_reviewer','content_admin','analytics_admin','read_only_admin'] ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isCompanion() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['companion'] ||
+        exists(/databases/$(database)/documents/companions/$(request.auth.uid))
+      );
+    }
+
+    function isCustomer() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['customer', 'guest']
+      );
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole == 'super_admin' ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'super_admin'
+      );
+    }
+
+    function isSafetyAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'safety_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'safety_admin']
+      );
+    }
+
+    function isModerationAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'moderation_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'moderation_admin']
+      );
+    }
+
+    function isBookingAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'booking_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'booking_admin']
+      );
+    }
+
+    function isKYCReviewer() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'kyc_reviewer'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'kyc_reviewer']
+      );
+    }
+
+    function isContentAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.adminRole in ['super_admin', 'content_admin'] ||
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'content_admin']
+      );
+    }
+
+    // Helper function to check if the requested data is valid
+    function isValidData(data) {
+      return (!data.keys().hasAll(['createdAt']) || data.createdAt is string) &&
+             (!data.keys().hasAll(['updatedAt']) || data.updatedAt is string);
+    }
+
+    function isValidUserUpdate(uid) {
+      return isAuthenticated() && request.auth.uid == uid &&
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+               'name', 'avatar', 'preferences', 'updatedAt', 'favorites', 'fcmToken',
+               'phone', 'bio', 'languages', 'skills', 'availability', 'interests', 'location'
+             ]);
+    }
+
+    // Users may NEVER modify their own privilege/verification state. These keys
+    // are only writable through the admin path (isAdmin branch) or backend.
+    function userUpdateContainsPrivilegeChange() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['role', 'companionStatus', 'verificationStatus', 'kycVerificationStatus', 'adminRole']);
+    }
+
+
+    // BEGIN SATHI MEDIA ROLLOUT: only Story and user photo branches use these helpers.
+    function sathiMediaMember() {
+      return request.auth != null && request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous';
+    }
+    function sathiMediaOwn(uid) { return sathiMediaMember() && request.auth.uid == uid; }
+    function sathiMediaModerator() {
+      // Trusted claims only: legacy profile/admin-document permissions are not a moderation authority.
+      return sathiMediaMember() && request.auth.token.get('adminRole',
+        request.auth.token.get('admin', false) == true ? 'super_admin' : '') in ['super_admin','moderation_admin'];
+    }
+    function sathiMediaChangedOnly(fields) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields); }
+    function sathiMediaStatus(status) { return status in ['ACTIVE','UNDER_REVIEW','RESTRICTED','REMOVED']; }
+    function sathiInteractionVisible(kind, id) {
+      let item = get(/databases/$(database)/documents/$(kind)/$(id)).data;
+      return item.moderationStatus == 'ACTIVE' && item.visibilityStatus == 'PUBLIC' &&
+        (kind == 'events' || (item.status == 'active' && item.expiresAt > request.time));
+    }
+    function sathiLikeCreate(likeId, kind, field) {
+      let data = request.resource.data;
+      return sathiMediaOwn(data.userId) && likeId == request.auth.uid + '_' + data[field] &&
+        data.keys().hasOnly(['userId',field,'createdAt']) && data.createdAt == request.time && sathiInteractionVisible(kind,data[field]);
+    }
+    function sathiCommentCreate(kind, field) {
+      let data = request.resource.data;
+      return sathiMediaOwn(data.userId) && data.keys().hasOnly(['userId',field,'createdAt','text']) &&
+        data.createdAt == request.time && data.text is string && data.text.size() > 0 && data.text.size() <= 500 &&
+        sathiInteractionVisible(kind,data[field]);
+    }
+    function sathiMediaReference(path, url, category, uid) {
+      let parts = path.split('/');
+      return parts.size() == 3 && parts[0] == category && parts[1] == uid &&
+        parts[2].matches('[a-zA-Z0-9_-]+[.](jpg|jpeg|png|webp)') &&
+        url is string && url.size() <= 2000 &&
+        url.matches('(https://firebasestorage[.]googleapis[.]com|http://127[.]0[.]0[.]1:9195)/v0/b/hamrosathi1[.](firebasestorage[.]app|appspot[.]com)/o/' +
+          category + '%2F' + uid + '%2F' + parts[2].replace('[.]','[.]') + '[?]alt=media.*');
+    }
+    function sathiPhotoChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'avatar','photoPath','photoPreviewPath','photoPreviewUrl','photoUpdatedAt','photoModerationStatus','photoVisibilityStatus',
+        'photoReportedCount','photoModeratedAt','photoModeratedBy','photoModerationReason'
+      ]);
+    }
+    function sathiPhotoCreateSafe() {
+      // Preserve existing OAuth/avatar bootstrap; protected media metadata is set after an owned upload.
+      return !request.resource.data.keys().hasAny([
+        'photoPath','photoPreviewPath','photoPreviewUrl','photoUpdatedAt','photoModerationStatus','photoVisibilityStatus',
+        'photoReportedCount','photoModeratedAt','photoModeratedBy','photoModerationReason'
+      ]);
+    }
+    function sathiProfilePhotoWrite(uid) {
+      let data = request.resource.data;
+      return sathiMediaOwn(uid) && resource.data.get('photoModerationStatus','ACTIVE') == 'ACTIVE' &&
+        sathiMediaChangedOnly(['avatar','photoPath','photoPreviewPath','photoPreviewUrl','photoUpdatedAt','photoModerationStatus','photoVisibilityStatus','photoReportedCount']) &&
+        data.photoModerationStatus == 'ACTIVE' && data.photoVisibilityStatus == 'PUBLIC' &&
+        data.photoReportedCount == resource.data.get('photoReportedCount',0) &&
+        sathiMediaReference(data.photoPath,data.avatar,'avatars',uid) &&
+        (!data.keys().hasAny(['photoPreviewPath','photoPreviewUrl']) || sathiMediaReference(data.photoPreviewPath,data.photoPreviewUrl,'avatars',uid));
+    }
+    function sathiProfilePhotoModeration() {
+      return sathiMediaModerator() &&
+        sathiMediaChangedOnly(['photoModerationStatus','photoVisibilityStatus','photoModeratedAt','photoModeratedBy','photoModerationReason','photoReportedCount']) &&
+        sathiMediaStatus(request.resource.data.photoModerationStatus) &&
+        request.resource.data.photoModeratedBy == request.auth.uid &&
+        request.resource.data.photoVisibilityStatus in ['PUBLIC','PRIVATE'] &&
+        request.resource.data.photoReportedCount is int && request.resource.data.photoReportedCount >= 0;
+    }
+    // END SATHI MEDIA ROLLOUT
+
+    // BEGIN SATHI COMPANION AUTHORITY CONTAINMENT
+    function sathiAuthorityMember() {
+      return request.auth != null && request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous';
+    }
+    function sathiAuthorityRoot() {
+      return sathiAuthorityMember() && request.auth.token.get('adminRole', '') == 'super_admin';
+    }
+    function sathiAuthorityReviewer() {
+      return sathiAuthorityRoot() || (sathiAuthorityMember() &&
+        request.auth.token.get('adminRole', '') == 'kyc_reviewer' &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'kyc_reviewer');
+    }
+    function sathiAuthorityUserFieldsChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'role','status','companionStatus','companionApprovalApplicationId','verificationStatus','kycVerificationStatus','adminRole']);
+    }
+    function sathiApprovalAppAfter(uid, appId, nextStatus) {
+      return appId is string && appId.size() > 0 &&
+        get(/databases/$(database)/documents/companion_applications/$(appId)).data.status in ['SUBMITTED','UNDER_REVIEW'] &&
+        getAfter(/databases/$(database)/documents/companion_applications/$(appId)).data.status == nextStatus &&
+        getAfter(/databases/$(database)/documents/companion_applications/$(appId)).data.userId == uid &&
+        getAfter(/databases/$(database)/documents/companion_applications/$(appId)).data.reviewedBy == request.auth.uid;
+    }
+    // END SATHI COMPANION AUTHORITY CONTAINMENT
+
+    // Users Collection: /users/{userId}
+    match /users/{userId} {
+      // Users can read their own profile, or admins
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+
+      // Users can update their own profile, but only specific fields (no changing role or createdAt)
+      allow update: if isValidUserUpdate(userId) && !userUpdateContainsPrivilegeChange() && !sathiPhotoChanged();
+
+      // Admins can read and write any user profile
+      allow read, delete: if isAdmin();
+      allow create: if isAdmin() && sathiPhotoCreateSafe() &&
+        !request.resource.data.keys().hasAny(['companionStatus','companionApprovalApplicationId','verificationStatus','kycVerificationStatus','adminRole']) &&
+        (request.resource.data.get('role','customer') != 'admin' || sathiAuthorityRoot());
+      allow update: if isAdmin() && !sathiPhotoChanged() && !sathiAuthorityUserFieldsChanged();
+      allow update: if sathiAuthorityRoot() && !sathiPhotoChanged() &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'companionStatus','verificationStatus','kycVerificationStatus','companionApprovalApplicationId']);
+      allow update: if sathiAuthorityReviewer() && request.auth.uid != userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'companionStatus','companionApprovalApplicationId','updatedAt']) &&
+        request.resource.data.companionStatus in ['APPROVED','REJECTED','CHANGES_REQUIRED'] &&
+        sathiApprovalAppAfter(userId, request.resource.data.companionApprovalApplicationId,
+          request.resource.data.companionStatus) &&
+        (request.resource.data.companionStatus != 'APPROVED' ||
+          (getAfter(/databases/$(database)/documents/companions/$(userId)).data.isVerified == true &&
+           getAfter(/databases/$(database)/documents/companions/$(userId)).data.approvalApplicationId == request.resource.data.companionApprovalApplicationId));
+      allow update: if sathiProfilePhotoWrite(userId) || sathiProfilePhotoModeration();
+
+      // New user creation — privilege/verification fields are FORBIDDEN at
+      // create time (prevents upsert-based self-promotion). Role, if present,
+      // may only be a non-privileged value.
+      allow create: if isAuthenticated() && request.auth.uid == userId
+        && (!('role' in request.resource.data) || request.resource.data.role in ['customer', 'guest'])
+        && !('companionStatus' in request.resource.data)
+        && !('verificationStatus' in request.resource.data)
+        && !('adminRole' in request.resource.data)
+        && isValidData(request.resource.data) && sathiPhotoCreateSafe();
+
+      // Subcollection for user favorites
+      match /favorites/{favoriteId} {
+        allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+        allow create, update, delete: if isAuthenticated() && request.auth.uid == userId;
+        allow create, delete: if isAdmin();
+      }
+    }
+
+    // Companions Collection: /companions/{companionId}
+    match /companions/{companionId} {
+      // Preserve public discovery of existing profiles; eligibility is checked at commitment time.
+      allow read: if true;
+      // A public profile is a reviewer projection, not an owner-created verification claim.
+      allow create: if sathiAuthorityReviewer() && request.auth.uid != companionId &&
+        request.resource.data.userId == companionId && request.resource.data.id == companionId &&
+        request.resource.data.isVerified == true && request.resource.data.verificationBadge == 'KYC_VERIFIED' &&
+        request.resource.data.keys().hasOnly([
+          'id','userId','name','bio','categories','languages','location','hourlyRate','imageUrl',
+          'isVerified','verificationBadge','approvalApplicationId','availability','createdAt','updatedAt'
+        ]) &&
+        sathiApprovalAppAfter(companionId, request.resource.data.approvalApplicationId, 'APPROVED') &&
+        getAfter(/databases/$(database)/documents/users/$(companionId)).data.companionStatus == 'APPROVED' &&
+        getAfter(/databases/$(database)/documents/users/$(companionId)).data.companionApprovalApplicationId == request.resource.data.approvalApplicationId;
+      // Preserve bounded owner edits, without touching verification, identity or rating authority.
+      allow update: if sathiAuthorityMember() && request.auth.uid == resource.data.userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name','bio','location','hourlyRate','gender','languages','interests','images','availableDays','updatedAt'
+        ]);
+      // Non-review staff may edit presentation fields but not create/verify a provider.
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'name','bio','categories','languages','location','imageUrl','availability','updatedAt','availableDays'
+      ]);
+      allow update: if sathiAuthorityReviewer() && request.auth.uid != companionId &&
+        resource.data.get('userId', companionId) == companionId &&
+        request.resource.data.userId == companionId &&
+        request.resource.data.isVerified == true && request.resource.data.verificationBadge == 'KYC_VERIFIED' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'id','userId','name','bio','categories','languages','location','hourlyRate','imageUrl',
+          'isVerified','verificationBadge','approvalApplicationId','availability','createdAt','updatedAt'
+        ]) &&
+        sathiApprovalAppAfter(companionId, request.resource.data.approvalApplicationId, 'APPROVED') &&
+        getAfter(/databases/$(database)/documents/users/$(companionId)).data.companionStatus == 'APPROVED' &&
+        getAfter(/databases/$(database)/documents/users/$(companionId)).data.companionApprovalApplicationId == request.resource.data.approvalApplicationId;
+      allow delete: if false; // No direct destruction of a reviewed public identity.
+    }
+
+    // Activities Collection: /activities/{activityId}
+    match /activities/{activityId} {
+      // Anyone can read activities
+      allow read: if true;
+
+      // Companions can create, update, and delete their own activities
+      allow create: if isCompanion() && request.auth.uid == request.resource.data.companionId && isValidData(request.resource.data);
+      allow update, delete: if isCompanion() && request.auth.uid == resource.data.companionId;
+
+      // Admins can create, update, and delete any activity
+      allow create, update, delete: if isAdmin();
+    }
+
+    // BEGIN SATHI BOOKING COMPATIBILITY (v2 only; no provider payment activation)
+    function sathiBookingMember() {
+      return request.auth != null && request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous';
+    }
+    function sathiBookingOwn(uid) { return sathiBookingMember() && request.auth.uid == uid; }
+    function sathiBookingOperator() {
+      return sathiBookingMember() && request.auth.token.get('adminRole', '') in ['super_admin', 'booking_admin'];
+    }
+    function sathiBookingChangedOnly(fields) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields); }
+    function sathiBookingText(value) { return value is string && value.size() > 0 && value.size() <= 10000; }
+    function sathiBookingLockKey(data) { return 'lock_' + data.companionId + '_' + data.date.replace('[^a-zA-Z0-9]', '_'); }
+    function sathiBookingTime(data) {
+      return timestamp.date(int(data.date[0:4]),int(data.date[5:7]),int(data.date[8:10])) +
+        duration.value(int(data.time[0:2]) * 60 + int(data.time[3:5]) - 345,'m');
+    }
+    function sathiBookingPairedLock(data,id) {
+      let lock = getAfter(/databases/$(database)/documents/booking_locks/$(sathiBookingLockKey(data))).data;
+      return lock.bookingId == id && lock.companionId == data.companionId && lock.date == data.date && lock.status == data.status;
+    }
+    function sathiBookingAvailableLock(data) {
+      let path = /databases/$(database)/documents/booking_locks/$(sathiBookingLockKey(data));
+      return !exists(path) || (get(path).data.status == 'cancelled' &&
+        get(/databases/$(database)/documents/bookings/$(get(path).data.bookingId)).data.status == 'cancelled');
+    }
+    // BEGIN GENERATED BOOKING TRANSITIONS
+    function sathiBookingTransition(data, next) {
+      return (data.status == 'pending' && next == 'confirmed' && (sathiBookingOwn(data.companionUid) || sathiBookingOperator())) ||
+        (data.status == 'pending' && next == 'cancelled' && (sathiBookingOwn(data.userId) || sathiBookingOwn(data.companionUid) || sathiBookingOperator())) ||
+        (data.status == 'confirmed' && next == 'active' && (sathiBookingOwn(data.companionUid) || sathiBookingOperator())) ||
+        (data.status == 'confirmed' && next == 'cancelled' && (sathiBookingOwn(data.userId) || sathiBookingOwn(data.companionUid) || sathiBookingOperator())) ||
+        (data.status == 'active' && next == 'completed' && (sathiBookingOwn(data.companionUid) || sathiBookingOperator())) ||
+        (data.status == 'active' && next == 'cancelled' && (sathiBookingOperator()));
+    }
+    // END GENERATED BOOKING TRANSITIONS
+    function sathiBookingValidReservation(data,id) {
+      let companion = get(/databases/$(database)/documents/companions/$(data.companionId)).data;
+      return sathiBookingOwn(data.userId) && data.id == id && data.policyVersion == 2 &&
+        data.companionId == data.companionUid && data.companionUid == companion.userId && data.companionUid != request.auth.uid &&
+        companion.isVerified == true &&
+        get(/databases/$(database)/documents/users/$(data.companionUid)).data.companionStatus == 'APPROVED' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('status','ACTIVE') == 'ACTIVE' &&
+        data.status == 'pending' && data.paymentStatus == 'not_started' &&
+        data.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && data.time.matches('([01][0-9]|2[0-3]):[0-5][0-9]') &&
+        data.duration is int && data.duration >= 1 && data.duration <= 12 &&
+        data.participants is int && data.participants >= 1 && data.participants <= 8 &&
+        int(data.time[0:2])*60 + int(data.time[3:5]) + data.duration*60 <= 1440 &&
+        data.startAt == sathiBookingTime(data) && data.startAt > request.time &&
+        companion.hourlyRate is int && companion.hourlyRate >= 500 &&
+        data.quotedTotalPaisa == companion.hourlyRate * data.duration * (110 + 33 * (data.participants - 1)) &&
+        data.totalPrice == data.quotedTotalPaisa / 100 &&
+        data.createdAt is string && data.updatedAt is string &&
+        sathiBookingText(data.meetingPoint) && sathiBookingText(data.userNameAtBooking) && sathiBookingText(data.userPhoneAtBooking) &&
+        data.keys().hasOnly(['id','userId','companionId','companionUid','date','time','duration','participants','meetingPoint',
+          'meetingCoordinates','specialRequests','userNameAtBooking','userPhoneAtBooking','userEmailAtBooking','status',
+          'paymentStatus','policyVersion','totalPrice','quotedTotalPaisa','startAt','createdAt','updatedAt']) &&
+        sathiBookingAvailableLock(data) && sathiBookingPairedLock(data,id);
+    }
+    match /bookings/{id} {
+      allow get: if sathiBookingMember() && !exists(/databases/$(database)/documents/bookings/$(id));
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.companionId || isAdmin());
+      allow create: if sathiBookingValidReservation(request.resource.data,id);
+      allow update: if resource.data.policyVersion == 2 && sathiBookingChangedOnly(['status','updatedAt']) && request.resource.data.updatedAt is string &&
+        sathiBookingTransition(resource.data,request.resource.data.status) &&
+        (request.resource.data.status != 'active' || request.time >= resource.data.startAt) &&
+        (request.resource.data.status != 'completed' || request.time >= resource.data.startAt + duration.value(resource.data.duration,'h')) &&
+        get(/databases/$(database)/documents/booking_locks/$(sathiBookingLockKey(resource.data))).data.bookingId == id &&
+        sathiBookingPairedLock(request.resource.data,id);
+    }
+    match /booking_locks/{id} {
+      allow read: if isAuthenticated();
+      function matchingBooking() {
+        let data = request.resource.data;
+        let book = getAfter(/databases/$(database)/documents/bookings/$(data.bookingId)).data;
+        return data.keys().hasAll(['bookingId','companionId','date','status','updatedAt']) &&
+          data.keys().hasOnly(['bookingId','companionId','date','status','updatedAt']) &&
+          data.updatedAt is string && data.updatedAt == book.updatedAt && id == sathiBookingLockKey(book) &&
+          data.companionId == book.companionId && data.date == book.date && data.status == book.status;
+      }
+      function newReservation() {
+        let path = /databases/$(database)/documents/bookings/$(request.resource.data.bookingId);
+        return !exists(path) && sathiBookingOwn(getAfter(path).data.userId) && request.resource.data.status == 'pending';
+      }
+      allow create: if matchingBooking() && newReservation();
+      allow update: if matchingBooking() &&
+        ((newReservation() && resource.data.status == 'cancelled' &&
+          get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.status == 'cancelled') ||
+         (request.resource.data.bookingId == resource.data.bookingId && sathiBookingChangedOnly(['status','updatedAt']) &&
+          getAfter(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.status !=
+          get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.status));
+    }
+    // END SATHI BOOKING COMPATIBILITY
+
+    // Reviews Collection: /reviews/{reviewId}
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if true;
+
+      // Users can create their own reviews linked to a booking
+      allow create: if isCustomer() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+
+      // Admins can create, update, and delete reviews
+      allow create, update, delete: if isAdmin();
+
+      // Users can update their own reviews
+      allow update: if isCustomer() && request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'comment', 'updatedAt']);
+    }
+
+    // Conversations Collection: /conversations/{conversationId}
+    // Stored membership is authoritative, including historical opaque IDs.
+    // Only records without membership use the unambiguous two-part legacy ID.
+    function sathiConversationMember(conversationId, data) {
+      let members = data.get('participantIds', null);
+      let parts = conversationId.split('_');
+      return members != null
+        ? (members is list && request.auth.uid in members)
+        : (!('participantIds' in data) && parts.size() == 2 &&
+           parts[0].size() > 0 && parts[1].size() > 0 && parts[0] != parts[1] &&
+           request.auth.uid in parts);
+    }
+
+    function sathiExistingConversationMember(conversationId) {
+      let path = /databases/$(database)/documents/conversations/$(conversationId);
+      return exists(path) && sathiConversationMember(conversationId, get(path).data);
+    }
+
+    match /conversations/{conversationId} {
+      // Create-if-absent transactions may read missing parents, never private data.
+      allow get: if isAuthenticated() && resource == null;
+      allow get: if isAuthenticated() &&
+        (isAdmin() || sathiConversationMember(conversationId, resource.data));
+      // Direct array predicate is provable from the existing array-contains query.
+      // Legacy ID fallback is get-only, never an unconstrained collection scan.
+      allow list: if isAuthenticated() && (isAdmin() ||
+        resource.data.participantIds.hasAny([request.auth.uid]));
+
+      function validNewPair() {
+        let data = request.resource.data;
+        let members = data.get('participantIds', null);
+        return members is list && members.size() == 2 &&
+          members[0] is string && members[1] is string &&
+          members[0].size() > 0 && members[1].size() > 0 && members[0] != members[1] &&
+          request.auth.uid in members && data.id == conversationId &&
+          (conversationId == members[0] + '_' + members[1] ||
+           conversationId == members[1] + '_' + members[0]);
+      }
+      allow create: if isAuthenticated() && validNewPair() && isValidData(request.resource.data);
+
+      // Inherited staff authority unchanged: this is NOT an RBAC fix.
+      allow create, update, delete: if isAdmin();
+      allow update: if isAuthenticated() &&
+        sathiConversationMember(conversationId, resource.data) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'unreadCount', 'updatedAt']) &&
+        isValidData(request.resource.data);
+
+      match /typing/{userId} {
+        allow read: if isAuthenticated() &&
+          sathiExistingConversationMember(conversationId);
+        allow create, update, delete: if isAuthenticated() && request.auth.uid == userId &&
+          sathiExistingConversationMember(conversationId);
+      }
+    }
+
+    // Messages Collection: /messages/{messageId}
+    match /messages/{messageId} {
+      // Only participants of the message's conversation or admins can read
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        (resource != null && sathiExistingConversationMember(resource.data.conversationId))
+      );
+
+      // Admins can create, update, and delete messages
+      allow create, update, delete: if isAdmin();
+
+      // Only sender can create messages in their conversation
+      allow create: if isAuthenticated() &&
+                    request.auth.uid == request.resource.data.senderId &&
+                    (
+                      sathiExistingConversationMember(request.resource.data.conversationId)
+                    ) &&
+                    isValidData(request.resource.data);
+
+      // Only participants can update (e.g. read status)
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        (resource != null && sathiExistingConversationMember(resource.data.conversationId))
+      ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'status', 'updatedAt']);
+
+      allow delete: if false;
+      allow write: if isAdmin();
+    }
+
+    // Notifications Collection: /notifications/{notificationId}
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId &&
+        sathiMediaChangedOnly(['isRead']) && request.resource.data.isRead is bool;
+      allow create: if !notificationId.matches('media_.*') &&
+        !(request.resource.data.get('type','') in ['STORY_LIKE','STORY_COMMENT','EVENT_LIKE','EVENT_COMMENT']) &&
+        !request.resource.data.keys().hasAny(['targetType','targetId','actorId','commentId']) &&
+        isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow create, update, delete: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Payments Collection: /payments/{paymentId}
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      // Payment truth must originate from a verified backend receipt.
+      // This also denies browser administrators; staff approval is not provider proof.
+      allow create, update, delete: if false;
+    }
+
+    // Community Posts Collection: /community_posts/{postId}
+    match /community_posts/{postId} {
+      function pairedCommentDelta() {
+        let id = request.resource.data.get('lastCommentMutationId', '');
+        let path = /databases/$(database)/documents/comments/$(id);
+        let before = resource.data.get('commentsCount', 0);
+        let after = request.resource.data.commentsCount;
+        return isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentsCount','lastCommentMutationId','updatedAt']) &&
+          before is int && after is int && after >= 0 &&
+          ((!exists(path) && existsAfter(path) && getAfter(path).data.userId == request.auth.uid &&
+            getAfter(path).data.postId == postId && after == before + 1) ||
+           (exists(path) && !existsAfter(path) && get(path).data.userId == request.auth.uid &&
+            get(path).data.postId == postId && after == before - 1));
+      }
+      allow update: if pairedCommentDelta();
+      // Publicly readable for all published posts, or if author or admin
+      allow read: if true;
+
+      // Authenticated users can create posts
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+
+      // Admins can create, update, and delete any post
+      allow create, update, delete: if isAdmin();
+
+      // Authors can update their own posts
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'category', 'tags', 'imageUrl', 'updatedAt', 'status']);
+
+      // Any authenticated user can update counter fields, but values must be
+      // sane: non-negative numbers only. Aggregate integrity beyond this is
+      // maintained transactionally by the client repositories.
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'updatedAt'])
+        && (!('likesCount' in request.resource.data) || (request.resource.data.likesCount is number && request.resource.data.likesCount >= 0))
+        && (!('commentsCount' in request.resource.data) || (request.resource.data.commentsCount is number && request.resource.data.commentsCount >= 0));
+    }
+
+    // Comments Collection: /comments/{commentId}
+    match /comments/{commentId} {
+      function paired(delta) {
+        let post = /databases/$(database)/documents/community_posts/$(delta == 1 ? request.resource.data.postId : resource.data.postId);
+        return getAfter(post).data.lastCommentMutationId == commentId &&
+          getAfter(post).data.commentsCount == get(post).data.get('commentsCount',0) + delta;
+      }
+      allow read: if true;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId &&
+        request.resource.data.id == commentId && request.resource.data.createdAt == request.time &&
+        request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500 &&
+        request.resource.data.keys().hasOnly(['id','postId','userId','userName','userAvatar','text','createdAt','parentId']) &&
+        get(/databases/$(database)/documents/community_posts/$(request.resource.data.postId)).data.status == 'published' && paired(1);
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text']) &&
+        request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId &&
+        (paired(-1) || get(/databases/$(database)/documents/community_posts/$(resource.data.postId)).data.get('commentsCount',0) == 0);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Companion Applications: /companion_applications/{applicationId}
+    // Lifecycle: DRAFT -> SUBMITTED -> (UNDER_REVIEW) -> APPROVED / REJECTED / CHANGES_REQUIRED
+    match /companion_applications/{applicationId} {
+      allow read: if sathiAuthorityMember() &&
+        (request.auth.uid == resource.data.userId || sathiAuthorityReviewer());
+      allow create: if sathiAuthorityMember() && request.auth.uid == request.resource.data.userId &&
+        request.resource.data.id == applicationId &&
+        request.resource.data.keys().hasOnly(['id','userId','status','applicationData','kyc','submittedAt','createdAt','updatedAt']) &&
+        request.resource.data.status in ['DRAFT','SUBMITTED'] &&
+        request.resource.data.kyc.verificationStatus == 'UNVERIFIED' && isValidData(request.resource.data);
+      allow update: if sathiAuthorityMember() && request.auth.uid == resource.data.userId &&
+        resource.data.status in ['DRAFT','CHANGES_REQUIRED'] &&
+        request.resource.data.status in ['DRAFT','SUBMITTED','CHANGES_REQUIRED'] &&
+        request.resource.data.kyc.verificationStatus == 'UNVERIFIED' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'applicationData','kyc','status','submittedAt','updatedAt']) && isValidData(request.resource.data);
+      allow update: if sathiAuthorityReviewer() && request.auth.uid != resource.data.userId &&
+        resource.data.status in ['SUBMITTED','UNDER_REVIEW'] &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.status in ['APPROVED','REJECTED','CHANGES_REQUIRED'] &&
+        request.resource.data.reviewedBy == request.auth.uid &&
+        request.resource.data.reviewAuditId is string && request.resource.data.reviewAuditId.size() > 0 &&
+        !exists(/databases/$(database)/documents/admin_audit_logs/$(request.resource.data.reviewAuditId)) &&
+        getAfter(/databases/$(database)/documents/admin_audit_logs/$(request.resource.data.reviewAuditId)).data.actorId == request.auth.uid &&
+        getAfter(/databases/$(database)/documents/admin_audit_logs/$(request.resource.data.reviewAuditId)).data.targetId == applicationId &&
+        getAfter(/databases/$(database)/documents/admin_audit_logs/$(request.resource.data.reviewAuditId)).data.action ==
+          (request.resource.data.status == 'APPROVED' ? 'application.approve' :
+           request.resource.data.status == 'REJECTED' ? 'application.reject' : 'application.request_changes') &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','reviewedBy','reviewedAt','reviewAuditId','updatedAt','rejectionReason','requestedChanges','kyc']) &&
+        request.resource.data.kyc.diff(resource.data.kyc).affectedKeys().hasOnly(['verificationStatus']) &&
+        getAfter(/databases/$(database)/documents/users/$(resource.data.userId)).data.companionApprovalApplicationId == applicationId &&
+        getAfter(/databases/$(database)/documents/users/$(resource.data.userId)).data.companionStatus == request.resource.data.status &&
+        ((request.resource.data.status == 'APPROVED' &&
+          request.resource.data.kyc.verificationStatus == 'VERIFIED' &&
+          getAfter(/databases/$(database)/documents/companions/$(resource.data.userId)).data.isVerified == true &&
+          getAfter(/databases/$(database)/documents/companions/$(resource.data.userId)).data.approvalApplicationId == applicationId) ||
+         (request.resource.data.status != 'APPROVED' &&
+          request.resource.data.kyc == resource.data.kyc));
+      allow delete: if false; // Keep review and evidence history.
+    }
+
+    // Admin Audit Logs: /admin_audit_logs/{logId}
+    // Immutable trail written only by elevated admin paths; readable by admins.
+    match /admin_audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // Likes Collection: /likes/{likeId}
+    match /likes/{likeId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    // Story Likes Collection: /story_likes/{likeId}
+    match /story_likes/{likeId} {
+      allow get: if sathiMediaMember() && likeId.matches(request.auth.uid + '_.*');
+      allow list: if false;
+      allow create, delete: if isAdmin();
+      allow create: if sathiLikeCreate(likeId,'stories','storyId');
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+    match /event_likes/{likeId} {
+      allow get: if sathiMediaMember() && likeId.matches(request.auth.uid + '_.*');
+      allow create: if sathiLikeCreate(likeId,'events','eventId');
+      allow delete: if sathiMediaOwn(resource.data.userId) || sathiMediaModerator();
+    }
+    match /story_comments/{commentId} {
+      allow get: if sathiMediaMember() && !exists(/databases/$(database)/documents/story_comments/$(commentId));
+      allow read: if sathiInteractionVisible('stories',resource.data.storyId) || sathiMediaModerator();
+      allow create, update: if false; // Stories are likes-only; historical documents retained.
+      allow delete: if sathiMediaOwn(resource.data.userId) || sathiMediaModerator();
+    }
+    match /event_comments/{commentId} {
+      allow get: if sathiMediaMember() && !exists(/databases/$(database)/documents/event_comments/$(commentId));
+      allow read: if sathiInteractionVisible('events',resource.data.eventId) || sathiMediaModerator();
+      allow create: if sathiCommentCreate('events','eventId');
+      allow delete: if sathiMediaOwn(resource.data.userId) || sathiMediaModerator();
+    }
+
+    // Stories Collection: /stories/{storyId}
+    match /stories/{storyId} {
+      allow get: if sathiMediaMember() && !exists(/databases/$(database)/documents/stories/$(storyId));
+      allow read: if (resource.data.moderationStatus == 'ACTIVE' && resource.data.visibilityStatus == 'PUBLIC' && resource.data.status == 'active') ||
+        sathiMediaOwn(resource.data.userId) || sathiMediaModerator();
+      allow create: if sathiMediaOwn(request.resource.data.userId) &&
+        request.resource.data.id == storyId && request.resource.data.contentType == 'story' && request.resource.data.mediaType == 'image' &&
+        request.resource.data.moderationStatus == 'ACTIVE' && request.resource.data.visibilityStatus == 'PUBLIC' && request.resource.data.status == 'publishing' &&
+        request.resource.data.reportedCount == 0 && request.resource.data.caption is string && request.resource.data.caption.size() <= 150 &&
+        request.resource.data.createdAt == request.time && request.resource.data.expiresAt == null &&
+        sathiMediaReference(request.resource.data.mediaPath,request.resource.data.imageUrl,'stories',request.auth.uid) &&
+        (!request.resource.data.keys().hasAny(['mediaPreviewPath','mediaPreviewUrl']) || sathiMediaReference(request.resource.data.mediaPreviewPath,request.resource.data.mediaPreviewUrl,'stories',request.auth.uid)) &&
+        request.resource.data.keys().hasOnly(['id','userId','contentType','mediaType','userName','userAvatar','companionName','caption','timeAgo',
+          'imageUrl','mediaPath','mediaPreviewPath','mediaPreviewUrl','createdAt','updatedAt','expiresAt','status','moderationStatus','visibilityStatus','reportedCount','likes','likesCount','comments','commentsCount']) &&
+        request.resource.data.get('likes',0) == 0 && request.resource.data.get('likesCount',0) == 0 &&
+        request.resource.data.get('comments',0) == 0 && request.resource.data.get('commentsCount',0) == 0;
+      allow update: if (sathiMediaOwn(resource.data.userId) && resource.data.moderationStatus == 'ACTIVE' &&
+          sathiMediaChangedOnly(['caption','updatedAt']) && request.resource.data.caption is string && request.resource.data.caption.size() <= 150) ||
+        (sathiMediaOwn(resource.data.userId) && resource.data.moderationStatus == 'ACTIVE' && resource.data.visibilityStatus == 'PUBLIC' &&
+          resource.data.status == 'publishing' && request.resource.data.status == 'active' && sathiMediaChangedOnly(['status','expiresAt']) &&
+          request.resource.data.expiresAt == resource.data.createdAt + duration.value(24,'h')) ||
+        (sathiMediaModerator() && sathiMediaChangedOnly(['moderationStatus','visibilityStatus','moderationReason','moderatedAt','moderatedBy','reportedCount']) &&
+          sathiMediaStatus(request.resource.data.moderationStatus) && request.resource.data.moderatedBy == request.auth.uid &&
+          request.resource.data.visibilityStatus in ['PUBLIC','PRIVATE'] &&
+          request.resource.data.reportedCount is int && request.resource.data.reportedCount >= 0);
+      // Interaction summary counters are backend-only.
+      allow delete: if (sathiMediaOwn(resource.data.userId) && resource.data.moderationStatus == 'ACTIVE') || sathiMediaModerator();
+    }
+
+    // Events Collection: /events/{eventId}
+    match /events/{eventId} {
+      allow get: if sathiMediaMember() && !exists(/databases/$(database)/documents/events/$(eventId));
+      allow read: if (resource.data.moderationStatus == 'ACTIVE' && resource.data.visibilityStatus == 'PUBLIC') ||
+        sathiMediaOwn(resource.data.get('ownerId','')) || isAdmin();
+      allow create, update, delete: if isAdmin();
+      allow create: if sathiMediaOwn(request.resource.data.ownerId) && request.resource.data.imageOwnerId == request.auth.uid &&
+        request.resource.data.id == eventId && request.resource.data.moderationStatus == 'ACTIVE' && request.resource.data.visibilityStatus == 'PUBLIC' &&
+        request.resource.data.mediaModerationStatus == 'ACTIVE' && request.resource.data.mediaVisibilityStatus == 'PUBLIC' && request.resource.data.mediaReportedCount == 0 &&
+        request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time &&
+        request.resource.data.startAt is timestamp && request.resource.data.startAt > request.time &&
+        request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 120 &&
+        request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.description.size() <= 3000 &&
+        request.resource.data.location is string && request.resource.data.location.size() > 0 && request.resource.data.location.size() <= 250 &&
+        request.resource.data.category is string && request.resource.data.category.size() <= 60 &&
+        request.resource.data.likesCount == 0 && request.resource.data.commentsCount == 0 &&
+        sathiMediaReference(request.resource.data.imagePath,request.resource.data.imageUrl,'events',request.auth.uid) &&
+        (!request.resource.data.keys().hasAny(['mediaPreviewPath','mediaPreviewUrl']) || sathiMediaReference(request.resource.data.mediaPreviewPath,request.resource.data.mediaPreviewUrl,'events',request.auth.uid)) &&
+        request.resource.data.keys().hasOnly(['id','ownerId','title','description','location','category','date','time','spots','imageUrl','imagePath','imageOwnerId',
+          'mediaModerationStatus','mediaVisibilityStatus','mediaReportedCount','imageUpdatedAt','mediaPreviewPath','mediaPreviewUrl','createdAt','updatedAt','startAt','moderationStatus','visibilityStatus','likesCount','commentsCount']);
+      allow update: if sathiMediaOwn(resource.data.ownerId) && resource.data.moderationStatus == 'ACTIVE' &&
+        sathiMediaChangedOnly(['title','description','location','updatedAt']) &&
+        request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 120 &&
+        request.resource.data.description is string && request.resource.data.description.size() <= 3000 &&
+        request.resource.data.location is string && request.resource.data.location.size() <= 250;
+
+      match /participants/{userId} {
+        allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+        allow create: if isAuthenticated() && request.auth.uid == userId;
+        allow update: if isAuthenticated() && request.auth.uid == userId || isAdmin();
+        allow delete: if isAuthenticated() && request.auth.uid == userId || isAdmin();
+      }
+    }
+
+    // Event Participants Collection: /event_participants/{registrationId}
+    match /event_participants/{registrationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow create, update, delete: if isAdmin();
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId || isAdmin();
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId || isAdmin();
+    }
+
+    // Partners Collection: /partners/{partnerId}
+    match /partners/{partnerId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Hotels Collection: /hotels/{hotelId}
+    match /hotels/{hotelId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Restaurants Collection: /restaurants/{restaurantId}
+    match /restaurants/{restaurantId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Cafes Collection: /cafes/{cafeId}
+    match /cafes/{cafeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Cities Collection: /cities/{cityId}
+    match /cities/{cityId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Reports Collection: /reports/{reportId}
+    match /reports/{reportId} {
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.reporterId && isValidData(request.resource.data);
+      allow read, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Support Tickets Collection: /support_tickets/{ticketId}
+    match /support_tickets/{ticketId} {
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow read, update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+    }
+
+    // Verification Requests Collection: /verification_requests/{requestId}
+    match /verification_requests/{requestId} {
+      allow create: if isCompanion() && request.auth.uid == request.resource.data.companionId && isValidData(request.resource.data);
+      allow read: if isCompanion() && request.auth.uid == resource.data.companionId;
+      allow read, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Analytics Collection: /analytics/{analyticId}
+    match /analytics/{analyticId} {
+      allow read: if isAdmin();
+      allow create: if false;
+      allow update, delete: if false;
+    }
+
+    // Admins Collection: /admins/{adminId}
+    // Staff assignment management requires explicit trusted root claims.
+    // A legacy profile role or an editable assignment is never root authority.
+    function sathiAssignmentRoot() {
+      return request.auth != null &&
+        request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous' &&
+        request.auth.token.get('adminRole', '') == 'super_admin';
+    }
+    match /admins/{adminId} {
+      allow read: if (isAuthenticated() && request.auth.uid == adminId) || sathiAssignmentRoot();
+      allow create, update: if sathiAssignmentRoot() &&
+        request.resource.data.keys().hasAll(['uid', 'role', 'updatedAt']) &&
+        request.resource.data.keys().hasOnly(['uid', 'role', 'updatedAt']) &&
+        request.resource.data.uid == adminId &&
+        request.resource.data.role in ['super_admin','platform_admin','safety_admin','moderation_admin','support_agent','booking_admin','finance_admin','kyc_reviewer','content_admin','analytics_admin','read_only_admin'] &&
+        request.resource.data.updatedAt is string;
+      allow delete: if sathiAssignmentRoot();
+    }
+
+    // Audit Logs Collection: /auditLogs/{logId}
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.actorId;
+      allow update, delete: if false;
+    }
+
+    // SOS Alerts Collection: /sosAlerts/{alertId}
+    match /sosAlerts/{alertId} {
+      allow read: if isAdmin() || resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow delete: if false;
+    }
+
+    // Suspicious Activity Collection: /suspiciousActivity/{activityId}
+    match /suspiciousActivity/{activityId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Guide Applications Collection: /guideApplications/{applicationId}
+    match /guideApplications/{applicationId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Feedback Collection: /feedback/{feedbackId}
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidData(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Booking Locations Collection: /booking_locations/{bookingId}
+    match /booking_locations/{bookingId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.companionId ||
+        isAdmin()
+      );
+      allow create, update: if isAuthenticated() && (
+        request.auth.uid == resource.data.companionId ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+
+      match /locations/{locationId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid == get(/databases/$(database)/documents/booking_locations/$(bookingId)).data.userId ||
+          request.auth.uid == get(/databases/$(database)/documents/booking_locations/$(bookingId)).data.companionId ||
+          isAdmin()
+        );
+        allow create: if isAuthenticated() && request.auth.uid == get(/databases/$(database)/documents/booking_locations/$(bookingId)).data.companionId;
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Presence Collection: /presence/{userId}
+    match /presence/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Booking Reminders Collection: /booking_reminders/{reminderId}
+    match /booking_reminders/{reminderId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.companionId ||
+        isAdmin()
+      );
+      allow create, update, delete: if isAdmin();
+    }
+
+  }
+}
