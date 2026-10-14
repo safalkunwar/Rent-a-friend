@@ -1,5 +1,5 @@
 {
-  "mode": "LOCAL_ANALYTICS_AUTHORITY_REBASE_CANDIDATE",
+  "mode": "ANALYTICS_AUTHORITY_CONTAINMENT_RELEASED",
   "project": "hamrosathi1",
   "release": {
     "name": "projects/hamrosathi1/releases/cloud.firestore",
@@ -16,7 +16,12 @@
     "isResourceAdmin"
   ],
   "sourceOutsideScopedPatch": "BYTE_IDENTICAL",
-  "deployment": "NOT_PERFORMED",
-  "approval": "NOT_REQUESTED",
-  "note": "Fresh candidate composed from the production source read on 2026-10-14. This does not authorize a rules release."
+  "deployment": "DEPLOYED_AND_READBACK_PASS",
+  "approval": "OWNER_AUTHORIZED_REMAINING_ROADMAP_2026-10-14",
+  "activeRelease": {
+    "rulesetName": "projects/hamrosathi1/rulesets/03145504-14d0-4f91-a9f6-8190c7803a98",
+    "updateTime": "2026-10-14T13:32:40.882869Z"
+  },
+  "liveAcceptance": "PASS_7_CHECKS_CLEANUP_PASS",
+  "note": "Scoped analytics-only release. Full rules/API and live acceptance evidence is in docs/sathi/STAFF_RBAC_RELEASE_RESULT_2026-10-14.md."
 }

@@ -1,3 +1,12 @@
+# 2026-10-14 — Release and live-qualify Phase 0 analytics containment
+- **Task:** Continue the owner-authorized roadmap and complete the next scoped Phase 0 authority containment release.
+- **Objective:** Restrict analytics reads to the staff roles that have analytics permission, while preserving all unrelated Firestore rules.
+- **Files changed:** Added `ops/staff-rbac-containment/active-2026-10-14/deploy-analytics.mjs`, `production-acceptance.mjs`, `docs/sathi/STAFF_RBAC_RELEASE_RESULT_2026-10-14.md`, and release/acceptance evidence; updated the candidate manifest, staff gate, approval checklist, documentation status, roadmap status, handoff and this changelog.
+- **Implementation/evidence:** Released candidate hash `94249bae2dc106e30b112e3f763a92695bbcf0e9fdb55359b6a3d00cd20b1fd1` from baseline `8bfecbb...`; active ruleset is `03145504-14d0-4f91-a9f6-8190c7803a98`. Only analytics read authorization and `isResourceAdmin` changed. Analytics writes remain denied.
+- **Validation:** 10/10 current-source/static tests; 17/17 Firestore emulator role/privacy tests; 7/7 dedicated-account live SDK checks. `super_admin`, `platform_admin`, and `analytics_admin` read; finance, read-only and customer roles are denied; allowed roles cannot write. Exact source readback passed. Cleanup verified removal of six generated Auth accounts and one synthetic analytics document.
+- **Remaining limits:** This closes analytics read containment only. No broader staff access, migration, Functions, Storage, index, Hosting, App Check, backup/restore, or other phase was activated. Phase 1/8 policy and evidence gates remain open.
+- **Next action:** Continue only dependency-ready phases; resolve named policy and infrastructure inputs in the checklist before activating identity, money, partner, event or safety features.
+
 # 2026-10-14 — Refresh and qualify Phase 0 analytics containment candidate
 - **Task:** Continue the owner-authorized Phase 0–12 roadmap and validate the next scoped rules candidate from current production state.
 - **Objective:** Correct stale candidate evidence and establish whether the analytics-only staff read restriction is ready for a separate production release.

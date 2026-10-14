@@ -1,0 +1,43 @@
+{
+  "result": "LIVE_SDK_ACCEPTANCE_PASS",
+  "project": "hamrosathi1",
+  "verifiedAt": "2026-10-14T13:33:46.985Z",
+  "candidateHash": "94249bae2dc106e30b112e3f763a92695bbcf0e9fdb55359b6a3d00cd20b1fd1",
+  "checks": [
+    {
+      "name": "super_admin reads analytics from the production server",
+      "result": "PASS"
+    },
+    {
+      "name": "platform_admin reads analytics from the production server",
+      "result": "PASS"
+    },
+    {
+      "name": "analytics_admin reads analytics from the production server",
+      "result": "PASS"
+    },
+    {
+      "name": "finance_admin is denied analytics read",
+      "result": "PASS"
+    },
+    {
+      "name": "read_only_admin is denied analytics read",
+      "result": "PASS"
+    },
+    {
+      "name": "customer is denied analytics read",
+      "result": "PASS"
+    },
+    {
+      "name": "live production source still equals the exact candidate",
+      "result": "PASS"
+    }
+  ],
+  "cleanup": {
+    "passed": true,
+    "accountsCreated": 6,
+    "fixturePaths": 1,
+    "errors": []
+  },
+  "scope": "DISPOSABLE_AUTH_ACCOUNTS_AND_ONE_GENERATED_ANALYTICS_DOCUMENT; NO CUSTOMER DATA CHANGED"
+}

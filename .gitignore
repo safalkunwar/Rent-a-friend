@@ -7,3 +7,4 @@ coverage/
 .env*
 !.env.example
 ops/booking-containment/.private/
+ops/staff-rbac-containment/.private/

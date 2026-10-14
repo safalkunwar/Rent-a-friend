@@ -18,8 +18,9 @@ test('current-source analytics candidate exactly composes from the active bookin
   assert.equal(manifest.baselineHash, hash(baseline));
   assert.equal(manifest.candidateHash, hash(candidate));
   assert.equal(candidate, baseline.replace(helperOld, helperNew).replace(analyticsOld, analyticsNew));
-  assert.equal(manifest.deployment, 'NOT_PERFORMED');
-  assert.equal(manifest.approval, 'NOT_REQUESTED');
+  assert.equal(manifest.deployment, 'DEPLOYED_AND_READBACK_PASS');
+  assert.equal(manifest.activeRelease.rulesetName, 'projects/hamrosathi1/rulesets/03145504-14d0-4f91-a9f6-8190c7803a98');
+  assert.equal(manifest.liveAcceptance, 'PASS_7_CHECKS_CLEANUP_PASS');
 });
 
 test('current-source analytics candidate retains byte-identical unrelated rules', async () => {

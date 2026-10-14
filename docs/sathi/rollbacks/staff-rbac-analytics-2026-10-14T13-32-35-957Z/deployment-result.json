@@ -1,0 +1,32 @@
+{
+  "result": "DEPLOYED_AND_READBACK_PASS",
+  "project": "hamrosathi1",
+  "verifiedAt": "2026-10-14T13:32:43.969Z",
+  "beforeHash": "8bfecbb1465176c50eab501b2b4680a19e678d83678a6f2003b197b1514f768f",
+  "candidateHash": "94249bae2dc106e30b112e3f763a92695bbcf0e9fdb55359b6a3d00cd20b1fd1",
+  "beforeRelease": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/e8b7524d-3fc8-4aa4-b19f-e89c3bedfac1",
+    "createTime": "2026-07-12T04:35:43.978011Z",
+    "updateTime": "2026-10-12T14:06:22.927363Z"
+  },
+  "afterRelease": {
+    "name": "projects/hamrosathi1/releases/cloud.firestore",
+    "rulesetName": "projects/hamrosathi1/rulesets/03145504-14d0-4f91-a9f6-8190c7803a98",
+    "createTime": "2026-07-12T04:35:43.978011Z",
+    "updateTime": "2026-10-14T13:32:40.882869Z"
+  },
+  "evidenceDirectory": "docs/sathi/rollbacks/staff-rbac-analytics-2026-10-14T13-32-35-957Z",
+  "untouched": [
+    "Firestore documents",
+    "Auth claims",
+    "Storage",
+    "indexes",
+    "Functions",
+    "Hosting",
+    "CORS"
+  ],
+  "liveAcceptance": "PASS_7_CHECKS_CLEANUP_PASS",
+  "acceptanceEvidence": "docs/sathi/rollbacks/staff-rbac-acceptance-2026-10-14T13-32-57-301Z/result.json",
+  "qualification": "SCOPED_ANALYTICS_CONTAINMENT_RELEASE_COMPLETE"
+}

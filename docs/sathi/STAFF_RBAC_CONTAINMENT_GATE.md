@@ -1,4 +1,8 @@
-# Staff RBAC containment gate — updated 2026-10-12
+# Staff RBAC containment gate — updated 2026-10-14
+
+## Release result — October 14, 2026
+
+The scoped analytics candidate `94249bae...` is active as ruleset `03145504-14d0-4f91-a9f6-8190c7803a98`. Dedicated-account live SDK acceptance passed seven checks, including allowed staff reads, denied finance/read-only/customer reads, denied analytics writes, exact source readback and clean fixture teardown. See [the release result](STAFF_RBAC_RELEASE_RESULT_2026-10-14.md). This closes only the analytics containment slice; broader resource RBAC remains open.
 
 ## Fresh current-source qualification — October 14, 2026
 
@@ -6,7 +10,7 @@ The owner authorized completion of the remaining roadmap on 2026-10-14. A fresh 
 
 The prior 2026-10-12 local baseline file had drifted to hash `022fe351...` despite its manifest naming `8bfecbb...`; this was caught by the current-source composition test. A fresh package was generated in `ops/staff-rbac-containment/active-2026-10-14/` from the live source. Candidate hash: `94249bae2dc106e30b112e3f763a92695bbcf0e9fdb55359b6a3d00cd20b1fd1`. It changes only analytics read authorization and adds the scoped helper; all other source bytes are identical. Current static composition passes 10/10 and the Firestore emulator role/privacy suite passes 17/17 using a temporary JDK 21 runtime. No production rules were changed.
 
-The owner's broad authorization permits continued roadmap work. This record does not claim finance, counsel, funding, migration, or cohort-release approvals. Production release of this exact rules candidate remains unperformed pending a scoped release decision and live dedicated-account acceptance/rollback package.
+The owner authorized completion of the remaining roadmap. This record does not claim finance, counsel, funding, migration, or other cohort-release approvals. The analytics candidate is now released and live-qualified; other rule branches remain subject to separate scope review.
 
 ## Current-source continuation — October 12, 2026
 
