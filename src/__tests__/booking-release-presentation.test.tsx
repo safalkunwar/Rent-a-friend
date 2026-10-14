@@ -56,4 +56,25 @@ describe('unreleased booking and approval presentation', () => {
     expect(document.activeElement).toBe(opener);
     opener.remove();
   });
+
+  it('wraps forward and reverse tab movement within the profile dialog', () => {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getClientRects')
+      .mockImplementation(() => [new DOMRect()] as unknown as DOMRectList);
+    const view = render(<CompanionProfileModal companion={legacy} onClose={vi.fn()} />);
+    const dialog = view.container.querySelector('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+    const buttons = Array.from(dialog.querySelectorAll('button'));
+    const first = buttons[0];
+    const last = buttons[buttons.length - 1];
+
+    last.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+    first.focus();
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
+
+    rectSpy.mockRestore();
+    view.unmount();
+  });
 });
