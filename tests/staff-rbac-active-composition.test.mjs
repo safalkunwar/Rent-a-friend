@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { helperOld, helperNew, analyticsOld, analyticsNew } from '../ops/staff-rbac-containment/patch.mjs';
 
-const dir = 'ops/staff-rbac-containment/active-2026-10-12';
+const dir = 'ops/staff-rbac-containment/active-2026-10-14';
 const hash = (content) => createHash('sha256').update(content).digest('hex');
 
 test('current-source analytics candidate exactly composes from the active booking rules', async () => {

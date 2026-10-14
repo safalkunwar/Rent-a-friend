@@ -1,6 +1,6 @@
 # SATHI Phase 0–12 approval and evidence checklist
 
-**Status: open.** This checklist separates decisions and release authority from implementation work. A completed local build, emulator suite, draft policy, or broad request to finish the roadmap does not replace the specific approval required for production rules, Functions, funding, legal policy, migrations, or feature activation.
+**Status: open.** On 2026-10-14, the owner authorized completion of the remaining roadmap. This permits continued implementation and qualification; it does not supply missing finance/counsel evidence, campaign amounts, migration manifests, or a release decision naming a production candidate. A completed local build, emulator suite, or draft policy does not replace those specific gates.
 
 ## Decisions needed from the product owner and counsel
 

@@ -1,3 +1,12 @@
+# 2026-10-14 — Refresh and qualify Phase 0 analytics containment candidate
+- **Task:** Continue the owner-authorized Phase 0–12 roadmap and validate the next scoped rules candidate from current production state.
+- **Objective:** Correct stale candidate evidence and establish whether the analytics-only staff read restriction is ready for a separate production release.
+- **Files changed:** Added `ops/staff-rbac-containment/active-2026-10-14/` baseline, candidate, manifest, emulator config and source-driven generator; updated `tests/staff-rbac-active-composition.test.mjs`, this gate, `APPROVAL_CHECKLIST_PHASE_00_12.md`, `PHASE_01_COINS_DECISION_REGISTER_2026-10-14.md`, `DOCUMENTATION_STATUS.md`, `ROADMAP_EXECUTION_STATUS_2026-09-25.md`, and this changelog.
+- **Implementation/evidence:** Authenticated read-only Firestore Rules API read returned active ruleset `e8b7524d-3fc8-4aa4-b19f-e89c3bedfac1`, hash `8bfecbb1465176c50eab501b2b4680a19e678d83678a6f2003b197b1514f768f`. Billing readback reports enabled. Refreshed candidate hash is `94249bae2dc106e30b112e3f763a92695bbcf0e9fdb55359b6a3d00cd20b1fd1`, changing only analytics read authorization and its scoped helper.
+- **Validation:** Current-source static composition 10/10; Firestore emulator role/privacy checks 17/17 with temporary JDK 21. No production rules, data, claims, Functions, indexes or Hosting changed.
+- **Remaining limits:** Candidate is not deployed. A scoped release and dedicated-account live acceptance/rollback result are still needed. Finance/counsel policy, funding, migration and feature approvals remain separate and open.
+- **Next action:** Complete live acceptance only after the scoped analytics candidate release is authorized; continue independent local tasks and maintain other feature gates.
+
 # 2026-10-14 — Keep Coins UI within approved identity and commerce boundaries
 - **Task:** Resume the remaining roadmap work and close an unsafe/incomplete integration found in the newest Coins UI commit.
 - **Objective:** Keep the local wallet candidate aligned with the decision register: no unapproved identity collection, payment, payout, or spend workflow.
