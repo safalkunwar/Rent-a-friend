@@ -1,3 +1,12 @@
+## 2026-10-14 — Consolidate Phase 0–12 approval dependencies
+- **Task:** Resume the full SATHI roadmap and make the remaining approval gates concrete against the owner's same-day completion target.
+- **Objective:** Identify decisions, evidence and release authority required by phase so local work can continue without treating the deadline as approval.
+- **Files changed:** docs/sathi/APPROVAL_CHECKLIST_PHASE_00_12.md, docs/sathi/DOCUMENTATION_STATUS.md, and this changelog.
+- **Implementation:** Added a consolidated matrix for product, identity/counsel, finance, merchant/provider, App Check, backup/restore, migration, Functions deployment, rules releases, safety operations and Phase 12 cohorts. Linked it from the current documentation index.
+- **Validation:** Cross-checked phase dependencies against the current roadmap, Phase 1 identity proposal, Phase 8 Coins policy/input template, and current operational status. git diff --check passed.
+- **Remaining limits:** No approval values, funding evidence, credentials, release authorization, device, recovery target or staffed operational coverage were supplied by this documentation task. Production state remains unchanged.
+- **Next action:** Continue local, policy-independent work; resume each gated phase when its named decision/evidence is provided.
+
 ## 2026-10-14 — Improve companion profile dialog keyboard access
 - **Task:** Continue the full roadmap with a dependency-free Phase 10 accessibility improvement.
 - **Objective:** Make the companion profile dialog operable and understandable with keyboard and assistive technology while preserving current profile and booking behavior.

@@ -6,6 +6,8 @@ This index separates current operational evidence from historical audits and tar
 
 ## Current source of truth
 
+The consolidated [Phase 0–12 approval checklist](APPROVAL_CHECKLIST_PHASE_00_12.md) lists the product, counsel, finance, infrastructure and per-release inputs still required. It supplements, and does not replace, the phase-specific gates below.
+
 | Topic | Current document | Status |
 | --- | --- | --- |
 | Full Phase 0–12 execution audit | [ROADMAP_EXECUTION_STATUS_2026-09-25.md](ROADMAP_EXECUTION_STATUS_2026-09-25.md) | Owner selected full roadmap; no phase is yet fully qualified. Scoped booking/lock containment is active; other Phase 0 and all downstream definitions remain open |
