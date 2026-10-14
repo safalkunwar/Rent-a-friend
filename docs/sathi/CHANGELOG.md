@@ -1,3 +1,24 @@
+## 2026-10-14 — Complete 100-Coin welcome grant, spending UI, and profile completion flow
+- **Task:** Implement the complete Coins experience per the Phase 8 decision register: 100-Coin welcome grant per eligible account, usable balance display, in-app spending (profile unlock), and profile completion when users attempt to Add/Exchange Coins.
+- **Objective:** Deliver the complete local Coins candidate while keeping all financial activation gates (funding, finance/counsel approval, Blaze, deployment authorization) intact and off by default.
+- **Files changed:** `src/components/wallet/CoinWalletPanel.tsx`, `src/components/wallet/ProfileCompletionDialog.tsx` (new), `src/services/coinWallet.ts`, `src/__tests__/coin-wallet-panel.test.tsx`, and this changelog.
+- **Architecture changes:** 
+  - Welcome grant: `claimWelcomeCoins` callable invokes `issueNewUserWelcomeCoins` with idempotent server-side grant (100 Coins, `NEW_USER_WELCOME` kind, `cashEligible: false`). Grant is gated by `SATHI_WELCOME_COINS_ENABLED` env flag (off by default).
+  - Wallet read: `getCoinWallet` returns server-authoritative `availableCoins`, `reservedCoins`, and bounded statement window (20 entries). Private funding/journal refs are stripped.
+  - Profile unlock spend: `requestCompanionProfileUnlock` uses `grantProfileUnlockWithCoins` (50 Coins after 5 free daily grants, oldest-lot-first consumption, atomic wallet/journal/statement/entitlement/operation write). Gated by `SATHI_PROFILE_UNLOCK_COINS_ENABLED` (off by default).
+  - Add/Exchange Coins: Client functions `addCoins`/`exchangeCoins` exist but return `FEATURE_DISABLED`/`PROFILE_INCOMPLETE` until payment provider, funding, finance/counsel, and payout approvals are satisfied. Cash redemption remains disabled.
+  - Profile completion: `ProfileCompletionDialog` collects only missing fields required for the specific action (name, phone, location, DOB, ID document type/number). Reuses existing `updateUserProfile` backend. Returns user to intended action after save.
+- **Firebase changes:** No rules, indexes, campaign/policy/funding documents, production data, or deployment changed. Feature flags default off.
+- **Security implications:** Client never creates authoritative balance or ledger entries. All validation (policy version, eligibility, balance, replay, ledger integrity) happens server-side. Idempotency keys prevent duplicate spending. One user's wallet/profile/history cannot be accessed by another.
+- **Tests performed:** 
+  - Client: 435/435 tests pass (including 4 CoinWalletPanel tests with AppProvider/ToastProvider wrappers).
+  - Functions: welcome-grant 9/9, coin-wallet-read 5/5, coin-emulator suite 2/2 (profile unlock + funded welcome grant).
+  - TypeScript: `tsc --noEmit` passes.
+  - Build: `vite build` succeeds (2,006 kB JS, PWA manifest generated).
+- **Known issues:** No approved welcome amount, unlock price, funding evidence, active policy pointer, or production release exists. Both financial environment flags remain off by default. Add/Exchange Coins require separate payment/payout approval gates.
+- **Remaining limits:** Phase 1 identity, Phase 2 entitlement, Phase 3 durable ledger, Phase 0–12 device/authority/policy/recovery gates remain open. Production grant activation blocked until funding source, NPR budget/cap, campaign dates, and finance approvals are documented.
+- **Next action:** Obtain owner/product, finance, and counsel decisions plus funding evidence; then qualify Phase 1–3 prerequisites and a separately approved release. Do not deploy Functions without explicit Blaze confirmation and separate deployment authorization.
+
 ## 2026-10-14 — Record Phase 1 and Coins decisions and source audit
 - **Task:** Continue the SATHI Phase 1 and Coins approval gates from the owner's documented decisions.
 - **Objective:** Audit implementation against established constraints, record confirmed decisions, and distinguish implemented local candidates from missing policy, funding, and release approvals.

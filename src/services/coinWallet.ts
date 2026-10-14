@@ -24,6 +24,14 @@ export type WelcomeCoinClaimResult =
   | { status: 'GRANTED' | 'ALREADY_GRANTED'; rewardId: string; amountCoins: number }
   | { status: 'NOT_CONFIGURED' | 'INELIGIBLE' | 'NOT_FUNDED' | 'CAP_REACHED' | 'WALLET_BLOCKED' };
 
+export type AddCoinsResult =
+  | { status: 'FEATURE_DISABLED' | 'PROFILE_INCOMPLETE' | 'PROVIDER_UNAVAILABLE' }
+  | { status: 'INITIATED'; transactionId: string; amountCoins: number; paymentUrl: string };
+
+export type ExchangeCoinsResult =
+  | { status: 'FEATURE_DISABLED' | 'PROFILE_INCOMPLETE' | 'NOT_APPROVED' | 'INSUFFICIENT_COINS' }
+  | { status: 'INITIATED'; transactionId: string; amountCoins: number; exchangeRate: string };
+
 function functionsClient() {
   if (!app) throw new Error('SATHI Coins are unavailable on this connection.');
   return getFunctions(app, 'us-central1');
@@ -87,4 +95,50 @@ export async function claimWelcomeCoins(): Promise<WelcomeCoinClaimResult> {
     };
   }
   throw new Error('The welcome Coin result could not be verified.');
+}
+
+export async function addCoins(amountCoins: number): Promise<AddCoinsResult> {
+  if (!auth?.currentUser) throw new Error('Sign in to add Coins.');
+  if (!Number.isSafeInteger(amountCoins) || amountCoins <= 0) {
+    throw new Error('Invalid Coin amount.');
+  }
+  const callable = httpsCallable<{ amountCoins: number }, unknown>(functionsClient(), 'addCoins');
+  const response = await callable({ amountCoins });
+  const data = response.data as Record<string, unknown>;
+  const disabledStatuses = ['FEATURE_DISABLED', 'PROFILE_INCOMPLETE', 'PROVIDER_UNAVAILABLE'];
+  if (disabledStatuses.includes(String(data.status))) {
+    return { status: data.status as AddCoinsResult['status'] } as AddCoinsResult;
+  }
+  if (data.status === 'INITIATED' && typeof data.transactionId === 'string' && isCoinCount(data.amountCoins) && typeof data.paymentUrl === 'string') {
+    return {
+      status: 'INITIATED',
+      transactionId: data.transactionId,
+      amountCoins: data.amountCoins,
+      paymentUrl: data.paymentUrl,
+    };
+  }
+  throw new Error('The add Coins result could not be verified.');
+}
+
+export async function exchangeCoins(amountCoins: number): Promise<ExchangeCoinsResult> {
+  if (!auth?.currentUser) throw new Error('Sign in to exchange Coins.');
+  if (!Number.isSafeInteger(amountCoins) || amountCoins <= 0) {
+    throw new Error('Invalid Coin amount.');
+  }
+  const callable = httpsCallable<{ amountCoins: number }, unknown>(functionsClient(), 'exchangeCoins');
+  const response = await callable({ amountCoins });
+  const data = response.data as Record<string, unknown>;
+  const disabledStatuses = ['FEATURE_DISABLED', 'PROFILE_INCOMPLETE', 'NOT_APPROVED', 'INSUFFICIENT_COINS'];
+  if (disabledStatuses.includes(String(data.status))) {
+    return { status: data.status as ExchangeCoinsResult['status'] } as ExchangeCoinsResult;
+  }
+  if (data.status === 'INITIATED' && typeof data.transactionId === 'string' && isCoinCount(data.amountCoins) && typeof data.exchangeRate === 'string') {
+    return {
+      status: 'INITIATED',
+      transactionId: data.transactionId,
+      amountCoins: data.amountCoins,
+      exchangeRate: data.exchangeRate,
+    };
+  }
+  throw new Error('The exchange Coins result could not be verified.');
 }
