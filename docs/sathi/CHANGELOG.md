@@ -1,3 +1,12 @@
+## 2026-10-14 — Record Phase 1 and Coins decisions and source audit
+- **Task:** Continue the SATHI Phase 1 and Coins approval gates from the owner's documented decisions.
+- **Objective:** Audit implementation against established constraints, record confirmed decisions, and distinguish implemented local candidates from missing policy, funding, and release approvals.
+- **Files changed:** `docs/sathi/PHASE_01_COINS_DECISION_REGISTER_2026-10-14.md`, `docs/sathi/PHASE_01_IDENTITY_EVIDENCE_DECISION_2026-09-30.md`, `docs/sathi/PHASE_08_REWARD_POLICY_INPUT_TEMPLATE.md`, `docs/sathi/APPROVAL_CHECKLIST_PHASE_00_12.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, and this changelog.
+- **Implementation:** Recorded the service-specific 18+ product floor, 10 Coins=NPR 1 reference, disabled cash-redemption gate, five-level referral maximum, and centrally/admin-controlled partner-rate constraint. Audited existing identity, reviewer, KYC Storage, welcome grant, wallet, unlock, partner-admin and feature-gate source. Replaced unapproved Coin campaign examples in the input template with explicit `BLOCKED — APPROVAL REQUIRED` fields; did not add values or alter code, schemas, rules, feature flags, production data, or releases.
+- **Validation:** Cross-checked architecture 20–25 and 31, roadmap, Phase 1 and Phase 8 gate documents, current UI/repository/Functions/Admin source and current release-status records. `git diff --check` passed.
+- **Remaining limits:** Accepted evidence/person-match method, age-to-service matrix, eligibility projection, evidence access/retention/deletion/hold, reviewer operations, grant/price/budget/cap/funding/dates/vesting/reversal, finance/counsel references, and Phase 1–3/release qualification remain blocked. No production state changed.
+- **Next action:** Product owner, Nepal counsel, identity operations/security and finance must complete the assigned entries in the decision register and Coins template before workflow implementation or activation.
+
 ## 2026-10-14 — Consolidate Phase 0–12 approval dependencies
 - **Task:** Resume the full SATHI roadmap and make the remaining approval gates concrete against the owner's same-day completion target.
 - **Objective:** Identify decisions, evidence and release authority required by phase so local work can continue without treating the deadline as approval.
@@ -1553,5 +1562,3 @@ Each session entry records the test count AT THE TIME of the work. Current total
 - **Tests performed:** Focused tests were authored for ordering, ineligible lots, insufficient value, cap behavior, duplicate IDs, and invalid amounts. They were not run, following the owner's instruction to skip the testing phase.
 - **Known issues:** The planner is not a ledger. Finance-approved accounts/funding policy, Phase 1 authority/config, durable operation idempotency, atomic writers, reconciliation and concurrency qualification remain open.
 - **Next recommended task:** Continue policy-independent contract preparation only; do not create wallet balances or activate financial flags.
-
-## 2026-10-12 — Reconcile Phase 1 identity proposal with official legal sources
