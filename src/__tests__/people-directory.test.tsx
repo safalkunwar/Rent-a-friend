@@ -98,3 +98,15 @@ it('uses explicit accessible profile/save actions without fabricated trust, revi
   expect(screen.queryByText('5 (0)')).toBeNull();
   expect(screen.getByText('Listed rate · NPR 0/hr')).toBeTruthy();
 });
+
+it('gives every responsive companion card layout a named, stateful save control', () => {
+  const layouts = ['home', 'compact', 'featured', 'default'] as const;
+  for (const layout of layouts) {
+    const { unmount } = render(
+      <CompanionCard companion={companion} layout={layout} isFav onToggleFavorite={vi.fn()} />,
+    );
+    const save = screen.getByRole('button', { name: 'Unsave Asha' });
+    expect(save.getAttribute('aria-pressed')).toBe('true');
+    unmount();
+  }
+});

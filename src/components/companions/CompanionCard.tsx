@@ -118,12 +118,15 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
           )}
           {onToggleFavorite && (
             <button
+              type="button"
               onClick={handleFavoriteClick}
               disabled={favoriteSaving}
               aria-busy={favoriteSaving}
+              aria-label={`${isFav ? 'Unsave' : 'Save'} ${companion.name}`}
+              aria-pressed={isFav}
               className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-text-primary hover:bg-black/60 transition-colors"
             >
-              <Heart className={`w-4 h-4 ${isFav ? 'text-red-500 fill-current' : 'text-text-primary'}`} />
+              <Heart aria-hidden="true" className={`w-4 h-4 ${isFav ? 'text-red-500 fill-current' : 'text-text-primary'}`} />
             </button>
           )}
         </div>
@@ -169,12 +172,15 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
         )}
         {onToggleFavorite && (
           <button
+            type="button"
             onClick={handleFavoriteClick}
             disabled={favoriteSaving}
             aria-busy={favoriteSaving}
+            aria-label={`${isFav ? 'Unsave' : 'Save'} ${companion.name}`}
+            aria-pressed={isFav}
             className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-text-primary hover:bg-black/60 transition-colors"
           >
-            <Heart className={`w-4 h-4 ${isFav ? 'text-red-500 fill-current' : 'text-text-primary'}`} />
+            <Heart aria-hidden="true" className={`w-4 h-4 ${isFav ? 'text-red-500 fill-current' : 'text-text-primary'}`} />
           </button>
         )}
       </div>

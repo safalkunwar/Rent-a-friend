@@ -1,3 +1,12 @@
+# 2026-10-14 — Name Save controls across companion card layouts
+- **Task:** Continue dependency-ready Phase 10 accessibility work across responsive people cards.
+- **Objective:** Ensure screen-reader users can identify and query the state of the Save action in every companion-card layout.
+- **Files changed:** `src/components/companions/CompanionCard.tsx`, `src/__tests__/people-directory.test.tsx`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, and this changelog.
+- **Implementation:** Added button types, dynamic Save/Unsave accessible names, `aria-pressed` state, and decorative-icon hiding to featured/default card controls, matching the home/compact variants. Added a regression test covering all four layouts.
+- **Validation:** Targeted People/favorite suites passed 11/11; root TypeScript check passed; `git diff --check` passed.
+- **Remaining limits:** No service eligibility, backend behavior, booking, or release gate changed. App-wide accessibility and installed-device acceptance remain open.
+- **Next action:** Continue with dependency-ready local accessibility work; preserve policy and release gates for all service features.
+
 # 2026-10-14 — Release and live-qualify Phase 0 analytics containment
 - **Task:** Continue the owner-authorized roadmap and complete the next scoped Phase 0 authority containment release.
 - **Objective:** Restrict analytics reads to the staff roles that have analytics permission, while preserving all unrelated Firestore rules.
