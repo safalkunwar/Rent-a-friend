@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { canDisplayCompanionApproval, canOfferV2Booking } from '../services/bookingEligibility';
 import { CompanionCard } from '../components/companions/CompanionCard';
@@ -36,5 +36,24 @@ describe('unreleased booking and approval presentation', () => {
     expect(screen.getAllByText(/Booking requests are unavailable while companion approvals are reviewed/)).toHaveLength(2);
     expect(screen.queryByLabelText('Application approved')).toBeNull();
     expect(screen.queryByText(/Usually responds in 1 hour/)).toBeNull();
+  });
+
+  it('supports keyboard dismissal and gives icon-only actions accessible names', () => {
+    const opener = document.createElement('button');
+    document.body.append(opener);
+    opener.focus();
+    const onClose = vi.fn();
+    const view = render(<CompanionProfileModal companion={legacy} onClose={onClose} />);
+
+    const closeButton = screen.getByRole('button', { name: 'Close companion profile' });
+    expect(document.activeElement).toBe(closeButton);
+    expect(screen.getByRole('button', { name: 'Save Legacy Person' }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.queryByRole('button', { name: 'Message Legacy Person' })).not.toBeNull();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledOnce();
+    view.rerender(<CompanionProfileModal companion={null} onClose={onClose} />);
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
   });
 });

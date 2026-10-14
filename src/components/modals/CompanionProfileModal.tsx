@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, MapPin, Star, ShieldCheck, Languages, CheckCircle2, Clock, Calendar, MessageSquare, Heart } from 'lucide-react';
 import { Companion } from '../../types';
@@ -21,6 +21,49 @@ interface CompanionProfileModalProps {
 export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ companion, onClose, onMessage, onOpenAuth, onComplete }) => {
   const { favorites, toggleFavorite, currentUser } = useAppContext();
   const [showBookingFlow, setShowBookingFlow] = useState(false);
+  const showBookingFlowRef = useRef(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  showBookingFlowRef.current = showBookingFlow;
+
+  useEffect(() => {
+    if (!companion) return undefined;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (showBookingFlowRef.current) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      )).filter(element => element.getClientRects().length > 0);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialogRef.current.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleDialogKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleDialogKeyDown);
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, [companion, onClose]);
 
   if (!companion) return null;
 
@@ -57,6 +100,7 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
         />
         
         <motion.div
+          ref={dialogRef}
           initial={{ opacity: 0, y: 100, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 100, scale: 0.95 }}
@@ -64,6 +108,7 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
           role="dialog"
           aria-modal="true"
           aria-labelledby="companion-profile-name"
+          tabIndex={-1}
         >
           {/* Header Image */}
           <div className="h-48 md:h-80 relative shrink-0">
@@ -71,7 +116,9 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
             <div className="absolute inset-0" style={{ background: 'var(--overlay-gradient)' }} />
 
             <button
+              ref={closeButtonRef}
               onClick={onClose}
+              aria-label="Close companion profile"
               className="absolute top-4 right-4 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/80 transition"
             >
               <X className="w-5 h-5" />
@@ -79,6 +126,8 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
 
             <button
               onClick={() => toggleFavorite(companion.id)}
+              aria-label={isFavorite ? `Remove ${companion.name} from saved profiles` : `Save ${companion.name}`}
+              aria-pressed={isFavorite}
               className="absolute top-4 right-16 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/80 transition"
             >
               <Heart className={`w-5 h-5 ${isFavorite ? 'fill-primary-action text-primary-action' : ''}`} />
@@ -232,6 +281,7 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
               </button> : <p className="flex-1 text-xs text-text-secondary">Booking requests are unavailable while companion approvals are reviewed.</p>}
               <button
                 onClick={handleMessageClick}
+                aria-label={`Message ${companion.name}`}
                 className="px-4 py-3 bg-surface-elevated text-text-primary border border-border-token rounded-xl font-medium hover:border-primary-action transition-colors flex items-center justify-center gap-2"
               >
                 <MessageSquare className="w-4 h-4" />

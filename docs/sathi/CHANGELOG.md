@@ -1,3 +1,12 @@
+## 2026-10-14 — Improve companion profile dialog keyboard access
+- **Task:** Continue the full roadmap with a dependency-free Phase 10 accessibility improvement.
+- **Objective:** Make the companion profile dialog operable and understandable with keyboard and assistive technology while preserving current profile and booking behavior.
+- **Files changed:** `src/components/modals/CompanionProfileModal.tsx`, `src/__tests__/booking-release-presentation.test.tsx`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Implementation:** Added accessible names and saved-state semantics to icon controls; focus moves to the dialog on open, Escape dismisses, Tab remains within the dialog, and closing restores focus to the opener. No booking, release gate, data, or backend behavior changed.
+- **Validation:** Focused presentation tests passed 3/3; root TypeScript check passed; Vite generated the production bundle. The build emitted the existing large-chunk advisory. No device or installed-PWA acceptance was run.
+- **Remaining limits:** This closes only the profile-dialog keyboard slice. App-wide accessibility, Phase 10 eligibility/navigation and device acceptance remain open, as do the policy and release dependencies recorded in the roadmap.
+- **Next action:** Continue with locally verifiable accessibility gaps where they do not cross unresolved service authority or production gates.
+
 ## 2026-10-14 — Finish lint cleanup for Coins domain helpers
 - **Task:** Resume remaining local Phase 8 work after the profile-unlock lint repair.
 - **Objective:** Bring the welcome-grant and owner-wallet read helpers into strict lint compliance and verify the fail-closed snapshot handling.
