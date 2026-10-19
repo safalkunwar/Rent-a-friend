@@ -261,12 +261,12 @@ export function AdminContent() {
               </div>
               <div className="flex items-center gap-2">
                 {hasPerm('content.read') && (
-                  <button className="p-1.5 rounded-lg text-primary-action hover:bg-primary-action/10 transition-colors"><Eye className="w-4 h-4" /></button>
+                  <button type="button" disabled aria-label={`Preview unavailable for ${item.title || 'untitled content'}`} className="p-1.5 rounded-lg text-primary-action hover:bg-primary-action/10 transition-colors disabled:opacity-50"><Eye aria-hidden="true" className="w-4 h-4" /></button>
                 )}
                 {hasPerm('content.write') && (
                   <>
-                    <button onClick={() => openEditForm(item)} disabled={processing} className="p-1.5 rounded-lg text-primary-action hover:bg-primary-action/10 transition-colors disabled:opacity-50"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => executeDelete(item.id)} disabled={processing} className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => openEditForm(item)} disabled={processing} aria-label={`Edit ${item.title || 'untitled content'}`} className="p-1.5 rounded-lg text-primary-action hover:bg-primary-action/10 transition-colors disabled:opacity-50"><Pencil aria-hidden="true" className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => executeDelete(item.id)} disabled={processing} aria-label={`Delete ${item.title || 'untitled content'}`} className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"><Trash2 aria-hidden="true" className="w-4 h-4" /></button>
                   </>
                 )}
               </div>

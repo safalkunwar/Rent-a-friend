@@ -1628,3 +1628,11 @@ Each session entry records the test count AT THE TIME of the work. Current total
 - **Tests performed:** Focused tests were authored for ordering, ineligible lots, insufficient value, cap behavior, duplicate IDs, and invalid amounts. They were not run, following the owner's instruction to skip the testing phase.
 - **Known issues:** The planner is not a ledger. Finance-approved accounts/funding policy, Phase 1 authority/config, durable operation idempotency, atomic writers, reconciliation and concurrency qualification remain open.
 - **Next recommended task:** Continue policy-independent contract preparation only; do not create wallet balances or activate financial flags.
+# 2026-10-19 — Clarify admin content action controls
+- **Task:** Continue dependency-ready Phase 10 accessibility work while awaiting the owner's policy decisions for blocked roadmap phases.
+- **Objective:** Give admin users actionable accessible names for content edit/delete controls and make the currently nonfunctional preview control clearly unavailable.
+- **Files changed:** `admin/src/pages/AdminContent.tsx`, `admin/src/__tests__/event-media.test.tsx`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Implementation:** Added item-specific accessible names and explicit button types to edit/delete actions. Disabled and labeled the preview control because it has no implementation; decorative icons are hidden from assistive technology. Existing permission checks and data operations are unchanged.
+- **Validation:** `cd admin && npx vitest run src/__tests__/event-media.test.tsx` passed 3/3; `git diff --check` passed.
+- **Remaining limits:** This local accessibility fix does not complete Phase 10 or qualify the admin app/device experience. The full roadmap remains gated by the decisions and third-party evidence in `APPROVAL_CHECKLIST_PHASE_00_12.md`.
+- **Next action:** Continue dependency-ready local tasks and proceed on blocked phases only when their required decisions and evidence are recorded.

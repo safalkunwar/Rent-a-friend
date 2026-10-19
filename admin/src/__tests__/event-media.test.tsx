@@ -2,15 +2,15 @@ import React from 'react';
 import { render, fireEvent, screen, waitFor, cleanup } from '@testing-library/react';
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { AdminContent } from '../pages/AdminContent';
-const mocks=vi.hoisted(()=>({save:vi.fn(),toast:vi.fn()}));
-vi.mock('../repositories/AdminRepository',()=>({adminRepository:{listActivities:vi.fn().mockResolvedValue([]),listEvents:vi.fn().mockResolvedValue([])}}));
+const mocks=vi.hoisted(()=>({save:vi.fn(),toast:vi.fn(),listActivities:vi.fn(),listEvents:vi.fn()}));
+vi.mock('../repositories/AdminRepository',()=>({adminRepository:{listActivities:mocks.listActivities,listEvents:mocks.listEvents}}));
 vi.mock('../hooks/useAdmin',()=>({useAdminAuth:()=>({user:{uid:'creator'},hasPerm:()=>true})}));
 vi.mock('../components/ui/Toast',()=>({useToast:()=>({showToast:mocks.toast})}));
 vi.mock('../services/rateLimiter',()=>({adminRateLimiter:{checkAction:()=>true}}));
 vi.mock('../../../src/services/mediaUploadCore',()=>({
   createMediaDraft:()=>({id:'media',contentId:'event-id',uid:'creator',kind:'event'}),saveMedia:mocks.save,
 }));
-beforeEach(()=>{vi.clearAllMocks();URL.createObjectURL=vi.fn(()=> 'blob:event-preview');URL.revokeObjectURL=vi.fn();});
+beforeEach(()=>{vi.clearAllMocks();mocks.listActivities.mockResolvedValue([{id:'activity-1',title:'Guided walk'}]);mocks.listEvents.mockResolvedValue([]);URL.createObjectURL=vi.fn(()=> 'blob:event-preview');URL.revokeObjectURL=vi.fn();});
 afterEach(cleanup);
 async function selectEventImage() {
   const rendered=render(<AdminContent />);
@@ -22,6 +22,13 @@ async function selectEventImage() {
   return rendered;
 }
 describe('authorized event image picker',()=>{
+  it('names content actions and disables the unavailable preview action',async()=>{
+    render(<AdminContent />);
+    expect(await screen.findByRole('button',{name:'Edit Guided walk'})).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Delete Guided walk'})).toBeTruthy();
+    expect((screen.getByRole('button',{name:'Preview unavailable for Guided walk'}) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('previews and saves through the shared core once, showing success after acknowledgement',async()=>{
     let resolve!:(value:object)=>void; mocks.save.mockReturnValue(new Promise(done=>{resolve=done;}));
     const rendered=await selectEventImage();
