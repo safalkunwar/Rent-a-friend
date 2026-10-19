@@ -84,9 +84,11 @@ export function AdminWelcomeCoinIdentity() {
     try {
       const callable = httpsCallable(getFunctions(app, 'us-central1'), 'reviewWelcomeCoinIdentityCase');
       const payload: Record<string, string> = { uid: identityCase.uid, action };
-      if (action === 'APPROVE') payload.documentNumber = documentNumbers[identityCase.uid] ?? '';
+      if (action === 'APPROVE') {
+        payload.documentNumber = documentNumbers[identityCase.uid] ?? '';
+        setDocumentNumbers(previous => ({ ...previous, [identityCase.uid]: '' }));
+      }
       await callable(payload);
-      setDocumentNumbers(previous => ({ ...previous, [identityCase.uid]: '' }));
       setMessage(`Case updated: ${action.toLowerCase()}.`);
       await refresh();
     } catch (cause) {
@@ -134,14 +136,12 @@ export function AdminWelcomeCoinIdentity() {
               </div>
               {canDecide ? (
                 <div className="space-y-3 border-t border-border-token pt-4">
-                  {identityCase.status !== 'ESCALATION_PENDING' && (
-                    <label className="block text-xs text-text-secondary">
-                      Document number as shown on the ID (used only to derive the person key; not saved)
-                      <input type="password" autoComplete="off" value={documentNumbers[identityCase.uid] ?? ''} onChange={event => setDocumentNumbers(previous => ({ ...previous, [identityCase.uid]: event.target.value }))} className="mt-1 block w-full rounded-lg border border-border-token bg-background px-3 py-2 text-sm" />
-                    </label>
-                  )}
+                  <label className="block text-xs text-text-secondary">
+                    Document number as shown on the ID (used only to derive the person key; not saved)
+                    <input type="password" autoComplete="off" value={documentNumbers[identityCase.uid] ?? ''} onChange={event => setDocumentNumbers(previous => ({ ...previous, [identityCase.uid]: event.target.value }))} className="mt-1 block w-full rounded-lg border border-border-token bg-background px-3 py-2 text-sm" />
+                  </label>
                   <div className="flex flex-wrap gap-2">
-                    {identityCase.status !== 'ESCALATION_PENDING' && <button type="button" disabled={busyUid === identityCase.uid || !documentNumbers[identityCase.uid]?.trim()} onClick={() => void act(identityCase, 'APPROVE')} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Approve</button>}
+                    <button type="button" disabled={busyUid === identityCase.uid || !documentNumbers[identityCase.uid]?.trim()} onClick={() => void act(identityCase, 'APPROVE')} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Approve</button>
                     <button type="button" disabled={busyUid === identityCase.uid} onClick={() => void act(identityCase, 'REJECT')} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-300 disabled:opacity-50">Reject</button>
                     {identityCase.status !== 'ESCALATION_PENDING' && <button type="button" disabled={busyUid === identityCase.uid} onClick={() => void act(identityCase, 'ESCALATE')} className="rounded-lg border border-border-token px-3 py-2 text-xs font-semibold disabled:opacity-50">Escalate</button>}
                   </div>

@@ -13,19 +13,23 @@ const { reviewWelcomeCoinIdentityCase, getWelcomeCoinIdentityStatus, appealWelco
 const suffix = randomUUID().replaceAll("-", "");
 const reviewerA = { uid: `reviewer-a-${suffix}`, token: { adminRole: "kyc_reviewer" } };
 const reviewerB = { uid: `reviewer-b-${suffix}`, token: { adminRole: "kyc_reviewer" } };
+const superAdmin = { uid: `super-admin-${suffix}`, token: { adminRole: "super_admin" } };
 const call = (fn, auth, data = {}) => fn.run({ auth, data });
 
 test("identity review creates a private person key, blocks duplicate UIDs, and enforces independent appeal review", async () => {
   const firstUid = `identity-first-${suffix}`;
   const duplicateUid = `identity-duplicate-${suffix}`;
   const appealUid = `identity-appeal-${suffix}`;
+  const escalatedUid = `identity-escalated-${suffix}`;
   const firstRef = db.collection("welcome_coin_identity_cases").doc(firstUid);
   const duplicateRef = db.collection("welcome_coin_identity_cases").doc(duplicateUid);
   const appealRef = db.collection("welcome_coin_identity_cases").doc(appealUid);
+  const escalatedRef = db.collection("welcome_coin_identity_cases").doc(escalatedUid);
   await Promise.all([
     firstRef.set({ uid: firstUid, status: "PENDING", documentType: "NATIONAL_ID" }),
     duplicateRef.set({ uid: duplicateUid, status: "PENDING", documentType: "NATIONAL_ID" }),
     appealRef.set({ uid: appealUid, status: "PENDING", documentType: "PASSPORT" }),
+    escalatedRef.set({ uid: escalatedUid, status: "PENDING", documentType: "PASSPORT" }),
   ]);
 
   const first = await call(reviewWelcomeCoinIdentityCase, reviewerA, {
@@ -59,8 +63,22 @@ test("identity review creates a private person key, blocks duplicate UIDs, and e
     uid: appealUid, action: "APPROVE", documentNumber: "P1234567",
   }), { status: "VERIFIED" });
 
+  assert.deepEqual(await call(reviewWelcomeCoinIdentityCase, reviewerA, {
+    uid: escalatedUid, action: "ESCALATE",
+  }), { status: "ESCALATION_PENDING" });
+  await assert.rejects(
+    call(reviewWelcomeCoinIdentityCase, reviewerB, {
+      uid: escalatedUid, action: "APPROVE", documentNumber: "P7654321",
+    }),
+    (error) => error.code === "permission-denied",
+  );
+  assert.deepEqual(await call(reviewWelcomeCoinIdentityCase, superAdmin, {
+    uid: escalatedUid, action: "APPROVE", documentNumber: "P7654321",
+  }), { status: "VERIFIED" });
+
   const appealPrivate = (await db.collection("welcome_coin_identity_private").doc(appealUid).get()).data();
-  for (const ref of [firstRef, duplicateRef, appealRef]) {
+  const escalatedPrivate = (await db.collection("welcome_coin_identity_private").doc(escalatedUid).get()).data();
+  for (const ref of [firstRef, duplicateRef, appealRef, escalatedRef]) {
     await Promise.all((await ref.collection("audit").get()).docs.map((entry) => entry.ref.delete()));
     await ref.delete();
   }
@@ -69,4 +87,6 @@ test("identity review creates a private person key, blocks duplicate UIDs, and e
   await db.collection("welcome_coin_identity_private").doc(appealUid).delete();
   await db.collection("welcome_coin_person_claims").doc(firstPersonKey).delete();
   await db.collection("welcome_coin_person_claims").doc(appealPrivate.personKey).delete();
+  await db.collection("welcome_coin_identity_private").doc(escalatedUid).delete();
+  await db.collection("welcome_coin_person_claims").doc(escalatedPrivate.personKey).delete();
 });
