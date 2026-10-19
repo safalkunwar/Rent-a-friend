@@ -134,8 +134,6 @@ function clone(value) {
 const account = (uid, overrides = {}) => ({
   uid,
   createdAtMillis: 1_800_000_000_000,
-  emailVerified: true,
-  phoneNumber: null,
   disabled: false,
   ...overrides,
 });
@@ -251,15 +249,24 @@ test("concurrent signup deliveries cannot exceed the campaign cap", async () => 
   assert.equal(db.read("coin_reward_funding/welcome-fund-1").remainingCoins, 0);
 });
 
-test("unverified, disabled, and out-of-cohort accounts receive no grant", async () => {
+test("incomplete profiles receive the UID-scoped welcome grant; disabled and out-of-cohort accounts do not", async () => {
   const db = fundedDatabase();
-  assert.deepEqual(await issueNewUserWelcomeCoins(db, account("unverified", { emailVerified: false })),
-    { status: "INELIGIBLE" });
+  const incompleteProfileGrant = await issueNewUserWelcomeCoins(db, account("incomplete-profile"));
+  assert.equal(incompleteProfileGrant.status, "GRANTED");
+  assert.equal(incompleteProfileGrant.amountCoins, 100);
   assert.deepEqual(await issueNewUserWelcomeCoins(db, account("disabled", { disabled: true })),
     { status: "INELIGIBLE" });
   assert.deepEqual(await issueNewUserWelcomeCoins(db, account("old", { createdAtMillis: 1_600_000_000_000 })),
     { status: "INELIGIBLE" });
-  assert.equal(db.documents.size, 3);
+  assert.equal(db.read("wallet_accounts/incomplete-profile").availableCoins, 100);
+  assert.equal(db.documents.size, 9);
+});
+
+test("campaign policy cannot change the owner-approved 100-Coin grant", async () => {
+  const db = fundedDatabase({ amountCoins: 50 });
+  await assert.rejects(issueNewUserWelcomeCoins(db, account("wrong-amount")),
+    /campaign policy fields are invalid/);
+  assert.equal(db.read("wallet_accounts/wrong-amount"), undefined);
 });
 
 test("missing campaign or exhausted funding fails closed without wallet writes", async () => {

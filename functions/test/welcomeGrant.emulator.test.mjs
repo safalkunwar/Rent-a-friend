@@ -71,8 +71,6 @@ test("funded welcome grant is atomic under real transaction retries and wallet r
   const evidence = (uid) => ({
     uid,
     createdAtMillis: now,
-    emailVerified: true,
-    phoneNumber: null,
     disabled: false,
   });
   const duplicateResults = await Promise.all([

@@ -13,13 +13,11 @@ export { onStoryLike, onEventLike, onEventComment, cleanupExpiredStories, onStor
 
 setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 
-async function issueWelcomeGrantForVerifiedAccount(userRecord: admin.auth.UserRecord): Promise<void> {
+async function issueWelcomeGrantForAccount(userRecord: admin.auth.UserRecord): Promise<void> {
   const createdAtMillis = Date.parse(userRecord.metadata.creationTime);
   const evidence: WelcomeAccountEvidence = {
     uid: userRecord.uid,
     createdAtMillis,
-    emailVerified: userRecord.emailVerified,
-    phoneNumber: userRecord.phoneNumber ?? null,
     disabled: userRecord.disabled,
   };
   try {
@@ -54,13 +52,13 @@ export const onUserCreate = user().onCreate(async (user) => {
 
     await admin.auth().setCustomUserClaims(uid, { role: "customer" });
     logger.info(`User profile and claims created for ${uid}`);
-    await issueWelcomeGrantForVerifiedAccount(user);
+    await issueWelcomeGrantForAccount(user);
   } catch (error) {
     logger.error(`Error in onUserCreate for ${uid}:`, error);
   }
 });
 
-/** Lets a newly verified owner retry the grant; eligibility and UID come from Firebase Auth. */
+/** Lets the authenticated owner retry; UID and account state come from Firebase Auth. */
 export const claimWelcomeCoins = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to check welcome Coin eligibility.");
   try {
@@ -69,8 +67,6 @@ export const claimWelcomeCoins = onCall(async (request) => {
     const result = await issueNewUserWelcomeCoins(admin.firestore(), {
       uid: userRecord.uid,
       createdAtMillis,
-      emailVerified: userRecord.emailVerified,
-      phoneNumber: userRecord.phoneNumber ?? null,
       disabled: userRecord.disabled,
     });
     return result;

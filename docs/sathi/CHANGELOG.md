@@ -1,3 +1,21 @@
+# 2026-10-19 — Apply approved Coins welcome-grant decision and record Phase 0–12 decisions
+- **Task:** Continue the roadmap after the owner supplied a complete decision register, including an exact Coins welcome-grant amount and qualification.
+- **Objective:** Implement the approved product rule locally while preserving funding, legal, operations, infrastructure and release gates.
+- **Files changed:** `functions/src/domains/rewards/welcomeGrant.ts`, `functions/src/index.ts`, `functions/test/welcomeGrant.test.mjs`, `functions/test/welcomeGrant.emulator.test.mjs`, `docs/sathi/OWNER_DECISIONS_2026-10-19.md`, `docs/sathi/PHASE_08_REWARD_POLICY_INPUT_TEMPLATE.md`, `docs/sathi/PHASE_01_COINS_DECISION_REGISTER_2026-10-14.md`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/APPROVAL_CHECKLIST_PHASE_00_12.md`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Implementation:** The owner approved 100 welcome Coins exactly once per canonical Firebase Auth UID, including incomplete profiles, with no profile-completion/DOB/ID/verified-email/verified-phone prerequisite and a one-grant beneficiary cap. Local grant logic no longer requires verified contact and rejects any campaign policy amount other than 100. Existing funded campaign, signup-window, disabled-account, idempotency, cap, immutable ledger and default-off environment gates remain. Recorded the owner's Phase 0–12 decisions and still-pending accountable evidence in a dedicated register.
+- **Validation:** `cd functions && npm run test:welcome-grant` passed 10/10 and built Functions TypeScript. `cd functions && npm run test:coin-emulator` passed both Firestore emulator suites (welcome grant and profile unlock) 2/2. Targeted ESLint on `welcomeGrant.ts` passed. Full `npm run lint` remains failing on 303 repository-wide formatting/length/style findings. Production was not changed and no Function was deployed.
+- **Remaining limits:** Finance still must approve finite grant count, NPR cap, reserved funding/account, campaign dates and budget monitoring. Vesting/reversal, counsel/finance references, any spend price/entitlement, Phase 1/2/3 qualification, Blaze confirmation, exact deployment/release scope, App Check, recovery and device acceptance remain open as listed in the decision register.
+- **Next action:** Continue scoped implementation that does not depend on missing evidence; keep all gated production activity off until its exact prerequisites and release approval are recorded.
+
+# 2026-10-19 — Clarify admin content action controls
+- **Task:** Continue dependency-ready Phase 10 accessibility work while awaiting the owner's policy decisions for blocked roadmap phases.
+- **Objective:** Give admin users actionable accessible names for content edit/delete controls and make the currently nonfunctional preview control clearly unavailable.
+- **Files changed:** `admin/src/pages/AdminContent.tsx`, `admin/src/__tests__/event-media.test.tsx`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Implementation:** Added item-specific accessible names and explicit button types to edit/delete actions. Disabled and labeled the preview control because it has no implementation; decorative icons are hidden from assistive technology. Existing permission checks and data operations are unchanged.
+- **Validation:** `cd admin && npx vitest run src/__tests__/event-media.test.tsx` passed 3/3; `git diff --check` passed.
+- **Remaining limits:** This local accessibility fix does not complete Phase 10 or qualify the admin app/device experience. The full roadmap remains gated by the decisions and third-party evidence in `APPROVAL_CHECKLIST_PHASE_00_12.md`.
+- **Next action:** Continue dependency-ready local tasks and proceed on blocked phases only when their required decisions and evidence are recorded.
+
 # 2026-10-19 — Name icon-only actions across common app surfaces
 - **Task:** Continue dependency-ready Phase 10 accessibility work after the companion-card control fix.
 - **Objective:** Make common icon-only actions discoverable to assistive technology and expose the selected photo-viewer position.
@@ -1628,11 +1646,3 @@ Each session entry records the test count AT THE TIME of the work. Current total
 - **Tests performed:** Focused tests were authored for ordering, ineligible lots, insufficient value, cap behavior, duplicate IDs, and invalid amounts. They were not run, following the owner's instruction to skip the testing phase.
 - **Known issues:** The planner is not a ledger. Finance-approved accounts/funding policy, Phase 1 authority/config, durable operation idempotency, atomic writers, reconciliation and concurrency qualification remain open.
 - **Next recommended task:** Continue policy-independent contract preparation only; do not create wallet balances or activate financial flags.
-# 2026-10-19 — Clarify admin content action controls
-- **Task:** Continue dependency-ready Phase 10 accessibility work while awaiting the owner's policy decisions for blocked roadmap phases.
-- **Objective:** Give admin users actionable accessible names for content edit/delete controls and make the currently nonfunctional preview control clearly unavailable.
-- **Files changed:** `admin/src/pages/AdminContent.tsx`, `admin/src/__tests__/event-media.test.tsx`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
-- **Implementation:** Added item-specific accessible names and explicit button types to edit/delete actions. Disabled and labeled the preview control because it has no implementation; decorative icons are hidden from assistive technology. Existing permission checks and data operations are unchanged.
-- **Validation:** `cd admin && npx vitest run src/__tests__/event-media.test.tsx` passed 3/3; `git diff --check` passed.
-- **Remaining limits:** This local accessibility fix does not complete Phase 10 or qualify the admin app/device experience. The full roadmap remains gated by the decisions and third-party evidence in `APPROVAL_CHECKLIST_PHASE_00_12.md`.
-- **Next action:** Continue dependency-ready local tasks and proceed on blocked phases only when their required decisions and evidence are recorded.

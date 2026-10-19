@@ -16,8 +16,6 @@ const SOURCE_KIND = "NEW_USER_SIGNUP";
 export interface WelcomeAccountEvidence {
   uid: string;
   createdAtMillis: number;
-  emailVerified: boolean;
-  phoneNumber: string | null;
   disabled: boolean;
 }
 
@@ -129,7 +127,8 @@ function validatePolicy(policy: DocumentData, version: number): void {
     typeof policy.approvalRef !== "string" ||
     policy.approvalRef.trim().length === 0 ||
     typeof policy.debitAccountKey !== "string" ||
-    !/^[A-Za-z0-9][A-Za-z0-9:_-]{0,159}$/.test(policy.debitAccountKey)
+    !/^[A-Za-z0-9][A-Za-z0-9:_-]{0,159}$/.test(policy.debitAccountKey) ||
+    policy.amountCoins !== 100
   ) {
     throw new Error(
       "Welcome grant integrity error: campaign policy fields are invalid",
@@ -166,13 +165,7 @@ export async function issueNewUserWelcomeCoins(
     typeof account.uid !== "string" ||
     !/^[A-Za-z0-9_-]{1,128}$/.test(account.uid) ||
     !isNonNegativeSafeInteger(account.createdAtMillis) ||
-    typeof account.emailVerified !== "boolean" ||
-    typeof account.disabled !== "boolean" ||
-    !(
-      account.emailVerified ||
-      (typeof account.phoneNumber === "string" &&
-        account.phoneNumber.length > 0)
-    )
+    typeof account.disabled !== "boolean"
   ) {
     return {status: "INELIGIBLE"};
   }
