@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, cleanup } from '@testing-library/react';
+import { fireEvent, render, cleanup, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { DiscoveryFeed } from '../components/discovery/DiscoveryFeed';
@@ -7,7 +7,10 @@ import { DiscoveryFeed } from '../components/discovery/DiscoveryFeed';
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }));
 vi.mock('../components/social/FeedSocialCards', () => ({
   FeedStoryCard: ({ story }: any) => <div data-media>{story.title}</div>,
-  FeedPostCard: ({ post }: any) => <div data-media>{post.title}</div>,
+  FeedPostCard: ({ post, onOpenMediaViewer }: any) => <div data-media>
+    {post.title}
+    {post.id === 'p1' && <button type="button" onClick={() => onOpenMediaViewer?.(['/one.jpg', '/two.jpg'], 0)}>Open photo viewer</button>}
+  </div>,
 }));
 afterEach(cleanup);
 
@@ -33,4 +36,22 @@ it('layout stays desktop-scoped and the Story backdrop does not inherit transpar
   const composer = readFileSync('src/components/modals/CreateStoryModal.tsx', 'utf8');
   expect(composer.match(/story-composer-backdrop/g)).toHaveLength(2);
   expect(composer).toContain('lg:object-contain');
+});
+
+it('labels photo viewer controls and exposes the selected image position', () => {
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+  const items = [{ type: 'category-header', category: 'Photos' }, {
+    type: 'post', section: 'Photos', data: { id: 'p1', title: 'Photo post' },
+  }];
+  render(<DiscoveryFeed stories={[]} favorites={[]} feedItems={items as any} visibleCategoryCount={2} sentinelRef={null}
+    onToggleFavorite={vi.fn()} onViewCompanion={vi.fn()} onShowToast={vi.fn()} onNavigateExplore={vi.fn()}
+    onCreateStory={vi.fn()} onApplyAsCompanion={vi.fn()} onViewStory={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Open photo viewer' }));
+  expect(screen.getByRole('button', { name: 'Close photo viewer' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Previous image' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Next image' })).toBeTruthy();
+  const firstImage = screen.getByRole('button', { name: 'Go to image 1 of 2' });
+  expect(firstImage.getAttribute('aria-pressed')).toBe('true');
+  fireEvent.click(screen.getByRole('button', { name: 'Next image' }));
+  expect(screen.getByRole('button', { name: 'Go to image 2 of 2' }).getAttribute('aria-pressed')).toBe('true');
 });

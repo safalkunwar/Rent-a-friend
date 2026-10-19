@@ -89,10 +89,12 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
             ✏️ Edit SATHI Profile
           </h3>
           <button 
+            type="button"
             onClick={onClose}
+            aria-label="Close profile editor"
             className="text-text-secondary hover:text-text-primary transition-all"
           >
-            <X className="w-5 h-5" />
+            <X aria-hidden="true" className="w-5 h-5" />
           </button>
         </div>
 

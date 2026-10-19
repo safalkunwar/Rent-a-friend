@@ -345,10 +345,12 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
       {lightboxImages && (
         <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={closeLightbox}>
           <button
+            type="button"
             onClick={closeLightbox}
+            aria-label="Close photo viewer"
             className="absolute top-4 right-4 text-white p-2 hover:bg-white/10 rounded-full transition-colors"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg aria-hidden="true" className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -356,18 +358,22 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
           {lightboxImages.length > 1 && (
             <>
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); prevImage(); }}
+                aria-label="Previous image"
                 className="absolute left-4 text-white p-2 hover:bg-white/10 rounded-full transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); nextImage(); }}
+                aria-label="Next image"
                 className="absolute right-4 text-white p-2 hover:bg-white/10 rounded-full transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
@@ -386,7 +392,10 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = React.memo(({
               {lightboxImages.map((_, idx) => (
                 <button
                   key={idx}
+                  type="button"
                   onClick={(e) => { e.stopPropagation(); setLightboxIndex(idx); }}
+                  aria-label={`Go to image ${idx + 1} of ${lightboxImages.length}`}
+                  aria-pressed={idx === lightboxIndex}
                   className={`w-2 h-2 rounded-full transition-colors ${idx === lightboxIndex ? 'bg-white' : 'bg-white/40'}`}
                 />
               ))}

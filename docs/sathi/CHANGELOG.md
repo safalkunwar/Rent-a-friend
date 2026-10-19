@@ -1,3 +1,12 @@
+# 2026-10-19 — Name icon-only actions across common app surfaces
+- **Task:** Continue dependency-ready Phase 10 accessibility work after the companion-card control fix.
+- **Objective:** Make common icon-only actions discoverable to assistive technology and expose the selected photo-viewer position.
+- **Files changed:** `src/components/modals/ProfileEditModal.tsx`, `src/components/modals/CreateStoryModal.tsx`, `src/components/maps/MeetingLocationSelector.tsx`, `src/components/PWAInstallPrompt.tsx`, `src/components/discovery/DiscoveryFeed.tsx`, `src/__tests__/desktop-layout.test.tsx`, `src/__tests__/media-upload-ui.test.tsx`, `docs/sathi/ROADMAP_EXECUTION_STATUS_2026-09-25.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, `docs/sathi/ANTIGRAVITY_HANDOFF.md`, and this changelog.
+- **Implementation:** Added accessible names and explicit button types for close/dismiss/current-location/photo-navigation actions; decorative icons are hidden from the accessibility tree. Photo position controls expose names and pressed state.
+- **Validation:** Focused People, favorite, desktop and media suites passed 19/19; root TypeScript check passed; `git diff --check` passed.
+- **Remaining limits:** This improves local control semantics only. It does not qualify all routes, screen readers, devices or installed PWA behavior; service and production gates remain unchanged.
+- **Next action:** Continue with scoped local accessibility checks where they do not infer unresolved service policy or release approval.
+
 # 2026-10-14 — Name Save controls across companion card layouts
 - **Task:** Continue dependency-ready Phase 10 accessibility work across responsive people cards.
 - **Objective:** Ensure screen-reader users can identify and query the state of the Save action in every companion-card layout.

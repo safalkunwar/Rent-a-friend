@@ -228,11 +228,13 @@ export const PWAInstallPrompt: React.FC = () => {
               </div>
 
               {/* Close icon */}
-              <button 
+              <button
+                type="button"
                 onClick={handleDismiss}
+                aria-label="Dismiss app install prompt"
                 className="text-text-secondary hover:text-text-primary transition-colors p-1 rounded-lg"
               >
-                <X className="w-4 h-4" />
+                <X aria-hidden="true" className="w-4 h-4" />
               </button>
             </div>
           </motion.div>

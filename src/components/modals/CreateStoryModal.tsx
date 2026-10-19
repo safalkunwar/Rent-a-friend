@@ -100,8 +100,8 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           <h3 className="text-sm font-extrabold text-text-primary flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary-action" /> Share Story Moment
           </h3>
-          <button disabled={submitting} onClick={onClose} className="story-composer-close text-text-secondary hover:text-text-primary transition-all">
-            <X className="w-5 h-5" />
+          <button type="button" aria-label="Close story composer" disabled={submitting} onClick={onClose} className="story-composer-close text-text-secondary hover:text-text-primary transition-all">
+            <X aria-hidden="true" className="w-5 h-5" />
           </button>
         </div>
 

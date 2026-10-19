@@ -1,6 +1,12 @@
 # SATHI — Antigravity implementation handoff
 
-## Current continuation — October 14
+## Current continuation — October 19
+
+Phase 10 local accessibility follow-up: Save controls have consistent accessible names and pressed state across all companion-card layouts. Icon-only controls in the photo viewer, Story composer, profile editor, current-location picker and PWA install prompt are now named; viewer image selectors expose their selected state. Focused People/favorite/desktop/media tests pass 19/19 and root typecheck passes. This closes only these control-name gaps; app-wide accessibility and installed-device/PWA acceptance remain open. See [the roadmap audit](ROADMAP_EXECUTION_STATUS_2026-09-25.md).
+
+The October 14 analytics rules release remains scoped to analytics reads. The full roadmap still has unresolved identity, finance, provider, merchant, recovery, safety operations and device gates in the [approval checklist](APPROVAL_CHECKLIST_PHASE_00_12.md). Keep feature flags off where their policy is unapproved, do not deploy Functions without an exact separately authorized scope, and do not treat this accessibility work as phase completion.
+
+## Previous continuation — October 14
 
 The owner authorized completion of the remaining Phase 0–12 roadmap. The analytics-only staff read-containment candidate `94249bae...` is now active and passed seven dedicated-account SDK checks with clean teardown; see [its release result](STAFF_RBAC_RELEASE_RESULT_2026-10-14.md). This does not supply missing finance/counsel decisions, funding evidence, migration manifests, provider credentials, recovery budget, staffed safety coverage or device acceptance. Use the consolidated [approval and evidence checklist](APPROVAL_CHECKLIST_PHASE_00_12.md) to track those remaining dependencies.
 

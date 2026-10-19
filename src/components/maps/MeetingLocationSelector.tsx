@@ -415,10 +415,11 @@ export const MeetingLocationSelector: React.FC<MeetingLocationSelectorProps> = (
             type="button"
             onClick={handleGetCurrentLocation}
             disabled={isLocked}
+            aria-label="Use current location"
             title="Use current location"
             className="bg-surface-elevated hover:bg-border-token text-text-primary border border-border-token p-2.5 rounded-xl transition-colors shrink-0 flex items-center justify-center disabled:opacity-50"
           >
-            <Navigation className="w-4 h-4 text-primary-action" />
+            <Navigation aria-hidden="true" className="w-4 h-4 text-primary-action" />
           </button>
 
           <button

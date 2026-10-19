@@ -61,4 +61,9 @@ describe('media form persistence sequencing',()=>{
     expect((screen.getByPlaceholderText('Describe your co-experience moment...') as HTMLInputElement).value).toBe('Keep me');
     expect(screen.getByAltText('Preview')).toBeTruthy(); expect(done).not.toHaveBeenCalled(); expect(mocks.toast).not.toHaveBeenCalled();
   });
+  it('exposes a named close action for the Story composer',()=>{
+    const close=vi.fn(); render(<CreateStoryModal onClose={close} />);
+    fireEvent.click(screen.getByRole('button',{name:'Close story composer'}));
+    expect(close).toHaveBeenCalledOnce();
+  });
 });
