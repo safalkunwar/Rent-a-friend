@@ -135,6 +135,18 @@ service cloud.firestore {
          changedOnly(['status','kyc','reviewedBy','reviewedAt','updatedAt','rejectionReason','requestedChanges']));
       allow delete: if root();
     }
+    // Claimant-wide Coins identity cases are written by trusted Functions only.
+    // Only reviewers may read case/evidence references; claimants use a minimized callable.
+    match /welcome_coin_identity_cases/{uid} {
+      allow read: if kyc();
+      allow write: if false;
+      match /audit/{eventId} {
+        allow read: if kyc();
+        allow write: if false;
+      }
+    }
+    match /welcome_coin_identity_private/{uid} { allow read, write: if false; }
+    match /welcome_coin_person_claims/{personKey} { allow read, write: if false; }
 
     function lockKey(data) { return 'lock_' + data.companionId + '_' + data.date.replace('[^a-zA-Z0-9]', '_'); }
     function bookingTime(data) {

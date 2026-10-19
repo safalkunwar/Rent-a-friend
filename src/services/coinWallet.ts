@@ -1,5 +1,6 @@
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app, auth } from '../firebase';
+import { deleteObject, ref, uploadBytes } from 'firebase/storage';
+import { app, auth, storage } from '../firebase';
 
 export interface CoinStatementEntry {
   id: string;
@@ -22,7 +23,14 @@ export type CoinWalletSnapshot =
 
 export type WelcomeCoinClaimResult =
   | { status: 'GRANTED' | 'ALREADY_GRANTED'; rewardId: string; amountCoins: number }
-  | { status: 'NOT_CONFIGURED' | 'INELIGIBLE' | 'NOT_FUNDED' | 'CAP_REACHED' | 'WALLET_BLOCKED' };
+  | { status: 'NOT_CONFIGURED' | 'INELIGIBLE' | 'IDENTITY_REVIEW_REQUIRED' | 'NOT_FUNDED' | 'CAP_REACHED' | 'WALLET_BLOCKED' };
+
+export type WelcomeCoinIdentityStatus = {
+  status: 'NOT_SUBMITTED' | 'PENDING' | 'VERIFIED' | 'REJECTED' | 'DUPLICATE' | 'APPEAL_PENDING' | 'ESCALATION_PENDING';
+  appealDeadlineMillis: number | null;
+};
+
+export type WelcomeCoinIdentityDocumentType = 'NEPALI_CITIZENSHIP_CERTIFICATE' | 'NATIONAL_ID' | 'PASSPORT';
 
 export type AddCoinsResult =
   | { status: 'FEATURE_DISABLED' | 'PROFILE_INCOMPLETE' | 'PROVIDER_UNAVAILABLE' }
@@ -82,7 +90,7 @@ export async function claimWelcomeCoins(): Promise<WelcomeCoinClaimResult> {
   const callable = httpsCallable<void, unknown>(functionsClient(), 'claimWelcomeCoins');
   const response = await callable();
   const data = response.data as Record<string, unknown>;
-  const inactiveStatuses = ['NOT_CONFIGURED', 'INELIGIBLE', 'NOT_FUNDED', 'CAP_REACHED', 'WALLET_BLOCKED'];
+  const inactiveStatuses = ['NOT_CONFIGURED', 'INELIGIBLE', 'IDENTITY_REVIEW_REQUIRED', 'NOT_FUNDED', 'CAP_REACHED', 'WALLET_BLOCKED'];
   if (inactiveStatuses.includes(String(data.status))) {
     return { status: data.status as WelcomeCoinClaimResult['status'] } as WelcomeCoinClaimResult;
   }
@@ -95,6 +103,72 @@ export async function claimWelcomeCoins(): Promise<WelcomeCoinClaimResult> {
     };
   }
   throw new Error('The welcome Coin result could not be verified.');
+}
+
+function identityFunctionsClient() {
+  if (!app) throw new Error('Identity review is unavailable on this connection.');
+  return getFunctions(app, 'us-central1');
+}
+
+function requireIdentityUploadServices() {
+  if (!auth?.currentUser || !storage) throw new Error('Sign in to submit identity evidence.');
+  return { uid: auth.currentUser.uid, service: storage };
+}
+
+export async function submitWelcomeCoinIdentityEvidence(
+  documentType: WelcomeCoinIdentityDocumentType,
+  idFile: File,
+  selfieFile: File,
+): Promise<void> {
+  const { uid, service } = requireIdentityUploadServices();
+  const idTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+  if (!idTypes.includes(idFile.type) || idFile.size <= 0 || idFile.size > 5 * 1024 * 1024) {
+    throw new Error('Government ID must be a JPEG, PNG, or PDF no larger than 5 MB.');
+  }
+  if (!['image/jpeg', 'image/png'].includes(selfieFile.type) || selfieFile.size <= 0 || selfieFile.size > 5 * 1024 * 1024) {
+    throw new Error('The fresh selfie must be a JPEG or PNG no larger than 5 MB.');
+  }
+  const folder = `kyc/${uid}/welcome-coins`;
+  const idExtension = idFile.type === 'application/pdf' ? 'pdf' : idFile.type === 'image/png' ? 'png' : 'jpg';
+  const selfieExtension = selfieFile.type === 'image/png' ? 'png' : 'jpg';
+  const idPath = `${folder}/${crypto.randomUUID()}.${idExtension}`;
+  const selfiePath = `${folder}/${crypto.randomUUID()}.${selfieExtension}`;
+  let submissionStarted = false;
+  try {
+    await Promise.all([
+      uploadBytes(ref(service, idPath), idFile, { contentType: idFile.type, customMetadata: { ownerUid: uid, category: 'kyc' } }),
+      uploadBytes(ref(service, selfiePath), selfieFile, { contentType: selfieFile.type, customMetadata: { ownerUid: uid, category: 'kyc' } }),
+    ]);
+    const callable = httpsCallable(identityFunctionsClient(), 'submitWelcomeCoinIdentityCase');
+    submissionStarted = true;
+    await callable({ documentType, idPath, selfiePath });
+  } catch (error) {
+    // Once submission starts, a lost response can mean the case was committed.
+    // Preserve the referenced evidence; clean up only when upload failed first.
+    if (!submissionStarted) {
+      await Promise.allSettled([deleteObject(ref(service, idPath)), deleteObject(ref(service, selfiePath))]);
+    }
+    throw error;
+  }
+}
+
+export async function getWelcomeCoinIdentityStatus(): Promise<WelcomeCoinIdentityStatus> {
+  if (!auth?.currentUser) throw new Error('Sign in to view identity review status.');
+  const callable = httpsCallable<void, unknown>(identityFunctionsClient(), 'getWelcomeCoinIdentityStatus');
+  const response = await callable();
+  const data = response.data as Record<string, unknown>;
+  const statuses = ['NOT_SUBMITTED', 'PENDING', 'VERIFIED', 'REJECTED', 'DUPLICATE', 'APPEAL_PENDING', 'ESCALATION_PENDING'];
+  if (!statuses.includes(String(data.status)) ||
+      !(data.appealDeadlineMillis === null || (Number.isSafeInteger(data.appealDeadlineMillis) && Number(data.appealDeadlineMillis) >= 0))) {
+    throw new Error('Identity review status could not be verified.');
+  }
+  return { status: data.status as WelcomeCoinIdentityStatus['status'], appealDeadlineMillis: data.appealDeadlineMillis as number | null };
+}
+
+export async function appealWelcomeCoinIdentityCase(): Promise<void> {
+  if (!auth?.currentUser) throw new Error('Sign in to appeal this decision.');
+  const callable = httpsCallable<void, unknown>(identityFunctionsClient(), 'appealWelcomeCoinIdentityCase');
+  await callable();
 }
 
 export async function addCoins(amountCoins: number): Promise<AddCoinsResult> {

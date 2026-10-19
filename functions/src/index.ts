@@ -4,33 +4,20 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { user } from "firebase-functions/v1/auth";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
-import { issueNewUserWelcomeCoins, type WelcomeAccountEvidence } from "./domains/rewards/welcomeGrant";
+import { issueNewUserWelcomeCoins } from "./domains/rewards/welcomeGrant";
 import { readCoinWalletForUid } from "./domains/wallet/coinWalletRead";
 import { grantProfileUnlockWithCoins } from "./domains/discovery/profileUnlockGrant";
+export {
+  appealWelcomeCoinIdentityCase,
+  getWelcomeCoinIdentityStatus,
+  reviewWelcomeCoinIdentityCase,
+  submitWelcomeCoinIdentityCase,
+} from "./domains/identity/welcomeCoinIdentity";
 
 admin.initializeApp();
 export { onStoryLike, onEventLike, onEventComment, cleanupExpiredStories, onStoryDeletedMedia, onMediaUploadFinalized, cleanupMediaOrphans } from './mediaSocial';
 
 setGlobalOptions({ region: "us-central1", maxInstances: 10 });
-
-async function issueWelcomeGrantForAccount(userRecord: admin.auth.UserRecord): Promise<void> {
-  const createdAtMillis = Date.parse(userRecord.metadata.creationTime);
-  const evidence: WelcomeAccountEvidence = {
-    uid: userRecord.uid,
-    createdAtMillis,
-    disabled: userRecord.disabled,
-  };
-  try {
-    const result = await issueNewUserWelcomeCoins(admin.firestore(), evidence);
-    if (result.status === "GRANTED") {
-      logger.info("Welcome Coins grant posted", { uid: userRecord.uid, rewardId: result.rewardId });
-    } else if (result.status !== "NOT_CONFIGURED" && result.status !== "ALREADY_GRANTED") {
-      logger.warn("Welcome Coins grant was not posted", { uid: userRecord.uid, status: result.status });
-    }
-  } catch (error) {
-    logger.error("Welcome Coins grant failed closed", { uid: userRecord.uid, error });
-  }
-}
 
 // --- Authentication & User Management ---
 
@@ -52,7 +39,6 @@ export const onUserCreate = user().onCreate(async (user) => {
 
     await admin.auth().setCustomUserClaims(uid, { role: "customer" });
     logger.info(`User profile and claims created for ${uid}`);
-    await issueWelcomeGrantForAccount(user);
   } catch (error) {
     logger.error(`Error in onUserCreate for ${uid}:`, error);
   }

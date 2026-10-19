@@ -1,10 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { createHash } from "node:crypto";
 
 const require = createRequire(import.meta.url);
-const { issueNewUserWelcomeCoins } = require("../lib/domains/rewards/welcomeGrant.js");
+const { issueNewUserWelcomeCoins: issueNewUserWelcomeCoinsRaw } = require("../lib/domains/rewards/welcomeGrant.js");
 process.env.SATHI_WELCOME_COINS_ENABLED = "true";
+process.env.SATHI_WELCOME_IDENTITY_ENABLED = "true";
 
 class FakeDocumentSnapshot {
   constructor(ref, data) {
@@ -177,6 +179,21 @@ function fundedDatabase(policyOverrides = {}, fundingOverrides = {}) {
   return db;
 }
 
+function seedVerifiedIdentity(db, uid, personKey = `v1_${createHash("sha256").update(uid).digest("hex")}`) {
+  db.seed(`welcome_coin_identity_cases/${uid}`, { uid, status: "VERIFIED" });
+  db.seed(`welcome_coin_identity_private/${uid}`, { status: "VERIFIED", personKey });
+  if (!db.read(`welcome_coin_person_claims/${personKey}`)) {
+    db.seed(`welcome_coin_person_claims/${personKey}`, { ownerUid: uid, keyVersion: 1 });
+  }
+}
+
+async function issueNewUserWelcomeCoins(db, evidence) {
+  if (!db.read(`welcome_coin_identity_private/${evidence.uid}`)) {
+    seedVerifiedIdentity(db, evidence.uid);
+  }
+  return issueNewUserWelcomeCoinsRaw(db, evidence);
+}
+
 test("posts one balanced grant, wallet projection, provenance lot, and reward atomically", async () => {
   const db = fundedDatabase();
   const result = await issueNewUserWelcomeCoins(db, account("new-user"));
@@ -201,6 +218,23 @@ test("posts one balanced grant, wallet projection, provenance lot, and reward at
   assert.equal(statement.deltaCoins, 100);
   assert.equal(statement.purpose, "NEW_USER_WELCOME");
   assert.equal(journal.entries.reduce((sum, entry) => sum + entry.signedAmount, 0), 0);
+});
+
+test("grant requires an approved person claim and blocks a second UID for that person", async () => {
+  const db = fundedDatabase();
+  const unverified = account("unverified-user");
+  assert.deepEqual(await issueNewUserWelcomeCoinsRaw(db, unverified), { status: "IDENTITY_REVIEW_REQUIRED" });
+  assert.equal(db.read("wallet_accounts/unverified-user"), undefined);
+
+  const personKey = `v1_${createHash("sha256").update("same-verified-person").digest("hex")}`;
+  seedVerifiedIdentity(db, "first-approved-uid", personKey);
+  seedVerifiedIdentity(db, "second-approved-uid", personKey);
+  assert.equal((await issueNewUserWelcomeCoinsRaw(db, account("first-approved-uid"))).status, "GRANTED");
+  assert.deepEqual(await issueNewUserWelcomeCoinsRaw(db, account("second-approved-uid")), {
+    status: "IDENTITY_REVIEW_REQUIRED",
+  });
+  assert.equal(db.read("wallet_accounts/second-approved-uid"), undefined);
+  assert.equal(db.read("coin_reward_campaign_usage/welcome_v1").issuedGrantCount, 1);
 });
 
 test("same UID retries return the original grant without another credit", async () => {
@@ -259,7 +293,7 @@ test("incomplete profiles receive the UID-scoped welcome grant; disabled and out
   assert.deepEqual(await issueNewUserWelcomeCoins(db, account("old", { createdAtMillis: 1_600_000_000_000 })),
     { status: "INELIGIBLE" });
   assert.equal(db.read("wallet_accounts/incomplete-profile").availableCoins, 100);
-  assert.equal(db.documents.size, 9);
+  assert.equal(db.documents.size, 18);
 });
 
 test("campaign policy cannot change the owner-approved 100-Coin grant", async () => {
@@ -271,7 +305,7 @@ test("campaign policy cannot change the owner-approved 100-Coin grant", async ()
 
 test("missing campaign or exhausted funding fails closed without wallet writes", async () => {
   const missing = new FakeFirestore();
-  assert.deepEqual(await issueNewUserWelcomeCoins(missing, account("no-campaign")), { status: "NOT_CONFIGURED" });
+  assert.deepEqual(await issueNewUserWelcomeCoinsRaw(missing, account("no-campaign")), { status: "NOT_CONFIGURED" });
   assert.equal(missing.documents.size, 0);
 
   const empty = fundedDatabase({}, { remainingCoins: 0 });

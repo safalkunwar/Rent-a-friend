@@ -10,6 +10,7 @@ const CAMPAIGN_POINTER = "coin_reward_campaigns/current_welcome";
 const CAMPAIGN_USAGE_PREFIX = "coin_reward_campaign_usage/welcome_v";
 const FUNDING_PREFIX = "coin_reward_funding/";
 const ENABLED_ENVIRONMENT_FLAG = "SATHI_WELCOME_COINS_ENABLED";
+const IDENTITY_ENABLED_ENVIRONMENT_FLAG = "SATHI_WELCOME_IDENTITY_ENABLED";
 const REWARD_KIND = "NEW_USER_WELCOME";
 const SOURCE_KIND = "NEW_USER_SIGNUP";
 
@@ -26,6 +27,7 @@ export type WelcomeGrantResult =
       status:
         | "NOT_CONFIGURED"
         | "INELIGIBLE"
+        | "IDENTITY_REVIEW_REQUIRED"
         | "NOT_FUNDED"
         | "CAP_REACHED"
         | "WALLET_BLOCKED";
@@ -145,9 +147,10 @@ function validatePolicy(policy: DocumentData, version: number): void {
 }
 
 /**
- * Internal Auth-trigger helper for a trusted backend Auth record. It is not a
- * callable and never creates policy or funding records. An absent active
- * campaign pointer leaves signup unchanged and awards nothing.
+ * Internal grant helper for a trusted backend Auth record. Grant callers must
+ * supply UID/account state from Firebase Auth; identity approval and the
+ * first-approved-person claim are rechecked in the same transaction. It never
+ * creates policy or funding records.
  *
  * @param {Firestore} db Firestore instance used for the transaction.
  * @param {WelcomeAccountEvidence} account Trusted Admin Auth account evidence.
@@ -170,8 +173,13 @@ export async function issueNewUserWelcomeCoins(
     return {status: "INELIGIBLE"};
   }
   if (account.disabled) return {status: "INELIGIBLE"};
+  if (process.env[IDENTITY_ENABLED_ENVIRONMENT_FLAG] !== "true") {
+    return {status: "IDENTITY_REVIEW_REQUIRED"};
+  }
 
   const rewardId = makeRewardId(account.uid);
+  const identityCaseRef = db.collection("welcome_coin_identity_cases").doc(account.uid);
+  const identityPrivateRef = db.collection("welcome_coin_identity_private").doc(account.uid);
   const pointerRef = db.doc(CAMPAIGN_POINTER);
   const rewardRef = db.collection("rewards").doc(rewardId);
   const walletRef = db.collection("wallet_accounts").doc(account.uid);
@@ -191,6 +199,8 @@ export async function issueNewUserWelcomeCoins(
       lotSnapshot,
       journalSnapshot,
       statementSnapshot,
+      identityCaseSnapshot,
+      identityPrivateSnapshot,
     ] = await transaction.getAll(
       pointerRef,
       rewardRef,
@@ -198,7 +208,35 @@ export async function issueNewUserWelcomeCoins(
       lotRef,
       journalRef,
       statementRef,
+      identityCaseRef,
+      identityPrivateRef,
     );
+
+    if (
+      !rewardSnapshot.exists &&
+      (!pointerSnapshot.exists || !pointerSnapshot.data()?.activeVersion)
+    ) {
+      return {status: "NOT_CONFIGURED"};
+    }
+
+    const identityCase = identityCaseSnapshot.data();
+    const identityPrivate = identityPrivateSnapshot.data();
+    const personKey = identityPrivate?.personKey;
+    if (
+      !identityCaseSnapshot.exists ||
+      identityCase?.status !== "VERIFIED" ||
+      !identityPrivateSnapshot.exists ||
+      identityPrivate?.status !== "VERIFIED" ||
+      typeof personKey !== "string" ||
+      !/^v1_[a-f0-9]{64}$/.test(personKey)
+    ) {
+      return {status: "IDENTITY_REVIEW_REQUIRED"};
+    }
+    const personClaimRef = db.collection("welcome_coin_person_claims").doc(personKey);
+    const personClaimSnapshot = await transaction.get(personClaimRef);
+    if (!personClaimSnapshot.exists || personClaimSnapshot.data()?.ownerUid !== account.uid) {
+      return {status: "IDENTITY_REVIEW_REQUIRED"};
+    }
 
     if (rewardSnapshot.exists) {
       const reward = requireRecord(rewardSnapshot, "reward journal pair");
@@ -459,7 +497,7 @@ export async function issueNewUserWelcomeCoins(
       sourceVersion: 1,
       sourceCreatedAtMillis: account.createdAtMillis,
       policyVersion: version,
-      systemActor: "auth-user-create",
+      systemActor: "verified-person-welcome-claim",
       idempotencyKeyHash: hash(rewardId),
       intentHash: hash(
         [rewardId, policy.amountCoins, policy.fundingRef, version].join("|"),

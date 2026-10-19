@@ -28,7 +28,8 @@ import { AdminRestaurants } from './pages/AdminRestaurants';
 import { AdminCafes } from './pages/AdminCafes';
 import { AdminLikes } from './pages/AdminLikes';
 import { AdminAnalytics } from './pages/AdminAnalytics';
-import { Activity, UserCheck, CalendarDays, ShieldAlert, MessageSquare, LogOut, Users, Briefcase, Flag, Image, CreditCard, MessageCircle, Store, MapPin, Hotel, Utensils, Coffee, Heart, BarChart3 } from 'lucide-react';
+import { AdminWelcomeCoinIdentity } from './pages/AdminWelcomeCoinIdentity';
+import { Activity, UserCheck, CalendarDays, ShieldAlert, MessageSquare, LogOut, Users, Briefcase, Flag, Image, CreditCard, MessageCircle, Store, MapPin, Hotel, Utensils, Coffee, Heart, BarChart3, Coins } from 'lucide-react';
 import * as motion from 'motion/react-client';
 
 const AdminLayout: React.FC<{ activeTab: string; onTabChange: (tab: string) => void; children: React.ReactNode }> = ({ 
@@ -50,6 +51,9 @@ const AdminLayout: React.FC<{ activeTab: string; onTabChange: (tab: string) => v
           </button>
           <button onClick={() => onTabChange('guides')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'guides' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
             <UserCheck className="w-4 h-4" /> Guides & Verification
+          </button>
+          <button onClick={() => onTabChange('welcome-coin-identity')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'welcome-coin-identity' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
+            <Coins className="w-4 h-4" /> Welcome-Coin ID Review
           </button>
           <button onClick={() => onTabChange('companions')} className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'companions' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'}`}>
             <Briefcase className="w-4 h-4" /> Companions
@@ -128,6 +132,7 @@ const AdminLayout: React.FC<{ activeTab: string; onTabChange: (tab: string) => v
                   {activeTab === 'dashboard' && 'Monitor overall platform metrics and growth.'}
                   {activeTab === 'users' && 'Manage user accounts and roles.'}
                   {activeTab === 'guides' && 'Review and approve guides on the platform.'}
+                  {activeTab === 'welcome-coin-identity' && 'Review claimant identity evidence for the one-person welcome grant.'}
                   {activeTab === 'companions' && 'Manage companion profiles and verifications.'}
                   {activeTab === 'bookings' && 'Manage all platform transactions.'}
                   {activeTab === 'content' && 'Manage activities and events.'}
@@ -170,6 +175,8 @@ const AdminDashboard: React.FC = () => {
         return <AdminUsers />;
       case 'guides':
         return <AdminGuides />;
+      case 'welcome-coin-identity':
+        return <AdminWelcomeCoinIdentity />;
       case 'companions':
         return <AdminCompanions />;
       case 'bookings':

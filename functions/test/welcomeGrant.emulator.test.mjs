@@ -1,11 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { initializeTestEnvironment, assertFails } from "@firebase/rules-unit-testing";
-import { doc, getDoc } from "firebase/firestore";
+import { initializeTestEnvironment, assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 process.env.SATHI_WELCOME_COINS_ENABLED = "true";
+process.env.SATHI_WELCOME_IDENTITY_ENABLED = "true";
 const { getCoinWallet } = await import("../lib/index.js");
 const { getFirestore } = await import("firebase-admin/firestore");
 const db = getFirestore();
@@ -15,6 +17,7 @@ const ownerUid = `coins-owner-${testSuffix}`;
 const cappedUid = `coins-capped-${testSuffix}`;
 const lateCappedUid = `coins-late-capped-${testSuffix}`;
 const pausedUid = `coins-paused-${testSuffix}`;
+const duplicateUid = `coins-duplicate-${testSuffix}`;
 const version = Number(BigInt(Date.now()) % 1_000_000_000n) || 1;
 const fundingRef = `emulator_${testSuffix.slice(0, 20)}`;
 const policyRef = db.collection("coin_reward_campaigns").doc(`welcome_v${version}`);
@@ -73,6 +76,20 @@ test("funded welcome grant is atomic under real transaction retries and wallet r
     createdAtMillis: now,
     disabled: false,
   });
+  const approveIdentity = async (uid) => {
+    const personKey = `v1_${createHash("sha256").update(uid).digest("hex")}`;
+    await Promise.all([
+      db.doc(`welcome_coin_identity_cases/${uid}`).set({ uid, status: "VERIFIED" }),
+      db.doc(`welcome_coin_identity_private/${uid}`).set({ status: "VERIFIED", personKey }),
+      db.doc(`welcome_coin_person_claims/${personKey}`).set({ ownerUid: uid, keyVersion: 1 }),
+    ]);
+  };
+  await Promise.all([ownerUid, cappedUid, lateCappedUid, pausedUid].map(approveIdentity));
+  const ownerPersonKey = `v1_${createHash("sha256").update(ownerUid).digest("hex")}`;
+  await Promise.all([
+    db.doc(`welcome_coin_identity_cases/${duplicateUid}`).set({ uid: duplicateUid, status: "VERIFIED" }),
+    db.doc(`welcome_coin_identity_private/${duplicateUid}`).set({ status: "VERIFIED", personKey: ownerPersonKey }),
+  ]);
   const duplicateResults = await Promise.all([
     issueNewUserWelcomeCoins(db, evidence(ownerUid)),
     issueNewUserWelcomeCoins(db, evidence(ownerUid)),
@@ -81,6 +98,8 @@ test("funded welcome grant is atomic under real transaction retries and wallet r
   assert.deepEqual(duplicateResults.map((result) => result.status).sort(), ["ALREADY_GRANTED", "GRANTED"].sort());
   assert.equal((await issueNewUserWelcomeCoins(db, evidence(cappedUid))).status, "GRANTED");
   assert.equal((await issueNewUserWelcomeCoins(db, evidence(lateCappedUid))).status, "CAP_REACHED");
+  assert.equal((await issueNewUserWelcomeCoins(db, evidence(duplicateUid))).status, "IDENTITY_REVIEW_REQUIRED");
+  assert.equal((await db.doc(`wallet_accounts/${duplicateUid}`).get()).exists, false);
 
   const ownerGrant = duplicateResults.find((result) => result.status === "GRANTED");
   assert.ok(ownerGrant);
@@ -136,10 +155,34 @@ test("funded welcome grant is atomic under real transaction retries and wallet r
   t.after(async () => { await rulesTestEnv?.cleanup(); });
   const ownerClient = rulesTestEnv.authenticatedContext(ownerUid).firestore();
   const otherClient = rulesTestEnv.authenticatedContext(lateCappedUid).firestore();
+  const reviewerClient = rulesTestEnv.authenticatedContext(`coins-reviewer-${testSuffix}`, {
+    adminRole: "kyc_reviewer",
+  }).firestore();
   await assertFails(getDoc(doc(ownerClient, `wallet_accounts/${ownerUid}`)));
   await assertFails(getDoc(doc(ownerClient, `wallet_accounts/${ownerUid}/statement/${ownerGrant.rewardId}_COIN`)));
+  await assertFails(getDoc(doc(ownerClient, `welcome_coin_identity_private/${ownerUid}`)));
+  await assertFails(getDoc(doc(ownerClient, `welcome_coin_person_claims/${ownerPersonKey}`)));
+  await assertFails(getDoc(doc(ownerClient, `welcome_coin_identity_cases/${ownerUid}`)));
+  await assertSucceeds(getDoc(doc(reviewerClient, `welcome_coin_identity_cases/${ownerUid}`)));
   await assertFails(getDoc(doc(otherClient, `wallet_accounts/${ownerUid}`)));
-  console.log("emulator test: client direct reads denied");
+  await assertFails(setDoc(doc(ownerClient, "wallet_accounts/client-created"), {
+    status: "ACTIVE",
+    availableCoins: 1_000_000,
+    reservedCoins: 0,
+  }));
+  await assertFails(updateDoc(doc(ownerClient, `wallet_accounts/${ownerUid}`), {
+    availableCoins: 1_000_000,
+  }));
+  await assertFails(setDoc(doc(ownerClient, "ledger_transactions/client-forged"), {
+    operationId: "client-forged",
+    asset: "COIN",
+    entries: [
+      { accountKey: `user:${ownerUid}:available`, signedAmount: 1_000_000 },
+      { accountKey: "platform:promo_fund", signedAmount: -1_000_000 },
+    ],
+  }));
+  await assertFails(setDoc(doc(ownerClient, `welcome_coin_person_claims/client-forged`), { ownerUid }));
+  console.log("emulator test: client direct wallet/ledger reads and writes denied");
 
   await assert.rejects(
     getCoinWallet.run({ auth: null, data: {} }),
