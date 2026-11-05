@@ -82,6 +82,11 @@ export const requestCompanionProfileUnlock = onCall(async (request) => {
   if (typeof providerUid !== "string" || typeof requestId !== "string") {
     throw new HttpsError("invalid-argument", "A profile and request ID are required.");
   }
+  // Free quota is still an entitlement; keep every unlock unavailable until
+  // the product policy and exact profile scope are approved.
+  if (process.env.SATHI_PROFILE_UNLOCK_ENABLED !== "true") {
+    return {status: "FEATURE_DISABLED"};
+  }
   try {
     return await grantProfileUnlockWithCoins(
       admin.firestore(), request.auth.uid, providerUid, requestId,

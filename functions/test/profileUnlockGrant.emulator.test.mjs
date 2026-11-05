@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { Timestamp } from "firebase-admin/firestore";
 
 process.env.SATHI_PROFILE_UNLOCK_COINS_ENABLED = "true";
+delete process.env.SATHI_PROFILE_UNLOCK_ENABLED;
 const { requestCompanionProfileUnlock } = await import("../lib/index.js");
 const { grantProfileUnlockWithCoins } = await import("../lib/domains/discovery/profileUnlockGrant.js");
 const { getFirestore } = await import("firebase-admin/firestore");
@@ -236,6 +237,13 @@ test("profile unlock transaction enforces free daily grants, oldest-first spend,
   const callableViewer = `unlock-callable-viewer-${suffix}`;
   await seedViewer(callableViewer, { balance: 50, freeUsed: 5 });
   const callableProvider = providers[6];
+  const gatedResult = await requestCompanionProfileUnlock.run({
+    auth: { uid: callableViewer, token: { uid: callableViewer } },
+    data: { providerUid: callableProvider, requestId: `gated-request-${suffix}` },
+  });
+  assert.deepEqual(gatedResult, { status: "FEATURE_DISABLED" });
+  assert.equal((await db.doc(`profile_unlocks/${callableViewer}_${callableProvider}`).get()).exists, false);
+  process.env.SATHI_PROFILE_UNLOCK_ENABLED = "true";
   const callableResult = await requestCompanionProfileUnlock.run({
     auth: { uid: callableViewer, token: { uid: callableViewer } },
     data: { uid: viewer, providerUid: callableProvider, requestId: `callable-request-${suffix}` },
