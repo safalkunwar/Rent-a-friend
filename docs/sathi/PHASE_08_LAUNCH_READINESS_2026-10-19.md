@@ -2,6 +2,14 @@
 
 **Status: NOT READY FOR PRODUCTION.** This report now includes a local, default-off implementation of claimant-wide ID review and person-level welcome-grant enforcement. No production configuration, ruleset, balances, feature flag, deployment, or grant was activated. Snapshot branch/HEAD: `staff-rbac-containment-2026-09-13` / `f6fb1571ba78b1e30f5caf1117dd23a4be794fb0` before local implementation edits.
 
+## Operational refresh — 2026-11-07
+
+- Current source branch/HEAD: `staff-rbac-containment-2026-09-13` / `9909a375e84aaf1b968bcb302a2508016ee16628` (pushed). The two untracked booking debug scripts are outside this P8 change.
+- Read-only `firebase functions:list --project hamrosathi1` returned seven media Functions only; no Coins, identity-review, or profile-unlock Function is deployed.
+- Billing status could not be verified. The installed `gcloud` lacks the billing command group; adding it was denied because the SDK is under a protected Program Files directory. No SDK change or deployment was attempted.
+- The server-side `SATHI_PROFILE_UNLOCK_ENABLED` gate blocks both the free quota and paid unlock until policy approval; it defaults off. This gate is separate from the paid-spend gate.
+- **Recommended release decision: NO-GO.** No backfill; only consider Auth accounts created within a future, approved finite campaign window. Do not set production gates or collect identity evidence until privacy/retention/legal-hold, App Check, finance and counsel evidence are complete.
+
 ## Verified implementation
 
 - Welcome grants use the canonical Firebase Auth UID for both the wallet document and deterministic reward ID. The transaction atomically creates the reward receipt, balanced COIN journal, non-cash lot, owner statement, wallet projection, campaign counter and funding decrement. The product amount is validated as exactly 100 Coins; the beneficiary maximum is one. The account-creation timestamp must fall within the approved campaign window, and disabled Auth accounts fail eligibility.
@@ -38,7 +46,7 @@ The fingerprint is **linkable sensitive/pseudonymous data**, even though it is k
 ## Technical blockers found
 
 1. **Identity handling is locally implemented but not cleared for production.** Signup no longer grants. Callable grants require an approved UID-bound identity case and person claim inside the grant transaction. Claimant upload, status, appeal, reviewer, HMAC and Admin queue code exist behind default-off gates. Privacy/counsel approval, App Check production readiness, key rotation/retention, legal-hold and cleanup operations, reviewer assignment and account-recovery policy remain unresolved.
-2. **Profile-unlock callable is safely disabled pending product approval.** The callable previously allowed up to five free daily profile entitlements before checking the paid-Coin gate. Local source now requires `SATHI_PROFILE_UNLOCK_ENABLED=true` before executing any profile unlock, including free grants; this gate defaults off and is independent from `SATHI_PROFILE_UNLOCK_COINS_ENABLED`, which still gates paid spending. Emulator coverage verifies the callable returns `FEATURE_DISABLED` without creating an entitlement when the global gate is unset. The callable is absent from the last observed production Functions list, so this is not a current production exposure. Keep the global gate off until the free quota, exact profile fields, paid price and terms are approved. No new entitlement is activated.
+2. **Profile-unlock callable is safely disabled pending product approval.** The callable previously allowed up to five free daily profile entitlements before checking the paid-Coin gate. Local source now requires `SATHI_PROFILE_UNLOCK_ENABLED=true` before executing any profile unlock, including free grants; this gate defaults off and is independent from `SATHI_PROFILE_UNLOCK_COINS_ENABLED`, which still gates paid spending. Emulator coverage verifies the callable returns `FEATURE_DISABLED` without creating an entitlement when the global gate is unset. The 2026-11-07 production Functions inventory shows that the callable is not deployed. Keep the global gate off until the free quota, exact profile fields, paid price and terms are approved. No new entitlement is activated.
 3. **Reversal/vesting is incomplete.** Welcome grant policy currently accepts only `postingMode: "IMMEDIATE"`; the grant writer has no durable one-time reversal or reconciliation workflow. The Phase 3 inverse-journal helper is a pure contract, not an authorized persistent writer. Finance/product/counsel must decide the posting and reversal policy before engineering can complete that dependency.
 4. **Production release scope is undefined.** The new Functions are local only. `onUserCreate` still initializes user profiles/custom claims, but no longer grants Coins; any deployment scope must be reviewed as a whole. Candidate exports include identity-review callables, `claimWelcomeCoins`, `getCoinWallet`, and the unapproved `requestCompanionProfileUnlock`; do not deploy a broad Functions bundle. Blaze status and exact Functions/config/source/rollback approval are not verified.
 
@@ -61,10 +69,11 @@ The fingerprint is **linkable sensitive/pseudonymous data**, even though it is k
 - `cd functions && npm run test:welcome-grant`: passed 11/11; Functions TypeScript build passed.
 - `cd functions && npm run test:coin-emulator`: passed all three Firestore emulator suites 3/3, including identity review/appeal/person-key behavior and direct client-write denials.
 - `cd functions && npm run test:welcome-identity-storage`: passed 1/1 Storage emulator suite for owner upload, reviewer read and restricted deletion.
+- The 2026-11-07 `npm run test:coin-emulator` run passed 3/3 suites after adding the profile-unlock global-gate regression; it rebuilt the Functions TypeScript project.
 - Root `npx tsc --noEmit` passed; Admin `npm run build` passed with existing mixed-import and large-chunk warnings. Focused wallet UI tests passed 4/4 and Admin RBAC tests passed 11/11.
 - Targeted ESLint on the new identity Functions module reported style violations for JSDoc and 80-column line length; runtime/build/emulator checks passed. No repository-wide lint cleanup was attempted.
 - Follow-up regression coverage for ambiguous evidence-submission responses passed 2/2; the wallet panel tests passed 4/4 and the root TypeScript check passed after that fix.
-- Read-only `firebase functions:list --project hamrosathi1`: seven media functions only; no Coins functions listed.
+- Read-only `firebase functions:list --project hamrosathi1` on 2026-11-07: seven media Functions only; no Coins, identity-review or profile-unlock Functions listed. Billing status is unverified because the required `gcloud beta billing` component is not installed and could not be installed in this environment.
 - Direct wallet creation/update, forged ledger creation, private person-key reads and person-claim writes from clients are denied by the Firestore emulator regression test.
 
 No production deployment, feature-flag change, wallet/ledger write, grant, backfill, migration or financial activation occurred during this audit.

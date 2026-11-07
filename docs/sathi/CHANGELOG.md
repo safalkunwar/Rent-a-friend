@@ -1,3 +1,12 @@
+# 2026-11-07 — Gate unapproved profile unlocks and refresh P8 release status
+- **Task:** Close the free-entitlement path in the unapproved profile-unlock callable and refresh current P8 production evidence.
+- **Objective:** Keep both free and paid profile unlocks disabled until the product scope is approved; recheck deployed Functions without deploying or changing production.
+- **Files changed:** `functions/src/index.ts`, `functions/test/profileUnlockGrant.emulator.test.mjs`, `docs/sathi/PHASE_08_LAUNCH_READINESS_2026-10-19.md`, `docs/sathi/PHASE_08_COINS_PRELAUNCH_SLICE_2026-10-13.md`, `docs/sathi/DOCUMENTATION_STATUS.md`, and this changelog.
+- **Implementation:** Added default-off `SATHI_PROFILE_UNLOCK_ENABLED` gate around all profile entitlements, separate from paid Coin spend gate. The existing five-free quota and 50-Coin proposal remain inactive and unapproved. Recorded conservative no-backfill/no-go recommendation. Production inventory returned seven media Functions only; billing status remains unverified because `gcloud beta billing` is unavailable and SDK component installation was denied.
+- **Validation:** `cd functions && npm run test:coin-emulator` passed 3/3 emulator suites, including default-off profile unlock, identity review, and welcome-grant transaction checks. Functions TypeScript build passed. Read-only `firebase functions:list --project hamrosathi1` passed; no P8 Functions are deployed. `git diff --check` passed. No production deployment or activation occurred.
+- **Remaining limits:** Funding cap/budget/source/account/dates/monitor, vesting/reversal/reconciliation, finance and Nepal counsel evidence, evidence deletion/legal holds, fingerprint lifecycle, recovery, App Check readiness, and exact release scope remain outstanding. Billing-plan status remains unverified.
+- **Next action:** Maintain NO-GO until documented external evidence and an exact release approval are available; do not backfill or enable feature flags.
+
 # 2026-10-19 — Build gated Coins identity review and person-level claim
 - **Task:** Implement the owner-approved local claimant identity workflow and enforce one welcome grant per verified person.
 - **Objective:** Remove signup-time issuance, support private ID/selfie review and appeals, reserve the first approved UID by HMAC person key, and enforce that reservation atomically with grant issuance.
