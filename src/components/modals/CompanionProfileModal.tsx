@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, MapPin, Star, ShieldCheck, Languages, CheckCircle2, Clock, Calendar, MessageSquare, Heart } from 'lucide-react';
+import { X, MapPin, Star, ShieldCheck, Languages, CheckCircle2, Clock, Calendar, MessageSquare, Heart, Flag } from 'lucide-react';
 import { Companion } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 import { BookingFlowModal } from './BookingFlowModal';
@@ -9,6 +9,7 @@ import { MAP_CENTER } from '../../services/maps';
 import { SafeImage } from '../ui/SafeImage';
 import { canDisplayCompanionApproval, canOfferV2Booking } from '../../services/bookingEligibility';
 import { bookingV2PresentationEnabled } from '../../services/releaseGates';
+import { ReportModal } from './ReportModal';
 
 interface CompanionProfileModalProps {
   companion: Companion | null;
@@ -21,6 +22,7 @@ interface CompanionProfileModalProps {
 export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ companion, onClose, onMessage, onOpenAuth, onComplete }) => {
   const { favorites, toggleFavorite, currentUser } = useAppContext();
   const [showBookingFlow, setShowBookingFlow] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const showBookingFlowRef = useRef(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -87,6 +89,8 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
     }
     if (onMessage) onMessage();
   };
+
+  const isOwnProfile = currentUser?.id === companion.userId || currentUser?.id === companion.id;
 
   return (
     <AnimatePresence>
@@ -167,6 +171,17 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                     ))}
                   </div>
                  </div>
+
+                 {!isOwnProfile && <button
+                   type="button"
+                   onClick={() => {
+                     if (!currentUser) onOpenAuth?.('login');
+                     else setShowReportModal(true);
+                   }}
+                   className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-danger-token underline underline-offset-4"
+                 >
+                   <Flag className="w-4 h-4" aria-hidden="true" /> Report this companion
+                 </button>}
 
                  {(() => {
                    const coords = companion.coordinates as any;
@@ -310,6 +325,13 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
           onMessageCompanion={onMessage ? () => { setShowBookingFlow(false); onClose(); onMessage(); } : undefined}
         />
       )}
+      {showReportModal && <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetType="companion"
+        targetId={companion.id}
+        targetName={companion.name}
+      />}
     </AnimatePresence>
   );
 };

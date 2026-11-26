@@ -17,6 +17,7 @@
 - Companion cards and profile viewing; saved profiles persist through the existing repository.
 - User-selected interests already save to the user's profile. Existing rules permit users to update their own `interests`, `languages`, and `availability` fields.
 - Existing reports can be submitted to the `reports` collection and reviewed by authorized staff.
+- Companion profiles now expose the existing report form for signed-in users; guests are sent to sign-in before reporting.
 - Coins and identity-review functionality has server-side gates; this release does not enable those workflows.
 - Admin application routes and existing records remain available.
 
@@ -27,12 +28,14 @@
 - User language and availability editing was not previously part of the companion discovery path.
 - No connection-request / accept / decline repository or Firestore contract exists.
 - No user-operable block workflow was found in app code or root Firestore rules. Reports exist, but they do not provide a substitute for blocking.
+- The profile report action submits into the existing report flow; it does not add blocking or establish an operations response policy.
 - Current rules permitted signed-in users to create a conversation with another UID and send messages as a conversation member. Historical threads could therefore be used to start new messages without a fresh consent decision.
 
 ## Validation
 
 - Root TypeScript check (`npm run lint`): passed.
 - Focused discovery, directory, and messaging tests: 47/47 passed after adding the availability regression test.
+- Companion profile release-presentation tests: 5/5 passed, including the signed-out report action.
 - Firestore rules emulator suite: 29 passed, including the companion-first history-read/new-message-denial case.
 - Production web build: passed. Vite reports the existing large JavaScript chunk advisory (about 1.93 MB minified).
 - No Firebase Rules or Functions deployment, production data change, bulk grant, or financial activation occurred.

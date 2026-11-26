@@ -57,6 +57,14 @@ describe('unreleased booking and approval presentation', () => {
     opener.remove();
   });
 
+  it('requires sign-in before opening the existing companion report flow', () => {
+    const onOpenAuth = vi.fn();
+    render(<CompanionProfileModal companion={legacy} onClose={vi.fn()} onOpenAuth={onOpenAuth} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Report this companion' }));
+    expect(onOpenAuth).toHaveBeenCalledWith('login');
+  });
+
   it('wraps forward and reverse tab movement within the profile dialog', () => {
     const rectSpy = vi.spyOn(HTMLElement.prototype, 'getClientRects')
       .mockImplementation(() => [new DOMRect()] as unknown as DOMRectList);
