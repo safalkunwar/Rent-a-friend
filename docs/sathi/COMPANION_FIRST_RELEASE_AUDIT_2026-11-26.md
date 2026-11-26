@@ -17,7 +17,7 @@
 - Companion cards and profile viewing; saved profiles persist through the existing repository.
 - User-selected interests already save to the user's profile. Existing rules permit users to update their own `interests`, `languages`, and `availability` fields.
 - Existing reports can be submitted to the `reports` collection and reviewed by authorized staff.
-- Companion profiles now expose the existing report form for signed-in users; guests are sent to sign-in before reporting.
+- Companion profiles now expose the existing report form for signed-in users; guests are sent to sign-in before reporting. Confirmation only says the report was submitted and does not promise a response.
 - Coins and identity-review functionality has server-side gates; this release does not enable those workflows.
 - Admin application routes and existing records remain available.
 

@@ -1,9 +1,9 @@
 # 2026-11-26 — Add report action to companion profiles
 - **Task:** Continue the companion-first candidate by surfacing the existing report workflow from companion profiles.
 - **Objective:** Let signed-in users report a companion without creating a parallel report service or changing report data/rules.
-- **Files changed:** `src/components/modals/CompanionProfileModal.tsx`, `src/__tests__/booking-release-presentation.test.tsx`, `docs/sathi/COMPANION_FIRST_RELEASE_AUDIT_2026-11-26.md`, and this changelog.
-- **Implementation:** Added a profile-level “Report this companion” action wired to the existing `ReportModal` and `reports` collection. Guests are directed to sign in; users do not see the action on their own profile. No report schema, Rules, Functions, operations promise, or production behavior changed.
-- **Validation:** `npx vitest run src/__tests__/booking-release-presentation.test.tsx` passed 5/5; `npm run lint` passed; `npm run build` passed with the existing large-chunk advisory. The broader 47-test discovery/messaging and 29-test rules emulator checks were run on the prior commit and are unaffected by this UI-only change.
+- **Files changed:** `src/components/modals/CompanionProfileModal.tsx`, `src/components/modals/ReportModal.tsx`, `src/__tests__/booking-release-presentation.test.tsx`, `src/__tests__/report-modal.test.tsx`, `docs/sathi/COMPANION_FIRST_RELEASE_AUDIT_2026-11-26.md`, and this changelog.
+- **Implementation:** Added a profile-level “Report this companion” action wired to the existing `ReportModal` and `reports` collection. Guests are directed to sign in; users do not see the action on their own profile. Report confirmation now confirms receipt without promising review or response. Fixed report reason/details label associations for accessibility. No report schema, Rules, Functions, or production behavior changed.
+- **Validation:** `npx vitest run src/__tests__/booking-release-presentation.test.tsx src/__tests__/report-modal.test.tsx` passed 6/6; `npm run lint` passed; `npm run build` passed with the existing large-chunk advisory. The broader 47-test discovery/messaging and 29-test rules emulator checks were run on the prior commit and are unaffected by this UI-only change.
 - **Remaining limits:** Connection requests/acceptance and user blocking remain absent. Report availability does not establish a staffed review response.
 - **Next action:** Resolve connection and block behavior, then build and qualify the consent workflow before release.
 

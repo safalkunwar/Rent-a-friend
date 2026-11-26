@@ -34,7 +34,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, targe
         reason: reason.trim(),
         details: details.trim() ? { additionalInfo: details.trim() } : undefined,
       });
-      showToast('Report submitted successfully. Our team will review it.', 'success');
+      showToast('Your report was submitted.', 'success');
       setReason('');
       setDetails('');
       onClose();
@@ -64,8 +64,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, targe
             </div>
           )}
           <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wider mb-2 block">Reason *</label>
+            <label htmlFor="report-reason" className="text-xs text-gray-500 uppercase tracking-wider mb-2 block">Reason *</label>
             <select
+              id="report-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               required
@@ -82,8 +83,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, targe
             </select>
           </div>
           <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wider mb-2 block">Additional Details</label>
+            <label htmlFor="report-details" className="text-xs text-gray-500 uppercase tracking-wider mb-2 block">Additional Details</label>
             <textarea
+              id="report-details"
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               rows={3}
