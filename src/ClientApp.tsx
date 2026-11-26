@@ -21,7 +21,7 @@ import { ExplorePage, type ExploreCategory } from './components/discovery/Explor
 import { PeopleDirectory, type PeopleView } from './components/discovery/PeopleDirectory';
 import { HomePage } from './components/home/HomePage';
 import { DiscoveryPageControl } from './components/discovery/DiscoveryPageControl';
-import { filterCompanions, homeSourceError, searchText, searchStrings } from './services/discoverySearch';
+import { filterCompanions, homeSourceError, rankCompanions, searchText, searchStrings } from './services/discoverySearch';
 import { CompanionCard } from './components/companions/CompanionCard';
 import { CustomerBookingActions } from './components/bookings/CustomerBookingActions';
 import { CategoryHeader } from './components/discovery/CategoryHeader';
@@ -61,6 +61,8 @@ import { eventCapacity } from './services/eventParticipationCore';
 import { firestore } from './services/firestore';
 import { CoinWalletPanel } from './components/wallet/CoinWalletPanel';
 
+const companionFirstRelease = true;
+
 interface ClientAppProps {
   initialTab?: 'home' | 'explore' | 'events' | 'bookings' | 'messages' | 'about' | 'admin' | 'dashboard' | 'partner' | 'settings';
 }
@@ -91,7 +93,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     return toggleFavorite(id);
   }, [currentUser?.id, currentUser?.role, openAuthModal, toggleFavorite]);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia('(min-width: 1024px)').matches);
-  const [peopleMode, setPeopleMode] = useState<PeopleView>('types');
+  const [peopleMode, setPeopleMode] = useState<PeopleView>('all');
   const [peopleCategoryStep, setPeopleCategoryStep] = useState(0);
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1024px)');
@@ -393,6 +395,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
   const unreadNotifCount = notifications ? notifications.filter(n => !n.isRead).length : 0;
 
   const handleViewCompanion = (companion: Companion) => {
+    if (companionFirstRelease && companion.hourlyRate !== 0) return;
     setSelectedCompanion(companion);
   };
 
@@ -409,16 +412,26 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     (minRatingFilter > 0 ? 1 : 0) +
     (sortBy !== 'recommended' ? 1 : 0);
 
-  const filteredCompanions = filterCompanions(companions, {
+  const companionCandidates = filterCompanions(companions, {
     query: searchQuery, category: selectedCategory, city: selectedCity,
     language: selectedLanguage, maxRate: maxHourlyRate === 3000 ? Infinity : maxHourlyRate, minRating: minRatingFilter,
     savedOnly: showSavedOnly, favorites: favorites || [], sort: sortBy,
   }).filter(c => {
-    if (peopleMode === 'free_friend') return c.hourlyRate === 0;
+    // Companion-first discovery is free to use. Never present paid or unknown
+    // rates as free listings; legacy paid profiles remain stored for later phases.
+    if (c.hourlyRate !== 0) return false;
+    if (peopleMode === 'free_friend') return true;
     if (peopleMode === 'guide') return c.verificationBadge === 'Verified Guide';
     if (peopleMode === 'local_host') return c.verificationBadge === 'Local Host';
     return true;
   });
+  const rankedCompanions = useMemo(() => rankCompanions(companionCandidates, currentUser), [companionCandidates, currentUser]);
+  const filteredCompanions = sortBy === 'recommended'
+    ? rankedCompanions.map(match => match.companion)
+    : companionCandidates;
+  const matchReasons = useMemo(() => new Map(rankedCompanions
+    .filter(match => match.reasons.length > 0)
+    .map(match => [match.companion.id, match.reasons.slice(0, 2).join(' · ')])), [rankedCompanions]);
 
   const availableInterests = useMemo(() => [...new Set(fetchedCompanions.flatMap(companion => searchStrings(companion.interests)))].sort(), [fetchedCompanions]);
 
@@ -529,7 +542,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
     onFilters={() => setIsFilterDrawerOpen(true)} activeFilters={activeFilterCount}
     savedOnly={showSavedOnly} onSavedOnly={setShowSavedOnly} favorites={favorites}
     onToggleFavorite={handleToggleFavorite} onShowToast={showToast}
-    onViewCompanion={handleViewCompanion} loading={companionsLoading}
+    onViewCompanion={handleViewCompanion} loading={companionsLoading} reasonsById={matchReasons}
     onReset={() => {
       setSearchQuery(''); setSelectedCategory('All'); setSelectedCity('All'); setSelectedLanguage('All');
       setMaxHourlyRate(3000); setMinRatingFilter(0); setSortBy('recommended'); setShowSavedOnly(false);
@@ -623,77 +636,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             </div>
           </div>
 
-          {/* Navigation Links */}
           <nav className="space-y-1" aria-label="Sidebar navigation">
-            <button
-              onClick={() => { setActiveTab('home'); setMobileTab('home'); navigate('/'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/' && !showSavedOnly ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
-            >
-              <Home className="w-4 h-4" /> For you
-            </button>
-            <button
-              onClick={() => { navigate('/explore'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/explore' ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
-            >
-              <Compass className="w-4 h-4" /> Explore
-            </button>
-            <button
-              onClick={() => { navigate('/companions'); setPeopleMode('types'); setSelectedCategory('All'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }}
-              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/companions' && !showSavedOnly ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
-            >
-              <span className="flex items-center gap-3"><Users className="w-4 h-4" /> People</span>
-
-            </button>
-            <button
-              onClick={() => { navigate('/explore#activities-section'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40 focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none"
-            >
-              <BookOpen className="w-4 h-4" /> Activities
-            </button>
-            <button
-              onClick={() => { navigate('/events'); setIsMobileSidebarOpen(false); }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40 focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none"
-            >
-              <Calendar className="w-4 h-4" /> Events
-            </button>
-            <button
-              onClick={() => { navigate('/messages'); setIsMobileSidebarOpen(false); }}
-              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/messages' ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
-            >
-              <span className="flex items-center gap-3"><MessageSquare className="w-4 h-4" /> Messages</span>
-
-            </button>
-            <button
-              onClick={() => { navigate('/bookings'); setIsMobileSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/bookings' ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
-            >
-              <Calendar className="w-4 h-4" /> Bookings
-            </button>
-            <button
-              onClick={() => { navigate('/companions'); setPeopleMode('all'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); showToast("Viewing Saved Companions", "success"); }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/companions' && showSavedOnly ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
-            >
-              <Heart className="w-4 h-4" /> Saved
-            </button>
-
-            <button
-              onClick={() => setShowWalletModal(true)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40 focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none"
-            >
-              <Wallet className="w-4 h-4" /> Wallet
-            </button>
-            <button
-              onClick={() => navigate('/explore#community')}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40 focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none"
-            >
-              <Users className="w-4 h-4" /> Community
-            </button>
-            <button
-              onClick={() => { navigate('/settings'); }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary-action focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:outline-none ${location.pathname === '/settings' || activeTab === 'settings' ? 'bg-primary-action/10 text-primary-action border-l-4 border-primary-action' : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated/40'}`}
-            >
-              <Settings className="w-4 h-4" /> Settings
-            </button>
+            <button onClick={() => { navigate('/companions'); setPeopleMode('all'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold ${location.pathname === '/companions' && !showSavedOnly ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:bg-surface-elevated/40'}`}><Users className="w-4 h-4" /> Find companions</button>
+            <button onClick={() => { navigate('/companions'); setPeopleMode('all'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold ${showSavedOnly ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:bg-surface-elevated/40'}`}><Heart className="w-4 h-4" /> Saved people</button>
+            <button onClick={() => { navigate('/messages'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold ${location.pathname === '/messages' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:bg-surface-elevated/40'}`}><MessageSquare className="w-4 h-4" /> Messages</button>
+            <button onClick={() => { navigate('/dashboard'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold ${location.pathname === '/dashboard' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:bg-surface-elevated/40'}`}><UserCircle className="w-4 h-4" /> My profile</button>
+            <button onClick={() => { navigate('/settings'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold ${location.pathname === '/settings' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary hover:bg-surface-elevated/40'}`}><Settings className="w-4 h-4" /> Settings</button>
           </nav>
         </div>
 
@@ -734,41 +682,16 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   </button>
                 </div>
 
-                <nav className="space-y-2">
-                  <button onClick={() => { navigate('/'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/' && !showSavedOnly ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
-                    <Home className="w-4 h-4" /> Home
-                  </button>
-                  <button onClick={() => { navigate('/explore'); setActiveTab('explore'); setDiscoveryTab('companions'); setSelectedCategory('All'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/explore' && !showSavedOnly ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
-                    <Users className="w-4 h-4" /> People
-                  </button>
-                  <button onClick={() => { navigate('/messages'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/messages' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
-                    <MessageSquare className="w-4 h-4" /> Messages
-                  </button>
-                  <button onClick={() => { navigate('/bookings'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/bookings' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
-                    <Calendar className="w-4 h-4" /> Bookings
-                  </button>
-                  <button onClick={() => { navigate('/explore'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/explore' && showSavedOnly ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
-                    <Heart className="w-4 h-4" /> Saved Companions
-                  </button>
-                  <button onClick={() => { setShowWalletModal(true); setIsMobileSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-text-secondary">
-                    <Wallet className="w-4 h-4" /> My Wallet
-                  </button>
-                  <button onClick={() => { navigate('/partner'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/partner' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
-                    <Briefcase className="w-4 h-4" /> Partners
-                  </button>
-                  <button onClick={() => { navigate('/dashboard'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/dashboard' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
-                    <UserCircle className="w-4 h-4" /> My Profile
-                  </button>
-                  <button onClick={() => { navigate('/settings'); setIsMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${location.pathname === '/settings' || activeTab === 'settings' ? 'bg-primary-action/10 text-primary-action' : 'text-text-secondary'}`}>
-                    <Settings className="w-4 h-4" /> Settings
-                  </button>
+                <nav className="space-y-2" aria-label="Mobile navigation">
+                  <button onClick={() => { navigate('/companions'); setPeopleMode('all'); setShowSavedOnly(false); setIsMobileSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-text-secondary"><Users className="w-4 h-4" /> Find companions</button>
+                  <button onClick={() => { navigate('/companions'); setPeopleMode('all'); setShowSavedOnly(true); setIsMobileSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-text-secondary"><Heart className="w-4 h-4" /> Saved people</button>
+                  <button onClick={() => { navigate('/messages'); setIsMobileSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-text-secondary"><MessageSquare className="w-4 h-4" /> Messages</button>
+                  <button onClick={() => { navigate('/dashboard'); setIsMobileSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-text-secondary"><UserCircle className="w-4 h-4" /> My profile</button>
+                  <button onClick={() => { navigate('/settings'); setIsMobileSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-text-secondary"><Settings className="w-4 h-4" /> Settings</button>
                 </nav>
               </div>
 
-              <div className="bg-surface-elevated rounded-2xl p-4 text-center space-y-2">
-                <p className="text-xs text-text-secondary">Referral rewards are coming soon.</p>
-                <button disabled className="w-full py-2 bg-surface text-text-muted rounded-xl text-xs font-bold cursor-not-allowed">Coming Soon</button>
-              </div>
+              <p className="text-center text-xs text-text-secondary">A friendly space to find people who share your interests.</p>
             </motion.div>
           </div>
         )}
@@ -951,16 +874,16 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                         <button onClick={() => { setActiveTab('dashboard'); navigate('/dashboard'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <UserCircle className="w-4 h-4 text-primary-action" /> My Profile / Dashboard
                         </button>
-                        <button onClick={() => { setActiveTab('bookings'); navigate('/bookings'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
+                        {!companionFirstRelease && <button onClick={() => { setActiveTab('bookings'); navigate('/bookings'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <Calendar className="w-4 h-4 text-primary-action" /> My Bookings
-                        </button>
+                        </button>}
                         <button onClick={() => { setActiveTab('messages'); navigate('/messages'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <MessageSquare className="w-4 h-4 text-primary-action" /> Messages
                         </button>
                         <button onClick={() => { setShowSavedOnly(true); setActiveTab('explore'); navigate('/explore'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <Heart className="w-4 h-4 text-red-500 fill-current" /> Favorites
                         </button>
-                        {(currentUser?.role === 'companion' || currentUser?.role === 'admin') && (
+                        {!companionFirstRelease && (currentUser?.role === 'companion' || currentUser?.role === 'admin') && (
                           <button onClick={() => { setActiveTab('partner'); navigate('/partner'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                             <Briefcase className="w-4 h-4 text-primary-action" /> Companion Dashboard
                           </button>
@@ -974,9 +897,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
                       {/* Section 2: Finances & Customization */}
                       <div className="py-1.5 border-b border-border-token/40">
-                        <button onClick={() => { setShowWalletModal(true); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
+                        {!companionFirstRelease && <button onClick={() => { setShowWalletModal(true); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <Wallet className="w-4 h-4 text-primary-action" /> Wallet
-                        </button>
+                        </button>}
                         <button onClick={() => { setActiveTab('settings'); navigate('/settings'); setShowProfileDropdown(false); }} className="w-full text-left px-4 py-2 text-xs text-text-primary hover:bg-surface-elevated hover:text-text-primary flex items-center gap-2.5 transition-colors">
                           <Settings className="w-4 h-4 text-primary-action" /> Settings
                         </button>
@@ -1060,7 +983,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
             {/* Render dynamically based on Tab */}
             {activeTab === 'home' && isDesktop && <><DiscoveryWelcome key={currentUser?.id ?? 'guest'} availableInterests={availableInterests} onExplore={exploreSection} />{renderHomeFeed()}</>}
 
-            {location.pathname === '/companions' && isDesktop && renderPeople()}
+            {location.pathname === '/companions' && isDesktop && <><DiscoveryWelcome key={currentUser?.id ?? 'guest'} mode="companions" availableInterests={availableInterests} onExplore={exploreSection} />{renderPeople()}</>}
             {activeTab === 'explore' && location.pathname !== '/companions' && isDesktop && renderExplore()}
 
             {activeTab === 'dashboard' && (
@@ -1145,6 +1068,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                   initialCompanionId={activeChatCompanionId}
                   onBrowseCompanions={handleBrowseCompanions}
                   onBrowseActivities={handleBrowseActivities}
+                  readOnly={companionFirstRelease}
                 />
               </motion.div>
             )}
@@ -1966,12 +1890,13 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               initialCompanionId={activeChatCompanionId}
               onBrowseCompanions={handleBrowseCompanions}
               onBrowseActivities={handleBrowseActivities}
+              readOnly={companionFirstRelease}
             />
           </div>
         )}
 
         {/* Render Mobile Tab Search */}
-        {mobileTab === 'search' && !isDesktop && <div className="px-4 pb-24">{renderPeople()}</div>}
+                {mobileTab === 'search' && !isDesktop && <div className="px-4 pb-24"><DiscoveryWelcome key={currentUser?.id ?? 'guest'} mode="companions" availableInterests={availableInterests} onExplore={exploreSection} />{renderPeople()}</div>}
 
         {/* Render Mobile Tab Notifications */}
         {mobileTab === 'notifications' && (
@@ -2028,10 +1953,9 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
         {/* Fixed Bottom Tab Navigation Bar */}
         <div className="sathi-bottom-navigation fixed bottom-0 left-0 right-0 h-16 bg-background/95 backdrop-blur-md border-t border-white/10 flex justify-between items-center px-6 z-50">
           {[
-            { tab: 'home', path: '/', icon: <Home className="w-5 h-5" />, label: 'For you' },
             { tab: 'search', path: '/companions', icon: <Search className="w-5 h-5" />, label: 'People' },
-            { tab: 'explore', path: '/explore', icon: <Compass className="w-5 h-5" />, label: 'Explore' },
             { tab: 'messages', path: '/messages', icon: <MessageSquare className="w-5 h-5" />, label: 'Messages' },
+            { tab: 'profile', path: '/settings', icon: <UserCircle className="w-5 h-5" />, label: 'Profile' },
             { tab: 'notifications', path: null, icon: (
               <div className="relative">
                 <Bell className="w-5 h-5" />
@@ -2043,22 +1967,20 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
               </div>
             ), label: 'Alerts' },
           ].map((item) => {
-            const isActive = mobileTab === item.tab && activeTab !== 'dashboard' && activeTab !== 'partner' && activeTab !== 'settings' && activeTab !== 'about';
+            const isActive = mobileTab === item.tab && activeTab !== 'partner' && activeTab !== 'about';
             return (
               <button
                 key={item.tab}
                 onClick={() => {
                   if (item.tab === 'messages') {
                     setActiveTab('messages');
-                  } else if (item.tab === 'home') {
-                    setActiveTab('home');
-                  } else if (item.tab === 'events') {
-                    setActiveTab('events');
+                  } else if (item.tab === 'profile') {
+                    setActiveTab('settings');
                   } else {
                     setActiveTab('explore');
                   }
                   if (item.path) {
-                    if (item.path === '/companions') { setPeopleMode('types'); setShowSavedOnly(false); }
+                    if (item.path === '/companions') { setPeopleMode('all'); setShowSavedOnly(false); }
                     navigate(item.path);
                   }
                   if (mobileTab === item.tab) {
@@ -2210,7 +2132,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
 
       {/* Wallet Active Balance Overlay Modal */}
       <AnimatePresence>
-        {showWalletModal && (
+        {!companionFirstRelease && showWalletModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
@@ -2526,12 +2448,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     </span>
                     <ChevronRight className="w-4 h-4 text-text-muted" />
                   </button>
-                  <button onClick={() => { setActiveTab('bookings'); setMobileTab('home'); navigate('/bookings'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
+                  {!companionFirstRelease && <button onClick={() => { setActiveTab('bookings'); setMobileTab('home'); navigate('/bookings'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
                     <span className="flex items-center gap-3 font-semibold">
                       <Calendar className="w-4.5 h-4.5 text-primary-action" /> My Bookings
                     </span>
                     <ChevronRight className="w-4 h-4 text-text-muted" />
-                  </button>
+                  </button>}
                   <button onClick={() => { setMobileTab('messages'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
                     <span className="flex items-center gap-3 font-semibold">
                       <MessageSquare className="w-4.5 h-4.5 text-primary-action" /> Messages
@@ -2544,7 +2466,7 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                     </span>
                     <ChevronRight className="w-4 h-4 text-text-muted" />
                   </button>
-                  {(currentUser?.role === 'companion' || currentUser?.role === 'admin') && (
+                  {!companionFirstRelease && (currentUser?.role === 'companion' || currentUser?.role === 'admin') && (
                     <button onClick={() => { setActiveTab('partner'); setMobileTab('home'); navigate('/partner'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
                       <span className="flex items-center gap-3 font-semibold">
                         <Briefcase className="w-4.5 h-4.5 text-primary-action" /> Companion Dashboard
@@ -2557,12 +2479,12 @@ export const ClientApp = React.memo(({ initialTab }: ClientAppProps = {}) => {
                 {/* Group 2: Settings & Customization */}
                 <div className="space-y-1.5 pt-2">
                   <span className="text-[9px] uppercase tracking-wider font-extrabold text-text-secondary block px-1">Preferences</span>
-                  <button onClick={() => { setShowWalletModal(true); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
+                  {!companionFirstRelease && <button onClick={() => { setShowWalletModal(true); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
                     <span className="flex items-center gap-3 font-semibold">
                       <Wallet className="w-4.5 h-4.5 text-primary-action" /> SATHI Coins
                     </span>
                     <ChevronRight className="w-4 h-4 text-text-muted" />
-                  </button>
+                  </button>}
                   <button onClick={() => { setActiveTab('settings'); setMobileTab('home'); navigate('/settings'); setShowProfileDropdown(false); }} className="w-full text-left px-3.5 py-3 text-xs text-text-primary bg-surface/50 rounded-xl hover:bg-surface-elevated flex items-center justify-between transition-colors">
                     <span className="flex items-center gap-3 font-semibold">
                       <Settings className="w-4.5 h-4.5 text-primary-action" /> Settings

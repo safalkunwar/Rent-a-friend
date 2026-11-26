@@ -12,7 +12,7 @@ const props = () => ({ mode: 'all' as PeopleView, onMode: vi.fn(), categoryStep:
 
 it('keeps the current directory people-only with category grouping and bounded pagination', () => {
   render(<PeopleDirectory {...props()} />);
-  expect(screen.getByRole('heading', { name: 'People', level: 1 })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Free companions', level: 1 })).toBeTruthy();
   expect(screen.getByRole('region', { name: 'Coffee Buddy people' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Load more people' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Events' })).toBeNull();
@@ -31,47 +31,12 @@ it('delegates search, category, filters and saved controls to the existing share
   expect(callbacks.onSavedOnly).toHaveBeenCalledWith(true);
 });
 
-it('never promotes legacy free rates, guide interests or approval flags to new service modes', () => {
-  function ControlledDirectory() {
-    const [mode, setMode] = React.useState<PeopleView>('types');
-    const [step, setStep] = React.useState(0);
-    return <PeopleDirectory {...props()} mode={mode} onMode={setMode} categoryStep={step} onCategoryStep={setStep} />;
-  }
-  render(<ControlledDirectory />);
-  for (const name of ['Free Friends', 'Local Hosts', 'Guides']) {
-    fireEvent.click(screen.getByRole('button', { name: `Select ${name}`, pressed: false }));
-    fireEvent.click(screen.getByRole('button', { name: `Explore ${name}` }));
-    expect(screen.getByRole('status').textContent).toContain('not available yet');
-    expect(screen.queryByRole('button', { name: "View Asha's profile" })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Load more people' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Browse current people' }));
-    expect(screen.getByRole('button', { name: "View Asha's profile" })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'All Companion Types' }));
-  }
-});
-
-it('retains the parent-selected service mode when responsive presentation remounts', () => {
-  const callbacks = props();
-  const { rerender } = render(<PeopleDirectory key="desktop" {...callbacks} mode="guide" />);
-  expect(screen.getByRole('status').textContent).toContain('agency listings are not available');
-  rerender(<PeopleDirectory key="mobile" {...callbacks} mode="guide" />);
-  expect(screen.getByRole('heading', { name: 'Guides' })).toBeTruthy();
-  expect(screen.queryByRole('searchbox')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Browse current people' }));
-  expect(callbacks.onMode).toHaveBeenCalledWith('all');
-});
-
-it('opens only the category entry and preserves its preview through responsive remounts', () => {
-  const callbacks = props();
-  const { rerender } = render(<PeopleDirectory key="desktop" {...callbacks} mode="types" categoryStep={-1} />);
-  expect(screen.getByRole('button', { name: 'View Guides' })).toBeTruthy();
-  expect(screen.queryByRole('searchbox')).toBeNull();
-  expect(screen.queryByRole('button', { name: "View Asha's profile" })).toBeNull();
-  rerender(<PeopleDirectory key="mobile" {...callbacks} mode="types" categoryStep={-1} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Explore Guides' }));
-  expect(callbacks.onMode).toHaveBeenCalledWith('guide');
-  expect(callbacks.onSearch).not.toHaveBeenCalled();
-  expect(callbacks.onCategory).not.toHaveBeenCalled();
+it('keeps excluded service categories out of the companion-first directory', () => {
+  render(<PeopleDirectory {...props()} mode="types" />);
+  expect(screen.getByRole('heading', { name: 'Free companions', level: 1 })).toBeTruthy();
+  expect(screen.getByRole('searchbox', { name: 'Search people' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /Guides|Local Hosts|Events|Partners/ })).toBeNull();
+  expect(screen.queryByText(/guide and agency listings|Local Host service/)).toBeNull();
 });
 
 it('preserves empty/loading/reset states without fallback profiles', () => {
@@ -96,7 +61,7 @@ it('uses explicit accessible profile/save actions without fabricated trust, revi
   expect(toast).not.toHaveBeenCalled();
   expect(screen.queryByText('APPLICATION APPROVED')).toBeNull();
   expect(screen.queryByText('5 (0)')).toBeNull();
-  expect(screen.getByText('Listed rate · NPR 0/hr')).toBeTruthy();
+  expect(screen.getByText('Free companion discovery')).toBeTruthy();
 });
 
 it('gives every responsive companion card layout a named, stateful save control', () => {

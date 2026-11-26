@@ -10,11 +10,6 @@ import { NotificationProvider } from './components/notifications/NotificationPro
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
-import { PaymentVerifyPage } from './pages/PaymentVerifyPage';
-import { EsewaVerifyPage } from './pages/EsewaVerifyPage';
-import { EsewaFailurePage } from './pages/EsewaFailurePage';
-import { PostPage } from './pages/PostPage';
-import { MediaContentPage } from './pages/MediaContentPage';
 import { AdminApplicationsPage } from './pages/AdminApplicationsPage';
 
 function AppRoutes() {
@@ -26,18 +21,11 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<ClientApp initialTab="home" />} />
-      <Route path="/explore" element={<ClientApp initialTab="explore" />} />
-      <Route path="/events" element={<ClientApp initialTab="events" />} />
+      <Route path="/" element={<Navigate to="/companions" replace />} />
+      <Route path="/explore" element={<Navigate to="/companions" replace />} />
+      <Route path="/events" element={<Navigate to="/companions" replace />} />
       <Route path="/companions" element={<ClientApp initialTab="explore" />} />
-      <Route
-        path="/bookings"
-        element={
-          <AuthGuard>
-            <ClientApp initialTab="bookings" />
-          </AuthGuard>
-        }
-      />
+      <Route path="/bookings" element={<Navigate to="/companions" replace />} />
       <Route
         path="/messages"
         element={
@@ -46,22 +34,8 @@ function AppRoutes() {
           </AuthGuard>
         }
       />
-      <Route
-        path="/dashboard"
-        element={
-          <AuthGuard>
-            <ClientApp initialTab="dashboard" />
-          </AuthGuard>
-        }
-      />
-      <Route
-        path="/partner"
-        element={
-          <AuthGuard>
-            <ClientApp initialTab="partner" />
-          </AuthGuard>
-        }
-      />
+      <Route path="/dashboard" element={<Navigate to="/settings" replace />} />
+      <Route path="/partner" element={<Navigate to="/companions" replace />} />
       <Route
         path="/settings"
         element={
@@ -70,9 +44,9 @@ function AppRoutes() {
           </AuthGuard>
         }
       />
-      <Route path="/post/:postId" element={<PostPage />} />
-      <Route path="/story/:storyId" element={<MediaContentPage kind="story" />} />
-      <Route path="/event/:eventId" element={<MediaContentPage kind="event" />} />
+      <Route path="/post/:postId" element={<Navigate to="/companions" replace />} />
+      <Route path="/story/:storyId" element={<Navigate to="/companions" replace />} />
+      <Route path="/event/:eventId" element={<Navigate to="/companions" replace />} />
       <Route
         path="/admin/applications"
         element={
@@ -81,9 +55,9 @@ function AppRoutes() {
           </AdminGuard>
         }
       />
-      <Route path="/payment/verify" element={<PaymentVerifyPage />} />
-      <Route path="/payment/esewa-verify" element={<EsewaVerifyPage />} />
-      <Route path="/payment/esewa-failure" element={<EsewaFailurePage />} />
+      <Route path="/payment/verify" element={<Navigate to="/companions" replace />} />
+      <Route path="/payment/esewa-verify" element={<Navigate to="/companions" replace />} />
+      <Route path="/payment/esewa-failure" element={<Navigate to="/companions" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -9,12 +9,13 @@ interface Props {
   onToggleFavorite: (id: string) => void | Promise<void>;
   onViewCompanion: (companion: Companion) => void;
   onShowToast: (message: string, type?: string) => void;
+  reasonsById?: ReadonlyMap<string, string>;
   renderCard?: (companion: Companion) => React.ReactNode;
   selectedCategory?: string;
 }
 
 /** Group the already-filtered page; never fetch or duplicate people per interest. */
-export function PeopleCategoryGroups({ companions, favorites, onToggleFavorite, onViewCompanion, onShowToast, renderCard, selectedCategory = 'All' }: Props) {
+export function PeopleCategoryGroups({ companions, favorites, onToggleFavorite, onViewCompanion, onShowToast, renderCard, selectedCategory = 'All', reasonsById }: Props) {
   const primaryGroups = useCompanionCategories(companions);
   // The parent has already filtered matches, including secondary interests.
   // Label that result set with the selected interest, without rewriting profiles.
@@ -31,7 +32,8 @@ export function PeopleCategoryGroups({ companions, favorites, onToggleFavorite, 
       <div className="people-category-grid">
         {group.companions.map(companion => renderCard ? <React.Fragment key={companion.id}>{renderCard(companion)}</React.Fragment> : <CompanionCard key={companion.id} companion={companion}
           isFav={favorites.includes(companion.id)} onToggleFavorite={onToggleFavorite}
-          onViewCompanion={onViewCompanion} onShowToast={onShowToast} layout="compact" />)}
+          onViewCompanion={onViewCompanion} onShowToast={onShowToast} layout="compact"
+          relevanceReason={reasonsById?.get(companion.id) ?? null} />)}
       </div>
     </section>)}
   </div>;

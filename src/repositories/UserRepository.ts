@@ -30,7 +30,7 @@ export class UserRepository extends BaseRepository {
     bio?: string;
     languages?: string[];
     skills?: string[];
-    availability?: string;
+    availability?: string | string[];
     interests?: string[];
     location?: string;
   }>): Promise<void> {

@@ -221,8 +221,9 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
               <div className="hidden md:block w-80 shrink-0">
                 <div className="bg-surface rounded-3xl p-6 border border-border-token sticky top-0 shadow-lg">
                   <div className="mb-6 pb-6 border-b border-border-token">
-                     <span className="text-3xl font-bold text-text-primary">NPR {companion.hourlyRate}</span>
-                    <span className="text-text-secondary"> / hour</span>
+                    {companion.hourlyRate === 0
+                      ? <span className="text-2xl font-bold text-text-primary">Free companion discovery</span>
+                      : <><span className="text-3xl font-bold text-text-primary">NPR {companion.hourlyRate}</span><span className="text-text-secondary"> / hour</span></>}
                   </div>
 
                   <div className="space-y-4 mb-8">
@@ -247,7 +248,10 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                     )}
                   </div>
 
-                  {bookingAvailable ? <button
+                  {companion.hourlyRate === 0 ? <div className="space-y-3">
+                    <p className="text-sm text-text-secondary">Profile discovery is free. No payment or Coins are needed.</p>
+                    <p className="text-sm text-text-secondary" role="status">Connection requests are not available yet. Messaging stays closed until a secure request is accepted.</p>
+                  </div> : <>{bookingAvailable ? <button
                     onClick={handleBookClick}
                     className="w-full py-4 bg-primary-action text-white rounded-2xl font-bold text-lg hover:bg-primary-action-hover transition-colors mb-3 shadow-md shadow-primary-action/20"
                   >
@@ -258,7 +262,7 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
                     className="w-full py-3 bg-surface-elevated text-text-primary border border-border-token rounded-2xl font-medium hover:border-primary-action transition-colors flex items-center justify-center gap-2"
                   >
                     <MessageSquare className="w-4 h-4" /> Message
-                  </button>
+                  </button></>}
                 </div>
               </div>
             </div>
@@ -268,11 +272,14 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
           <div className="md:hidden absolute bottom-0 left-0 right-0 p-4 bg-surface border-t border-border-token flex flex-col gap-2 z-20">
             <div className="flex justify-between items-center mb-1">
               <div>
-                <span className="text-xl font-bold text-text-primary">NPR {companion.hourlyRate}</span>
-                <span className="text-xs text-text-secondary"> / hour</span>
+                {companion.hourlyRate === 0
+                  ? <span className="text-lg font-bold text-text-primary">Free companion discovery</span>
+                  : <><span className="text-xl font-bold text-text-primary">NPR {companion.hourlyRate}</span><span className="text-xs text-text-secondary"> / hour</span></>}
               </div>
             </div>
-            <div className="flex gap-2">
+            {companion.hourlyRate === 0
+              ? <p className="text-xs text-text-secondary" role="status">Connection requests are not active yet. Messaging stays closed until a request is accepted.</p>
+              : <div className="flex gap-2">
               {bookingAvailable ? <button
                 onClick={handleBookClick}
                 className="flex-1 py-3 bg-primary-action text-white rounded-xl font-bold text-sm hover:bg-primary-action-hover transition-colors shadow-md shadow-primary-action/20"
@@ -286,7 +293,7 @@ export const CompanionProfileModal: React.FC<CompanionProfileModalProps> = ({ co
               >
                 <MessageSquare className="w-4 h-4" />
               </button>
-            </div>
+            </div>}
           </div>
         </motion.div>
       </div>

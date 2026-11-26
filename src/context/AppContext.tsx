@@ -34,7 +34,7 @@ interface AppState {
     bio?: string;
     languages?: string[];
     skills?: string[];
-    availability?: string;
+    availability?: string | string[];
     interests?: string[];
     location?: string;
   }>) => Promise<void>;
@@ -321,7 +321,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     bio?: string;
     languages?: string[];
     skills?: string[];
-    availability?: string;
+    availability?: string | string[];
     interests?: string[];
     location?: string;
   }>) => {

@@ -16,6 +16,8 @@ export interface User {
   bio?: string;
   location?: string;
   interests?: string[];
+  languages?: string[];
+  availability?: string | string[];
 }
 
 export interface Review {

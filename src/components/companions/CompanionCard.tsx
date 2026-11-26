@@ -55,6 +55,7 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
           <h3 className="text-base font-semibold text-text-primary leading-snug">{companion.name}</h3>
           {companion.location && <p className="text-sm text-text-secondary flex items-center gap-1"><MapPin className="w-4 h-4 shrink-0" aria-hidden="true" /><span className="truncate">{companion.location}</span></p>}
           {relevanceReason && <p className="text-sm text-text-secondary">{relevanceReason}</p>}
+          {companion.hourlyRate === 0 && <p className="text-sm text-text-secondary">Free companion discovery</p>}
           {Number.isFinite(companion.hourlyRate) && companion.hourlyRate > 0 && <p className="text-sm text-text-secondary">Listed rate · NPR {companion.hourlyRate}/hr</p>}
           <button type="button" onClick={handleCardClick} className="discovery-secondary w-full mt-auto" aria-label={`View ${companion.name}'s profile`}>View profile <ArrowRight size={16} aria-hidden="true" /></button>
         </div>
@@ -95,7 +96,7 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
             </div>}
           </div>
           <div className="space-y-3 pt-3">
-            <p className="text-sm text-text-secondary">{Number.isFinite(companion.hourlyRate) && companion.hourlyRate >= 0 ? `Listed rate · NPR ${companion.hourlyRate}/hr` : 'Rate not listed'}</p>
+            <p className="text-sm text-text-secondary">{companion.hourlyRate === 0 ? 'Free companion discovery' : Number.isFinite(companion.hourlyRate) && companion.hourlyRate > 0 ? `Listed rate · NPR ${companion.hourlyRate}/hr` : 'Rate not listed'}</p>
             <button onClick={handleCardClick} className="discovery-secondary w-full" aria-label={`View ${companion.name}'s profile`}>View profile <ArrowRight size={16} aria-hidden="true" /></button>
           </div>
         </div>
@@ -146,8 +147,8 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
           </div>
           <div className="flex justify-between items-center pt-2 border-t border-white/5">
             <div>
-              <p className="text-[8px] text-text-secondary uppercase font-bold leading-none">Rate</p>
-              <p className="text-xs font-black text-primary-action mt-0.5">NPR {companion.hourlyRate}/hr</p>
+              <p className="text-[8px] text-text-secondary uppercase font-bold leading-none">{companion.hourlyRate === 0 ? 'Connection' : 'Rate'}</p>
+              <p className="text-xs font-black text-primary-action mt-0.5">{companion.hourlyRate === 0 ? 'Free' : `NPR ${companion.hourlyRate}/hr`}</p>
             </div>
             <div className="w-7 h-7 rounded-full bg-primary-action flex items-center justify-center text-background shadow-md">
               <ArrowRight className="w-4 h-4" />
@@ -200,8 +201,8 @@ export const CompanionCard: React.FC<CompanionCardProps> = ({
         </div>
         <div className="flex justify-between items-center pt-2 border-t border-white/5">
           <div>
-            <p className="text-[8px] text-text-secondary uppercase font-bold leading-none">Rate</p>
-            <p className="text-xs font-black text-primary-action mt-0.5">NPR {companion.hourlyRate}/hr</p>
+            <p className="text-[8px] text-text-secondary uppercase font-bold leading-none">{companion.hourlyRate === 0 ? 'Connection' : 'Rate'}</p>
+            <p className="text-xs font-black text-primary-action mt-0.5">{companion.hourlyRate === 0 ? 'Free' : `NPR ${companion.hourlyRate}/hr`}</p>
           </div>
           <div className="w-7 h-7 rounded-full bg-primary-action flex items-center justify-center text-background shadow-md">
             <ArrowRight className="w-4 h-4" />

@@ -2,7 +2,7 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { DiscoveryPageControl } from '../components/discovery/DiscoveryPageControl';
-import { filterCompanions, homeSourceError } from '../services/discoverySearch';
+import { filterCompanions, homeSourceError, rankCompanions } from '../services/discoverySearch';
 import { useCompanions } from '../hooks/useFirestoreData';
 import { useCompanionCategories } from '../hooks/useCompanionCategories';
 import type { Companion } from '../types';
@@ -37,6 +37,34 @@ it('preserves saved, price, language and category filters without mutating sourc
   expect(filterCompanions(records, { ...filters, sort: 'priceAsc' }).map(c => c.id)).toEqual(['a', 'b']);
   expect(records[0].id).toBe('b');
   expect(filterCompanions(records, { ...filters, category: 'hiking', language: 'nepali', savedOnly: true, favorites: ['b'] })).toEqual([records[0]]);
+});
+
+it('ranks free companions using chosen interests, language, availability and city with clear reasons', () => {
+  const people = [
+    profile({ id: 'b', hourlyRate: 0, interests: ['Hiking'], languages: ['Nepali'], availableDays: ['Saturday'], location: 'Pokhara' }),
+    profile({ id: 'a', hourlyRate: 0, interests: ['Hiking', 'Photography'], languages: ['English'], availableDays: ['Monday'], location: 'Kathmandu' }),
+    profile({ id: 'paid', hourlyRate: 300, interests: ['Hiking', 'Photography'], languages: ['Nepali'], location: 'Kathmandu' }),
+  ];
+  const freePeople = people.filter(person => person.hourlyRate === 0);
+  const ranked = rankCompanions(freePeople, {
+    interests: ['hiking', 'photography'], languages: ['english'], availability: 'weekdays', location: 'Kathmandu',
+  });
+  expect(ranked.map(match => match.companion.id)).toEqual(['a', 'b']);
+  expect(ranked[0].reasons).toEqual(expect.arrayContaining([
+    'You both enjoy Hiking and Photography', 'You both speak English', 'Your available days overlap', 'You are both in Kathmandu',
+  ]));
+  expect(ranked[1].reasons).toEqual(['You both enjoy Hiking']);
+});
+
+it('matches broad weekday and weekend preferences against companion weekdays', () => {
+  const matches = rankCompanions([
+    profile({ id: 'weekend', hourlyRate: 0, availableDays: ['Saturday'] }),
+    profile({ id: 'weekday', hourlyRate: 0, availableDays: ['Monday'] }),
+  ], { availability: ['Weekends'] });
+
+  expect(matches[0].companion.id).toBe('weekend');
+  expect(matches[0].reasons).toContain('Your available days overlap');
+  expect(matches[1].reasons).not.toContain('Your available days overlap');
 });
 
 it('groups missing interests safely including prototype-shaped category names', () => {

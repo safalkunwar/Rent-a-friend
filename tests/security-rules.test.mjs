@@ -48,6 +48,16 @@ test('participants read messages but cannot alter the other sender text', async 
   await assertSucceeds(getDoc(doc(db('A'), 'messages/m')));
   await assertFails(updateDoc(doc(db('A'), 'messages/m'), { text: 'forged' }));
 });
+test('companion-first consent gate denies new conversations and messages while preserving history reads', async () => {
+  await assertSucceeds(getDoc(doc(db('A'), 'messages/m')));
+  await assertFails(setDoc(doc(db('A'), 'conversations/A_C'), {
+    id: 'A_C', participantIds: ['A', 'C'], unreadCount: 0, createdAt: 'now', updatedAt: 'now',
+  }));
+  await assertFails(setDoc(doc(db('A'), 'messages/new'), {
+    id: 'new', conversationId: 'A_B', senderId: 'A', text: 'Hello', isRead: false, timestamp: 'now',
+  }));
+  await assertFails(updateDoc(doc(db('A'), 'conversations/A_B'), { lastMessage: { text: 'forged' } }));
+});
 test('user cannot self-promote or approve KYC', async () => {
   for (const field of ['role', 'adminRole', 'companionStatus', 'verificationStatus', 'kycVerificationStatus']) {
     await assertFails(updateDoc(doc(db('A'), 'users/A'), { [field]: 'APPROVED' }));

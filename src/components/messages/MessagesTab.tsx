@@ -13,13 +13,15 @@ interface MessagesTabProps {
   initialCompanionId?: string | null;
   onBrowseCompanions?: () => void;
   onBrowseActivities?: () => void;
+  readOnly?: boolean;
 }
 
 export const MessagesTab: React.FC<MessagesTabProps> = ({ 
   onOpenAuth, 
   initialCompanionId,
   onBrowseCompanions,
-  onBrowseActivities
+  onBrowseActivities,
+  readOnly = false,
 }) => {
   const { currentUser, bookings } = useAppContext();
   const { showToast } = useToast();
@@ -495,7 +497,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-text-primary">No messages yet</p>
-                  <p className="text-[11px] text-text-secondary mt-0.5">Send a message to start the conversation.</p>
+                  <p className="text-[11px] text-text-secondary mt-0.5">{readOnly ? 'New messages are paused until connection requests and acceptance are available.' : 'Send a message to start the conversation.'}</p>
                 </div>
               </div>
             ) : (
@@ -506,7 +508,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                     <div className="flex flex-col max-w-[75%]">
                       <div className={`rounded-2xl px-4 py-2.5 shadow-md ${isMe ? 'bg-primary-action text-background rounded-br-sm font-medium text-xs' : 'bg-surface-elevated text-text-primary rounded-bl-sm border border-border-token text-xs'}`}>
                         <p className="leading-relaxed break-words whitespace-pre-wrap">{msg.text}</p>
-                        {isMe && msg.status === 'failed' && (
+                        {!readOnly && isMe && msg.status === 'failed' && (
                           <button
                             onClick={() => handleSend(msg.text)}
                             className="mt-1.5 text-[10px] font-bold underline opacity-80 hover:opacity-100"
@@ -529,7 +531,9 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
           </div>
 
           {/* Input */}
-          <div className="p-3 bg-surface border-t border-border-token shrink-0">
+          {readOnly ? <div className="p-4 bg-surface border-t border-border-token text-center text-xs text-text-secondary" role="status">
+            Messaging is paused until a secure connection-request and acceptance flow is ready.
+          </div> : <div className="p-3 bg-surface border-t border-border-token shrink-0">
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -547,7 +551,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
                 <Send className="w-4 h-4 ml-0.5" />
               </button>
             </div>
-          </div>
+          </div>}
         </div>
       ) : (
         <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-background text-text-secondary p-8 text-center space-y-4">
@@ -556,7 +560,7 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
           </div>
           <div>
             <h3 className="font-bold text-text-primary text-sm">Select a conversation</h3>
-            <p className="text-xs text-text-secondary mt-1 max-w-[240px]">Choose a chat from the sidebar or visit any companion profile to message them instantly.</p>
+            <p className="text-xs text-text-secondary mt-1 max-w-[240px]">Choose an existing conversation to read its history. New messages are paused until consent can be enforced.</p>
           </div>
         </div>
       )}
